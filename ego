@@ -1,0 +1,73 @@
+#!/usr/bin/python3
+
+import os, sys
+import glob
+import json
+import subprocess
+
+VERSION = "1.0"
+
+class color:
+	PURPLE = '\033[95m'
+	CYAN = '\033[96m'
+	DARKCYAN = '\033[36m'
+	BLUE = '\033[94m'
+	GREEN = '\033[92m'
+	YELLOW = '\033[93m'
+	RED = '\033[91m'
+	BOLD = '\033[1m'
+	UNDERLINE = '\033[4m'
+	END = '\033[0m'
+
+ego_dir = "/usr/share/ego"
+ego_dir = os.getcwd()
+ego_mod_dir = "%s/modules" % ego_dir
+ego_mod_inf = "%s/modules-info" % ego_dir
+ego_mods = [] 
+ego_mod_info = {}
+
+def run(mod, cmdargs=[], env={}):
+	subprocess.call([ego_mod_dir + "/" + mod + ".ego"] + cmdargs, env=env)
+	
+def header(info):
+	print("\n=== "+color.BOLD+color.GREEN+info+color.END+": ===\n")
+
+if os.path.isdir(ego_mod_dir):
+	for match in glob.glob(ego_mod_dir + "/*.ego"):
+		ego_mods.append(match.split("/")[-1][:-4])
+for mod in ego_mods:
+	inf_path = ego_mod_inf + "/" + mod + ".json"
+	if os.path.exists(inf_path):
+		with open(inf_path,"r") as inf:
+			ego_mod_info[mod] = json.loads(inf.read())
+
+if len(sys.argv) == 1:
+	print("Usage: %s [module] [info|options]..." % os.path.basename(sys.argv[0]))
+	header("Available ego modules")
+	for mod in ego_mods:
+		inf = ''
+		if mod in ego_mod_info and "description" in ego_mod_info[mod]:
+			inf = ego_mod_info[mod]["description"]
+elif len(sys.argv) == 3 and sys.argv[2] in [ "info", "help"]:
+	mod = sys.argv[1]
+	action = sys.argv[2]
+	if mod not in ego_mods:
+		print("Module not found: %s. Exiting." % mod)
+		sys.exit(1)
+	if mod not in ego_mod_info:
+		print("No %s is available for %s ego module." % (action, mod))
+	else:
+		if action == "info":
+			print("Extended information for %s ego module:" % mod)
+			for key in ego_mod_info[mod]:
+				print("%20s: %s" % (key, ego_mod_info[mod][key]))
+			print()
+		else:
+			if "help" in ego_mod_info[mod]:
+				print(ego_mod_info[mod]["help"])
+			else:
+				print("No help available for this ego module.")
+else:
+	run(sys.argv[1], cmdargs=sys.argv[2:], env=os.environ)
+
+# vim: ts=4 sw=4 noexpandtab

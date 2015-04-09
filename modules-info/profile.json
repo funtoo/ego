@@ -1,0 +1,6 @@
+{
+	"description" : "Manage Funtoo Linux profiles.",
+	"author" : "Daniel Robbins",
+	"version" : "1.0",
+	"actions" : [ "list", "show" ]
+}

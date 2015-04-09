@@ -1,0 +1,175 @@
+#!/usr/bin/python3
+
+import os
+import portage
+portdir = portage.settings["PORTDIR"]
+repodir = portdir + "/profiles"
+profiledir = "/etc/portage/make.profile"
+reponame = "gentoo"
+reponamefile = os.path.join(repodir,"repo_name")
+if os.path.exists(reponamefile):
+	with open(reponamefile,"r") as rnf:
+		reponame = rnf.read().strip()
+
+class ProfileSetting(object):
+
+	def __init__(self,repomap={},path=None,parent=None,parent_line=None,top_flavor=None,top_mixin=None):
+		self.parent = parent
+		self.parent_line = parent_line
+		self.path = path
+		self.inherited = { "mix-in" : [], "flavor" : [] } 
+		self.top_flavor = top_flavor
+		self.top_mixin = top_mixin
+		self.repomap = repomap
+		parentfile = path + "/parent"
+		self.lines = []
+		if os.path.exists(parentfile):
+			a = open(parentfile, "r")
+			for l in a.readlines():
+				self.lines.append(l.strip())
+			a.close()
+			self.children = []
+		cl = self.classify()
+		# top_flavor and top_mixin are used for doing accounting for "mix-ins enabled by this flavor", etc.
+		if cl == "flavor":
+			if self.top_flavor == None:
+				self.top_flavor = self
+		elif cl == "mix-in":
+			if self.top_mixin == None:
+				self.top_mixin = self
+		# This following code allows each flavor to have a list of all descendant mix-ins and flavors in
+		# self.inherited. Stored as live object references.
+		if cl in [ "flavor", "mix-in" ]:
+			if self.top_flavor != None and self.top_flavor != self:
+				self.top_flavor.inherited[cl].append(self)
+			if self.top_mixin != None and self.top_mixin != self:
+				self.top_mixin.inherited[cl].append(self)
+		self.process()
+
+	@property
+	def shortname(self):
+		return self.path.split("/")[-1]
+
+	def process(self):
+		for l in self.lines:
+			l = l.split("#")[0]
+			if len(l) == 0:
+				continue
+			colsplit = l.split(":")
+			if l[0] == ":":
+				# ":base" format
+				self.children.append(ProfileSetting(self.repomap,os.path.join(self.repomap[reponame],l[1:]),parent=self,parent_line=l,top_flavor=self.top_flavor,top_mixin=self.top_mixin))
+			elif len(colsplit) == 2 and colsplit[0] in self.repomap:
+				# "gentoo:foo" format
+				self.children.append(ProfileSetting(self.repomap,os.path.join(self.repomap[colsplit[0]],colsplit[1]),parent=self,parent_line=l,top_flavor=self.top_flavor,top_mixin=self.top_mixin))
+			else:
+				# "../../foo/bar" format
+				self.children.append(ProfileSetting(self.repomap,os.path.normpath(os.path.join(self.path,l)),parent=self,parent_line=l,top_flavor=self.top_flavor,top_mixin=self.top_mixin))
+
+	def classify(self):
+		ps = self.path.split("/")
+		pstag = ps[-2:-1][0]
+		if pstag == "flavor":
+			return "flavor"
+		elif pstag == "arch":
+			return "arch"
+		elif pstag == "mix-ins":
+			return "mix-in"
+		elif pstag == "subarch":
+			return "subarch"
+		elif pstag == "build":
+			return "build"
+		else:
+			return "misc"
+
+	def __repr__(self):
+		return self.shortname
+
+def warning(info):
+	print("WARNING: %s" % info)
+	
+def header(info):
+	print("\n=== "+color.BOLD+color.GREEN+info+color.END+": ===\n")
+
+a = ProfileSetting(repomap={reponame:repodir},path=profiledir)
+key_order = [ "arch", "build", "subarch", "flavor", "mix-in" ]
+required_keys = [ "arch", "build", "flavor" ]
+multi_keys = [ "mix-in" ]
+inherited_keys = [ "flavor", "mix-in" ]
+inherit_order = "original"
+mainmap = {
+	"arch" : [],
+	"build" : [],
+	"subarch" : [],
+	"flavor" : [],
+	"mix-in" : []
+}
+
+writeout = False
+
+for x in a.children:
+	c = x.classify()
+	if c in [ "flavor", "arch", "subarch", "build" ] and len(mainmap[c]) > 0:
+		warning("Extra profile of type '%s' defined: '%s'. Will be removed." % ( c, x.shortname))
+		writeout = True
+	else:
+		mainmap[c].append(x)
+for key in required_keys:
+	if key not in mainmap:
+		warning("No %s defined. Please set a %s." % (key,key))
+
+def genProfileString():
+	out = ""
+	for key in key_order:
+		if len(mainmap[key]):
+			if key in multi_keys:
+				for item in mainmap[key]:
+					out += item.parent_line + "\n"
+			else:
+				out += mainmap[key][0].parent_line + "\n"
+	return out
+
+def write():
+	out = genProfileString()
+	with open(os.path.join(profiledir,"parent"),"w") as f:
+		f.write(out)
+
+action = "list"
+class color:
+	PURPLE = '\033[95m'
+	CYAN = '\033[96m'
+	DARKCYAN = '\033[36m'
+	BLUE = '\033[94m'
+	GREEN = '\033[92m'
+	YELLOW = '\033[93m'
+	RED = '\033[91m'
+	BOLD = '\033[1m'
+	UNDERLINE = '\033[4m'
+	END = '\033[0m'
+
+if action == "list":
+	header("Enabled Profiles")
+	for key in key_order:
+		if len(mainmap[key]) == 0:
+			print("%s%12s%s: (not set)" % (color.BOLD, key, color.END))
+		else:
+			for item in mainmap[key]:
+				print("%s%12s%s: %s%s%s" % ( color.BOLD, key, color.END, color.CYAN, item.shortname, color.END ))
+
+	inherited_things = []
+	if len(mainmap["flavor"]):
+		inherited_things.append(mainmap["flavor"][0])
+	inherited_things.extend(mainmap["mix-in"])
+
+	for item in inherited_things:
+		for x in inherited_keys:
+			ilist = item.inherited[x]
+			if ilist:
+				header("All inherited %ss from %s %s" % (x, item.shortname, item.classify()))
+				for i in ilist:
+					print("      %s%26s%s (from %s %s)" % ( color.CYAN, i, color.END, i.parent, i.parent.classify() ))
+
+if writeout:
+	write()
+
+# vim: ts=4 noexpandtab sw=4
