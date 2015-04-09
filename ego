@@ -48,6 +48,8 @@ if len(sys.argv) == 1:
 		inf = ''
 		if mod in ego_mod_info and "description" in ego_mod_info[mod]:
 			inf = ego_mod_info[mod]["description"]
+		print("%s%15s%s - %s" % ( color.CYAN, mod, color.END, inf ))
+	print()
 elif len(sys.argv) == 3 and sys.argv[2] in [ "info", "help"]:
 	mod = sys.argv[1]
 	action = sys.argv[2]
