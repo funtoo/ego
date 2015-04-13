@@ -1,15 +1,24 @@
 #!/usr/bin/python3
 
-import os
+import os, sys
 import portage
+import json
+
 portdir = portage.settings["PORTDIR"]
 repodir = portdir + "/profiles"
+egodescinfo = {}
+#egodescfile = repodir + "/profiles.ego.desc"
+egodescfile = "/root/funtoo-overlay/profiles/profiles.ego.desc"
 profiledir = "/etc/portage/make.profile"
 reponame = "gentoo"
 reponamefile = os.path.join(repodir,"repo_name")
+
 if os.path.exists(reponamefile):
 	with open(reponamefile,"r") as rnf:
 		reponame = rnf.read().strip()
+if os.path.exists(egodescfile):
+	with open(egodescfile,"r") as ed:
+		egodescinfo = json.loads(ed.read())
 
 class ProfileSetting(object):
 
@@ -97,6 +106,8 @@ required_keys = [ "arch", "build", "flavor" ]
 multi_keys = [ "mix-in" ]
 inherited_keys = [ "flavor", "mix-in" ]
 inherit_order = "original"
+list_keys = [ "flavor", "mix-ins", "subarch", "build" ]
+
 mainmap = {
 	"arch" : [],
 	"build" : [],
@@ -134,7 +145,16 @@ def write():
 	with open(os.path.join(profiledir,"parent"),"w") as f:
 		f.write(out)
 
-action = "list"
+if len(sys.argv) > 1:
+	action = sys.argv[1]
+	args = sys.argv[2:]
+else:
+	sys.exit(1)
+
+if action not in [ "show", "list" ]:
+	print("Please specify a valid action.")
+	sys.exit(1)
+
 class color:
 	PURPLE = '\033[95m'
 	CYAN = '\033[96m'
@@ -147,7 +167,7 @@ class color:
 	UNDERLINE = '\033[4m'
 	END = '\033[0m'
 
-if action == "list":
+if action == "show":
 	header("Enabled Profiles")
 	for key in key_order:
 		if len(mainmap[key]) == 0:
@@ -168,7 +188,35 @@ if action == "list":
 				header("All inherited %ss from %s %s" % (x, item.shortname, item.classify()))
 				for i in ilist:
 					print("      %s%26s%s (from %s %s)" % ( color.CYAN, i, color.END, i.parent, i.parent.classify() ))
-
+elif action == "list":
+	for key in list_keys:
+		if key in [ "flavor", "mix-ins", "build" ]:
+			if key not in egodescinfo:
+				print("No info available for %s." % key)
+				continue
+			header(key)
+			dirp = repodir + "/" + egodescinfo[key]
+			avail = []
+			lpos = 4 
+			maxpos = 60
+			count = 0
+			sys.stdout.write(" " * lpos)
+			items = os.listdir(dirp)
+			items.sort()
+			for x in items:
+				if os.path.isdir(dirp+"/"+x):
+					count += 1
+					if count == 1 or lpos == 4:
+						sys.stdout.write(x)
+						lpos += len(x)
+					else:
+						sys.stdout.write(", "+x)
+						lpos += len(x) + 2
+					if lpos > maxpos:
+						sys.stdout.write("\n")
+						lpos = 4 
+						sys.stdout.write(" " * lpos)
+			print()
 if writeout:
 	write()
 
