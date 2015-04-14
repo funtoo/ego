@@ -6,7 +6,6 @@ import json
 
 portdir = portage.settings["PORTDIR"]
 repodir = portdir + "/profiles"
-egodescinfo = {}
 #egodescfile = repodir + "/profiles.ego.desc"
 egodescfile = "/root/funtoo-overlay/profiles/profiles.ego.desc"
 profiledir = "/etc/portage/make.profile"
@@ -16,20 +15,85 @@ reponamefile = os.path.join(repodir,"repo_name")
 if os.path.exists(reponamefile):
 	with open(reponamefile,"r") as rnf:
 		reponame = rnf.read().strip()
-if os.path.exists(egodescfile):
-	with open(egodescfile,"r") as ed:
-		egodescinfo = json.loads(ed.read())
+
+# ProfileLister will allow us to see what profile settings -- flavors, subarches, mix-ins, builds --
+# are available.
+
+class ProfileLister(object):
+
+	def __init__(self,repodir,p,arch=None):
+		self.repodir = repodir
+		self.info = {}
+		self.arch = arch
+		if os.path.exists(p):
+			with open(p,"r") as ed:
+				self.info = json.loads(ed.read())
+		if arch != None and "arch" in self.info:
+			self.info["subarch"] = self.info["arch"] + "/" + self.arch + "/subarch"
+
+	def keys(self):
+		r = []
+		for k in [ "flavor" , "mix-ins", "subarch" ]:
+			if k in self.info:
+				r.append(k)
+		return r
+
+	def __getitem__(self,key):
+			if key in self.info:
+				return self.repodir + "/" + self.info[key]
+			return None
+
+	def list(self,key):
+		p = self[key]
+		if os.path.exists(p):
+			return os.listdir(p)
+		else:	
+			return []
+
+# This is used to record all enabled thingsr, even by inheritance. Short names, not live objects are stored here.
+
+all_enabled = { "flavor" : set(), "mix-ins" : set(), "subarch" : set(), "build" : set() }
+
+# ProfileSetting will recurse into the system's profile settings and determine heirarchical relationships
+# of the profile.
 
 class ProfileSetting(object):
 
-	def __init__(self,repomap={},path=None,parent=None,parent_line=None,top_flavor=None,top_mixin=None):
-		self.parent = parent
+	def __init__(self,repomap={},path=None,child=None,parent_line=None,top={ "mix-ins" : None, "flavor" : None}):
+
+		# Child maps to the direct child of this profile entry -- this means the one that referenced
+		# this one in the parent file.
+
+		self.child = child
+
+		# Parent_line contains line from the parent file that refers to this profile entry.
+
 		self.parent_line = parent_line
-		self.path = path
-		self.inherited = { "mix-in" : [], "flavor" : [] } 
-		self.top_flavor = top_flavor
-		self.top_mixin = top_mixin
+
+
+		# for top-level (user-selected) flavors and mix-ins, self.inherited will hold a list of
+		# child flavors and mix-ins inherited via parent.
+
+		self.inherited = { "mix-ins" : [], "flavor" : [] }
+
+		# Reposmap is a dict that maps a repository name, such as "gentoo" to the associated
+		# profile directory path (i.e. "/usr/portage/profiles")
+
 		self.repomap = repomap
+
+		# Descendents contains a dict, which is populated with keys such as "flavor", "mix-ins", etc.
+		# The values are a list of all direct descendents of that type.
+
+		self.descendents = {}
+
+		# Top is used for updating self.inherited properly. It tracks the top-most flavor or mix-in,
+		# which is the user-selected one. Top-most flavor is self.top["flavor"], etc. 
+		
+		# If we are a mix-in or flavor, we get added to self.top["flavor"] and self.top["mix-ins"]
+		# inherited[self.cl] list.
+		
+		self.top = top
+
 		parentfile = path + "/parent"
 		self.lines = []
 		if os.path.exists(parentfile):
@@ -37,23 +101,29 @@ class ProfileSetting(object):
 			for l in a.readlines():
 				self.lines.append(l.strip())
 			a.close()
-			self.children = []
+		self.parents = []
+		self.path = path
 		cl = self.classify()
-		# top_flavor and top_mixin are used for doing accounting for "mix-ins enabled by this flavor", etc.
-		if cl == "flavor":
-			if self.top_flavor == None:
-				self.top_flavor = self
-		elif cl == "mix-in":
-			if self.top_mixin == None:
-				self.top_mixin = self
-		# This following code allows each flavor to have a list of all descendant mix-ins and flavors in
-		# self.inherited. Stored as live object references.
-		if cl in [ "flavor", "mix-in" ]:
-			if self.top_flavor != None and self.top_flavor != self:
-				self.top_flavor.inherited[cl].append(self)
-			if self.top_mixin != None and self.top_mixin != self:
-				self.top_mixin.inherited[cl].append(self)
+		self.cl = cl
+		if cl in [ "flavor", "mix-ins" ]:
+			for ty in [ "flavor", "mix-ins" ]:
+				if self.top[ty] != None:
+					self.top[ty].inherited[cl].append(self)
+		if cl in all_enabled:
+			all_enabled[cl].add(self.shortname)
 		self.process()
+
+	def nextTop(self):
+		# This function returns a dict of top values to be used by process()
+		out = {}
+		for k in [ "mix-ins", "flavor" ]:
+			if self.top[k]:
+				out[k] = self.top[k]
+			elif self.cl == k:
+				out[k] = self
+			else:
+				out[k] = None
+		return out
 
 	@property
 	def shortname(self):
@@ -67,13 +137,17 @@ class ProfileSetting(object):
 			colsplit = l.split(":")
 			if l[0] == ":":
 				# ":base" format
-				self.children.append(ProfileSetting(self.repomap,os.path.join(self.repomap[reponame],l[1:]),parent=self,parent_line=l,top_flavor=self.top_flavor,top_mixin=self.top_mixin))
+				ps = ProfileSetting(self.repomap,os.path.join(self.repomap[reponame],l[1:]),child=self,parent_line=l,top=self.nextTop())
 			elif len(colsplit) == 2 and colsplit[0] in self.repomap:
 				# "gentoo:foo" format
-				self.children.append(ProfileSetting(self.repomap,os.path.join(self.repomap[colsplit[0]],colsplit[1]),parent=self,parent_line=l,top_flavor=self.top_flavor,top_mixin=self.top_mixin))
+				ps = ProfileSetting(self.repomap,os.path.join(self.repomap[colsplit[0]],colsplit[1]),child=self,parent_line=l,top=self.nextTop())
 			else:
 				# "../../foo/bar" format
-				self.children.append(ProfileSetting(self.repomap,os.path.normpath(os.path.join(self.path,l)),parent=self,parent_line=l,top_flavor=self.top_flavor,top_mixin=self.top_mixin))
+				ps = ProfileSetting(self.repomap,os.path.normpath(os.path.join(self.path,l)),child=self,parent_line=l,top=self.nextTop())
+			self.parents.append(ps)
+			if not ps.cl in self.descendents:
+				self.descendents[ps.cl] = []
+			self.descendents[ps.cl].append(ps)
 
 	def classify(self):
 		ps = self.path.split("/")
@@ -83,7 +157,7 @@ class ProfileSetting(object):
 		elif pstag == "arch":
 			return "arch"
 		elif pstag == "mix-ins":
-			return "mix-in"
+			return "mix-ins"
 		elif pstag == "subarch":
 			return "subarch"
 		elif pstag == "build":
@@ -91,53 +165,38 @@ class ProfileSetting(object):
 		else:
 			return "misc"
 
-	def __repr__(self):
-		return self.shortname
-
 def warning(info):
 	print("WARNING: %s" % info)
 	
 def header(info):
 	print("\n=== "+color.BOLD+color.GREEN+info+color.END+": ===\n")
 
-a = ProfileSetting(repomap={reponame:repodir},path=profiledir)
-key_order = [ "arch", "build", "subarch", "flavor", "mix-in" ]
+ps = ProfileSetting(repomap={reponame:repodir},path=profiledir)
+key_order = [ "arch", "build", "subarch", "flavor", "mix-ins" ]
 required_keys = [ "arch", "build", "flavor" ]
-multi_keys = [ "mix-in" ]
-inherited_keys = [ "flavor", "mix-in" ]
+multi_keys = [ "mix-ins" ]
 inherit_order = "original"
-list_keys = [ "flavor", "mix-ins", "subarch", "build" ]
-
-mainmap = {
-	"arch" : [],
-	"build" : [],
-	"subarch" : [],
-	"flavor" : [],
-	"mix-in" : []
-}
 
 writeout = False
 
-for x in a.children:
-	c = x.classify()
-	if c in [ "flavor", "arch", "subarch", "build" ] and len(mainmap[c]) > 0:
+for x in ps.parents:
+	c = x.cl
+	if c in [ "flavor", "arch", "subarch", "build" ] and len(ps.descendents[c]) > 1:
 		warning("Extra profile of type '%s' defined: '%s'. Will be removed." % ( c, x.shortname))
 		writeout = True
-	else:
-		mainmap[c].append(x)
 for key in required_keys:
-	if key not in mainmap:
+	if key not in ps.descendents:
 		warning("No %s defined. Please set a %s." % (key,key))
 
 def genProfileString():
 	out = ""
 	for key in key_order:
-		if len(mainmap[key]):
+		if key in ps.descendents and len(ps.descendents[key]):
 			if key in multi_keys:
-				for item in mainmap[key]:
+				for item in ps.descendents[key]:
 					out += item.parent_line + "\n"
 			else:
-				out += mainmap[key][0].parent_line + "\n"
+				out += ps.descendents[key][0].parent_line + "\n"
 	return out
 
 def write():
@@ -170,53 +229,85 @@ class color:
 if action == "show":
 	header("Enabled Profiles")
 	for key in key_order:
-		if len(mainmap[key]) == 0:
+		if key not in ps.descendents or len(ps.descendents[key]) == 0:
 			print("%s%12s%s: (not set)" % (color.BOLD, key, color.END))
 		else:
-			for item in mainmap[key]:
+			for item in ps.descendents[key]:
 				print("%s%12s%s: %s%s%s" % ( color.BOLD, key, color.END, color.CYAN, item.shortname, color.END ))
 
 	inherited_things = []
-	if len(mainmap["flavor"]):
-		inherited_things.append(mainmap["flavor"][0])
-	inherited_things.extend(mainmap["mix-in"])
+	if len(ps.descendents["flavor"]):
+		# follow first flavor:
+		inherited_things.append(ps.descendents["flavor"][0])
+	# follow all mix-ins:
+	inherited_things.extend(ps.descendents["mix-ins"])
 
 	for item in inherited_things:
-		for x in inherited_keys:
+		for x in [ "flavor", "mix-ins" ]:
 			ilist = item.inherited[x]
+			# pluralize output if needed:
+			if x[-1] != "s":
+				x += "s"
 			if ilist:
-				header("All inherited %ss from %s %s" % (x, item.shortname, item.classify()))
+				header("All inherited %s from %s %s" % (x, item.shortname, item.classify()))
 				for i in ilist:
-					print("      %s%26s%s (from %s %s)" % ( color.CYAN, i, color.END, i.parent, i.parent.classify() ))
+					if i == i.child:
+						continue
+					print("      %s%26s%s (from %s %s)" % ( color.CYAN, i.shortname, color.END, i.child.shortname, i.child.classify() ))
 elif action == "list":
-	for key in list_keys:
-		if key in [ "flavor", "mix-ins", "build" ]:
-			if key not in egodescinfo:
-				print("No info available for %s." % key)
-				continue
-			header(key)
-			dirp = repodir + "/" + egodescinfo[key]
-			avail = []
-			lpos = 4 
-			maxpos = 60
-			count = 0
-			sys.stdout.write(" " * lpos)
-			items = os.listdir(dirp)
-			items.sort()
-			for x in items:
-				if os.path.isdir(dirp+"/"+x):
-					count += 1
-					if count == 1 or lpos == 4:
-						sys.stdout.write(x)
-						lpos += len(x)
-					else:
-						sys.stdout.write(", "+x)
-						lpos += len(x) + 2
-					if lpos > maxpos:
-						sys.stdout.write("\n")
-						lpos = 4 
-						sys.stdout.write(" " * lpos)
-			print()
+	if "arch" in ps.descendents and len(ps.descendents) != 0:
+		# We list subarches based on the arch path, ie. "arch/x86-64bit/subarch" -- so we need to provide arch name:
+		pl = ProfileLister(repodir,egodescfile, arch=ps.descendents["arch"][0].shortname)
+	else:
+		pl = ProfileLister(repodir,egodescfile)
+	for key in pl.keys():
+
+		# Names of active (currently enabled) profile keys of this type (ie. flavor, etc.). These active ones will
+		# get highlighted in bold.
+
+		active_keys = []
+		inherited_keys = []
+		if key in ps.descendents:
+			for my_ps in ps.descendents[key]:	
+				active_keys.append(my_ps.shortname)
+
+		header(key)
+		dirp = pl[key]
+		if dirp == None:
+			print(key)
+			continue
+		avail = []
+		lpos = 4 
+		maxpos = 60
+		count = 0
+
+		# spacing:
+		sys.stdout.write(" " * lpos)
+		items = os.listdir(dirp)
+		items.sort()
+
+		# write each item out -- when we cross maxpos characters, add a newline and indent:
+		for x in items:
+			if x in active_keys:
+				# highlight it if it's currently active.
+				outx = color.BOLD + x + color.END
+			elif key in all_enabled and x in all_enabled[key]:
+				outx = color.DARKCYAN + x + color.END
+			else:
+				outx = x
+			if os.path.isdir(dirp+"/"+x):
+				count += 1
+				if count == 1 or lpos == 4:
+					sys.stdout.write(outx)
+					lpos += len(x)
+				else:
+					sys.stdout.write(", "+outx)
+					lpos += len(x) + 2
+				if lpos > maxpos:
+					sys.stdout.write("\n")
+					lpos = 4 
+					sys.stdout.write(" " * lpos)
+		print()
 if writeout:
 	write()
 
