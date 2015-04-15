@@ -107,6 +107,9 @@ class ProfileSetting(object):
 		else:
 			self.cl = cl
 
+		if self.cl in all_enabled:
+			all_enabled[self.cl].add(self.shortname)
+
 		if path != None:
 			
 			# If we are creating a fake ProfileSetting to change a flavor, etc, then path will be None.
@@ -127,8 +130,6 @@ class ProfileSetting(object):
 				for ty in [ "flavor", "mix-ins" ]:
 					if self.top[ty] != None:
 						self.top[ty].inherited[cl].append(self)
-			if cl in all_enabled:
-				all_enabled[cl].add(self.shortname)
 			self.process()
 
 	def nextTop(self):
@@ -305,6 +306,10 @@ elif action == "list":
 
 		# write each item out -- when we cross maxpos characters, add a newline and indent:
 		for x in items:
+			if lpos > maxpos:
+				sys.stdout.write("\n")
+				lpos = 4 
+				sys.stdout.write(" " * lpos)
 			if x in active_keys:
 				# highlight it if it's currently active.
 				outx = color.BOLD + x + color.END
@@ -320,11 +325,8 @@ elif action == "list":
 				else:
 					sys.stdout.write(", "+outx)
 					lpos += len(x) + 2
-				if lpos > maxpos:
-					sys.stdout.write("\n")
-					lpos = 4 
-					sys.stdout.write(" " * lpos)
 		print()
+	print()
 elif action in [ "flavor", "mix-in", "subarch", "build", "arch" ]:
 	if action in [ "flavor", "subarch", "build", "arch" ]:
 		newset = sys.argv[2]
