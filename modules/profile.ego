@@ -19,6 +19,9 @@ if os.path.exists(reponamefile):
 # are available. It returns relative paths (relative to repodir) to each type of profile. For
 # example, mypl["flavor"] = "funtoo/1.0/linux-gnu/flavors" and mypl.list("flavor") = [ "desktop" ...].
 
+# ProfileLister uses the profiles.ego.desc file in /usr/portage/profiles to locate the base directories
+# for all these goodies.
+
 class ProfileLister(object):
 
 	def __init__(self,repodir,p,arch=None):
@@ -58,7 +61,11 @@ class ProfileLister(object):
 all_enabled = { "flavor" : set(), "mix-ins" : set(), "subarch" : set(), "build" : set() }
 
 # ProfileSetting will recurse into the system's profile settings and determine heirarchical relationships
-# of the profile.
+# of the profile, and create a tree of ProfileSetting objects (linked via self.child, self.descendents).
+
+# We use this for seeing everything that gets enabled from a particular flavor or mix-in. When a user updates
+# a profile setting, we tweak the top object's decendents info. Then the write() method will write out the
+# updated information.
 
 class ProfileSetting(object):
 
@@ -126,10 +133,10 @@ class ProfileSetting(object):
 			self.parents = []
 			self.path = path
 
-			if cl in [ "flavor", "mix-ins" ]:
+			if self.cl in [ "flavor", "mix-ins" ]:
 				for ty in [ "flavor", "mix-ins" ]:
 					if self.top[ty] != None:
-						self.top[ty].inherited[cl].append(self)
+						self.top[ty].inherited[self.cl].append(self)
 			self.process()
 
 	def nextTop(self):
