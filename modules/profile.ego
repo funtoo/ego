@@ -280,11 +280,20 @@ if action == "show":
 			if x[-1] != "s":
 				x += "s"
 			if ilist:
-				header("All inherited %s from %s %s" % (x, item.shortname, item.cl))
+				icl = item.cl
+				# de-pluralize
+				if icl == "mix-ins":
+					icl = "mix-in"
+				header("All inherited %s from %s %s" % (x, item.shortname, icl))
 				for i in ilist:
 					if i == i.child:
 						continue
-					print("      %s%26s%s (from %s %s)" % ( color.CYAN, i.shortname, color.END, i.child.shortname, i.child.cl ))
+					iccl = i.child.cl
+					# de-pluralize
+					if iccl == "mix-ins":
+						iccl = "mix-in"
+					print("      %s%26s%s (from %s %s)" % ( color.CYAN, i.shortname, color.END, i.child.shortname, iccl ))
+	print()
 elif action == "list":
 	for key in pl.keys():
 
