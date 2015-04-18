@@ -48,6 +48,8 @@ if len(sys.argv) == 1:
 		inf = ''
 		if mod in ego_mod_info and "description" in ego_mod_info[mod]:
 			inf = ego_mod_info[mod]["description"]
+		if "shortcut" in ego_mod_info[mod]:
+			inf += " (%s%s%s)" % ( color.BOLD, ego_mod_info[mod]["shortcut"], color.END )
 		print("%s%15s%s - %s" % ( color.CYAN, mod, color.END, inf ))
 	print()
 elif len(sys.argv) == 3 and sys.argv[2] in [ "info", "help"]:
