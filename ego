@@ -20,7 +20,6 @@ class color:
 	END = '\033[0m'
 
 ego_dir = "/usr/share/ego"
-ego_dir = os.getcwd()
 ego_mod_dir = "%s/modules" % ego_dir
 ego_mod_inf = "%s/modules-info" % ego_dir
 ego_mods = [] 
