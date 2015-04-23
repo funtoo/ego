@@ -224,9 +224,9 @@ def write():
 
 if len(sys.argv) > 1:
 	action = sys.argv[1]
-	args = sys.argv[2:]
 else:
-	sys.exit(1)
+	action = "show"
+args = sys.argv[2:]
 
 if action not in [ "show", "list", "flavor", "mix-in", "mix-ins", "subarch", "arch", "build" ]:
 	print("Please specify a valid action.")
@@ -294,10 +294,14 @@ if action == "show":
 					print("      %s%26s%s (from %s %s)" % ( color.CYAN, i.shortname, color.END, i.child.shortname, iccl ))
 	print()
 elif action == "list":
+	args = sys.argv[2:]
 	for key in pl.keys():
+		if args != [] and key not in args:
+			# user-specified sub-list, only list those things
+			continue
 
-		# Names of active (currently enabled) profile keys of this type (ie. flavor, etc.). These active ones will
-		# get highlighted in bold.
+		# active_keys: Names of active (currently enabled explicitly by user) profile keys 
+		# of this type (ie. flavor, etc.). These active ones will get highlighted differently.
 
 		active_keys = []
 		inherited_keys = []
@@ -310,11 +314,13 @@ elif action == "list":
 		if dirp == None:
 			continue
 		avail = []
+		
+		# We handle our own output formatting/spacing/newlines. These vars are used for this.
+		# lpos - column position; maxpos - when to wrap; count - item count. 
+
 		lpos = 4 
 		maxpos = 60
 		count = 0
-
-		# spacing:
 		sys.stdout.write(" " * lpos)
 		items = os.listdir(dirp)
 		items.sort()
@@ -326,9 +332,14 @@ elif action == "list":
 				lpos = 4 
 				sys.stdout.write(" " * lpos)
 			if x in active_keys:
-				# highlight it if it's currently active.
-				outx = color.BOLD + x + color.END
+				# make it stand out if it explicitly enabled:
+				outx = color.BOLD + color.CYAN + x + "*" + color.END
+				if key in [ "arch", "build" ]:
+					# parens to mark as read-only -- USE style. Not really read-only but should
+					# not generally be changed by user.
+					outx = "(" + outx + ")"
 			elif key in all_enabled and x in all_enabled[key]:
+				# highlight if enabled through inheritance:
 				outx = color.DARKCYAN + x + color.END
 			else:
 				outx = x
