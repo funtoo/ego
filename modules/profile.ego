@@ -228,7 +228,7 @@ if len(sys.argv) > 1:
 else:
 	sys.exit(1)
 
-if action not in [ "show", "list", "flavor", "mix-in", "subarch", "arch", "build" ]:
+if action not in [ "show", "list", "flavor", "mix-in", "mix-ins", "subarch", "arch", "build" ]:
 	print("Please specify a valid action.")
 	sys.exit(1)
 
