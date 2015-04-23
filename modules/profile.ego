@@ -342,7 +342,7 @@ elif action == "list":
 					lpos += len(x) + 2
 		print()
 	print()
-elif action in [ "flavor", "mix-in", "subarch", "build", "arch" ]:
+elif action in [ "flavor", "mix-in", "mix-ins", "subarch", "build", "arch" ]:
 	if action in [ "flavor", "subarch", "build", "arch" ]:
 		newset = sys.argv[2]
 		if newset not in pl.list(action):
@@ -358,6 +358,65 @@ elif action in [ "flavor", "mix-in", "subarch", "build", "arch" ]:
 		ps.descendents[action] = [ProfileSetting(ps.repomap,name=newset,cl=action,parent_line=reponame + ":" + pl[action] + "/" + newset,child=ps)]
 		shortList()
 		print(">>> Set %s to %s." % ( action, newset ))
+	else:
+		if action == "mix-in":
+			action = "mix-ins"
+		# action == "mix-in":
+		adds = set()
+		subs = set()
+		for i in sys.argv[2:]:
+			if i[0] == "-":
+				subs.add(i[1:])
+			elif i[0] == "+":
+				adds.add(i[1:])
+			else:
+				adds.add(i)
+		valids = pl.list("mix-ins")
+		for i in adds.union(subs):
+			if i not in valids:
+				warning("Error: %s is not a valid mix-in." % i)
+				sys.exit(1)
+		p = 0
+		# remove "-" arguments.
+		removed = set()
+		if "mix-ins" in ps.descendents:
+			while p < len(ps.descendents["mix-ins"]):
+				sn = ps.descendents["mix-ins"][p].shortname
+				if sn in subs:
+					del ps.descendents["mix-ins"][p]
+					removed.add(sn)
+					writeout = True
+					continue
+				p += 1
+		# get currently active mix-ins:
+		active = []
+		if "mix-ins" in ps.descendents:
+			active = [ x.shortname for x in ps.descendents["mix-ins"] ]
+		notadded = set()
+		added = set()
+		for new_shortname in adds:
+			if new_shortname in active:
+				notadded.add(new_shortname)
+				continue
+			new_ps = ProfileSetting(ps.repomap,name=new_shortname,cl="mix-ins",parent_line=reponame + ":" + pl["mix-ins"] + "/" + new_shortname,child=ps)
+			if "mix-ins" not in ps.descendents:
+				ps.descendents["mix-ins"] = []
+			ps.descendents["mix-ins"].append(new_ps)
+			added.add(new_shortname)
+			writeout = True
+
+		# Do all output here -- our shortList() will reflect the mix-in changes made above. Then put informational messages
+		# underneath for readability:
+
+		shortList()
+		for x in subs.difference(removed):
+			warning("Mix-in %s not found, not removing." % x)
+		for x in notadded:
+			warning("Mix-in %s already active, not adding." % x)
+		for x in removed:
+			print(">>> Removed %s mix-in." % x)
+		for x in added:
+			print(">>> Added %s mix-in." % x)
 
 for x in ps.parents:
 	c = x.cl
