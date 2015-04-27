@@ -52,7 +52,7 @@ class ProfileLister(object):
 		p = self.repodir + "/" + self[key]
 		if os.path.exists(p):
 			return os.listdir(p)
-		else:	
+		else:
 			return []
 
 # This is used to record all enabled thingsr, even by inheritance. Short names, not live objects are stored here.
@@ -100,11 +100,11 @@ class ProfileSetting(object):
 		self.descendents = {}
 
 		# Top is used for updating self.inherited properly. It tracks the top-most flavor or mix-in,
-		# which is the user-selected one. Top-most flavor is self.top["flavor"], etc. 
-		
+		# which is the user-selected one. Top-most flavor is self.top["flavor"], etc.
+
 		# If we are a mix-in or flavor, we get added to self.top["flavor"] and self.top["mix-ins"]
 		# inherited[self.cl] list.
-		
+
 		self.top = top
 		self.path = path
 
@@ -117,7 +117,7 @@ class ProfileSetting(object):
 			all_enabled[self.cl].add(self.shortname)
 
 		if path != None:
-			
+
 			# If we are creating a fake ProfileSetting to change a flavor, etc, then path will be None.
 			# If we are reading in an existing ProfileSetting, we do a lot of processing, including
 			# figuring out what kind of profile setting we are, recursing on any parents, etc.
@@ -194,7 +194,7 @@ class ProfileSetting(object):
 
 def warning(info):
 	print("WARNING: %s" % info)
-	
+
 def header(info):
 	print("\n=== "+color.BOLD+color.GREEN+info+color.END+": ===\n")
 
@@ -300,13 +300,13 @@ elif action == "list":
 			# user-specified sub-list, only list those things
 			continue
 
-		# active_keys: Names of active (currently enabled explicitly by user) profile keys 
+		# active_keys: Names of active (currently enabled explicitly by user) profile keys
 		# of this type (ie. flavor, etc.). These active ones will get highlighted differently.
 
 		active_keys = []
 		inherited_keys = []
 		if key in ps.descendents:
-			for my_ps in ps.descendents[key]:	
+			for my_ps in ps.descendents[key]:
 				active_keys.append(my_ps.shortname)
 
 		header(key)
@@ -314,11 +314,11 @@ elif action == "list":
 		if dirp == None:
 			continue
 		avail = []
-		
-		# We handle our own output formatting/spacing/newlines. These vars are used for this.
-		# lpos - column position; maxpos - when to wrap; count - item count. 
 
-		lpos = 4 
+		# We handle our own output formatting/spacing/newlines. These vars are used for this.
+		# lpos - column position; maxpos - when to wrap; count - item count.
+
+		lpos = 4
 		maxpos = 60
 		count = 0
 		sys.stdout.write(" " * lpos)
@@ -329,7 +329,7 @@ elif action == "list":
 		for x in items:
 			if lpos > maxpos:
 				sys.stdout.write("\n")
-				lpos = 4 
+				lpos = 4
 				sys.stdout.write(" " * lpos)
 			if x in active_keys:
 				# make it stand out if it explicitly enabled:
