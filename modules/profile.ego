@@ -355,6 +355,9 @@ elif action == "list":
 	print()
 elif action in [ "flavor", "mix-in", "mix-ins", "subarch", "build", "arch" ]:
 	if action in [ "flavor", "subarch", "build", "arch" ]:
+		if len(sys.argv) < 3:
+		    print("Please specify a valid target.")
+		    sys.exit(1)
 		newset = sys.argv[2]
 		if newset not in pl.list(action):
 			warning("%s %s not available. Can't set." % ( action, newset ))
