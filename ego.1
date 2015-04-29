@@ -7,60 +7,27 @@
 ego \- Funtoo's personality tool
 .SH SYNOPSIS
 .B ego
-.RI [ "module" ]
+.RI [ module ]
 .RI [ info|options ]
-...
 .SH DESCRIPTION
+.P
 .B ego
-is Funtoo's configuration and management meta-tool. Typing
+is Funtoo's configuration and management meta-tool.
+.P
+Typing
 .BR ego
-will print a list of available commands. Those commands are ego modules, which can be implemented in any language.
-.BR ego
-modules are designed to be stand-alone commands as well. It allows you to use shortcuts to access these sub-commands.
-For, example
-.BR epro
-is a short curt for
-.B ego profile.
+will print a list of available commands. Those commands are called ego modules. New modules can be implemented in any language. ego's modules are designed to be stand-alone commands. So it allows you to access them via shortcuts as well.
 .SH MODULES
 .TP
 .B profile
-Manage Funtoo Linux profiles like: arch, build, subarch, flavor and mix-ins.  Module shortcut is:
-.BR epro
-
-Running it without any arguments will get you an overview of your current profile settings.
-
-To specify an arch, build, subarch or flavor just use it like:
-.IP
-.B ego profile
-.I profile
-.I desired-selection
-.PP
-.IP
-For example, to set your architecture to pure64 use:
-.IP
-.B epro arch pure64
-.IP
-
-Since you can have several mix-ins enabled, you can specify more than one option when changing your mix-ins. Use the plus sign, or none sign at all, to add a mix-in and the minus sign to remove it.
-.IP
-To deselect the kde and cinnamon mix-ins and enable the gnome one instead type:
-.IP
-.B epro mix-ins -kde -cinnamon +gnome
-.IP
-.TP
-.SH SUB-COMMANDS
-The following sub-commands are avilable for
-.B
-epro.
-.TP
-.B list
-Displays a detailed list of all available profiles. Enabled profiles are highlighted in cyan, directly enabled ones are brinted in bold and have a asterisk appended.
-.TP
-.B show
-Displays your profile settings. Same as running it without any arguments.
+.P
+Manage Funtoo Linux profiles like: arch, build, subarch, flavor and mix-ins. Shortcut is:
+.B epro.
 .SH AUTHORS
 .TP
 Daniel Robbins <drobbins@funtoo.org>
 .br
 .SH COMMENTS
 This manpage was written by Michael Vetter <g.bluehut@gmail.com>.
+.SH "SEE ALSO"
+.BR epro (1)
