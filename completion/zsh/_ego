@@ -1,0 +1,72 @@
+#compdef epro
+
+PROFILE_DIR="/usr/portage/profiles/funtoo/1.0/linux-gnu"
+
+_epro-actionlist() {
+  local -a actions
+
+  actions=( 'show' 'list' 'flavor' 'mix-ins' 'subarch' 'arch' 'build' )
+
+  _values 'Actions' $actions && return 0
+}
+
+_epro-list() {
+  local -a profiles
+
+  profiles=( 'flavor' 'mix-ins' 'subarch' 'arch' 'build' )
+
+  _values 'Profiles' $profiles && return 0
+}
+
+_epro-fetch-choices() {
+  local line
+  local profile=$1
+  local -a choices
+
+  choices=()
+
+  _call_program help-command "ls -1 $PROFILE_DIR/$profile" | while read -A line; do choices=($line $choices) done
+
+  _values "Choices" $choices && return 0
+}
+
+_epro-mixins-choices() {
+  local line
+  local -a choices
+
+  choices=()
+
+  _call_program help-command "ls -1 $PROFILE_DIR/mix-ins" | while read -A line; do choices=(+$line -$line $choices) done
+
+  _values "Choices" $choices && return 0
+}
+
+_epro-subarch-choices() {
+  local line
+  local arch=$(cat /etc/portage/make.profile/parent|grep "funtoo/1.0/linux-gnu/arch/[^/]\+$"|sed "s:^.*/\([^/]\+\)$:\1:")
+  local -a choices
+
+  _call_program help-command "ls -1 $PROFILE_DIR/arch/$arch/subarch" | while read -A line; do choices=($line $choices) done
+
+  _values "Choices" $choices && return 0
+}
+
+_epro() {
+  local curcontext="$curcontext" ret=1
+
+  if ((CURRENT == 2)); then
+    _epro-actionlist
+  elif ((CURRENT == 3)); then
+    if [[ $words[2] == list ]]; then
+      _epro-list
+    elif [[ $words[2] == mix-ins ]]; then
+      _epro-mixins-choices
+    elif [[ $words[2] == subarch ]]; then
+      _epro-subarch-choices
+    elif [[ $words[2] == (flavor|arch|build) ]]; then
+      _epro-fetch-choices $words[2]
+    fi
+  fi
+}
+
+compdef _epro epro
