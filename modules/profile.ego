@@ -38,7 +38,7 @@ class ProfileLister(object):
 
 	def keys(self):
 		r = []
-		for k in [ "flavor" , "mix-ins", "subarch", "build", "arch" ]:
+		for k in [ "arch", "subarch", "build", "flavor", "mix-ins" ]:
 			if k in self.info:
 				r.append(k)
 		return r
