@@ -13,36 +13,33 @@ epro \- Funtoo's profile management tool
 is Funtoo's profile management tool. It is a module of
 .B ego
 , meaning you can also access it using
-.B ego profile
+.B ego profile.
 Typing
 .BR epro
 will give you an overview of all set profiles.
 .SH USAGE
-To specify an arch, build, subarch or flavor just use it like:
-.TP
+To specify an arch, subarch, build or flavor, just use it like:
+.IP
 .B epro
 .I profile
 .I dedired-profile
 .TP
-For example, to set your architecture to pure64 use:
+For example, set your architecture to pure64 by using:
+.IP
+.B epro arch pure64
 .TP
-.B "epro arch pure64"
+Since you can have several mix-ins enabled, you can specify more than one option when changing your mix-ins. Use the plus(+) sign or none sign at all, to add a mix-in. And the minus(-) sign to remove it.
 .TP
-Since you can have several mix-ins enabled, you can specify more than one option when changing your mix-ins. Use the plus sign, or none sign at all, to add a mix-in and the minus sign to remove it.
-.TP
-To deselect the kde and cinnamon mix-ins and enable the gnome one instead type:
-.TP
+For example, deselect the kde and cinnamon mix-ins and enable the gnome one instead by using:
+.IP
 .B epro mix-ins -kde -cinnamon +gnome
-
 .SH COMMANDS
 .TP
 .B list
-Displays a detailed list of all available profiles. Enabled profiles are highlighted in cyan, directly enabled ones are printed in bold and have a asterisk appended.
+Displays a list of all available profiles. Enabled profiles are highlighted in cyan, directly enabled ones are printed in bold and have a asterisk appended.
 .TP
 .B show
 Displays your profile settings. Same as running it without any arguments.
-.B list
-Displays a list of all available profiles.
 .SH AUTHORS
 .TP
 Daniel Robbins <drobbins@funtoo.org>
