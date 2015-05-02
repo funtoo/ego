@@ -43,7 +43,7 @@ _epro-mixins-choices() {
 
 _epro-subarch-choices() {
   local line
-  local arch=$(cat /etc/portage/make.profile/parent|grep "funtoo/1.0/linux-gnu/arch/[^/]\+$"|sed "s:^.*/\([^/]\+\)$:\1:")
+  local arch=$(grep "funtoo/1.0/linux-gnu/arch/[^/]\+$" /etc/portage/make.profile/parent|sed "s:^.*/\([^/]\+\)$:\1:")
   local -a choices
 
   _call_program help-command "ls -1 $PROFILE_DIR/arch/$arch/subarch" | while read -A line; do choices=($line $choices) done
