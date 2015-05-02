@@ -1,13 +1,21 @@
-#compdef epro
+#compdef epro ego
 
 PROFILE_DIR="/usr/portage/profiles/funtoo/1.0/linux-gnu"
+
+_ego-modulelist() {
+  local -a modules
+
+  modules=( 'profile' )
+
+  _values 'Modules' $modules && ret=0
+}
 
 _epro-actionlist() {
   local -a actions
 
   actions=( 'show' 'list' 'flavor' 'mix-ins' 'subarch' 'arch' 'build' )
 
-  _values 'Actions' $actions && return 0
+  _values 'Actions' $actions && ret=0
 }
 
 _epro-list() {
@@ -15,7 +23,7 @@ _epro-list() {
 
   profiles=( 'flavor' 'mix-ins' 'subarch' 'arch' 'build' )
 
-  _values 'Profiles' $profiles && return 0
+  _values 'Profiles' $profiles && ret=0
 }
 
 _epro-fetch-choices() {
@@ -27,7 +35,7 @@ _epro-fetch-choices() {
 
   _call_program help-command "ls -1 $PROFILE_DIR/$profile" | while read -A line; do choices=($line $choices) done
 
-  _values "Choices" $choices && return 0
+  _values "Choices" $choices && ret=0
 }
 
 _epro-mixins-choices() {
@@ -38,7 +46,7 @@ _epro-mixins-choices() {
 
   _call_program help-command "ls -1 $PROFILE_DIR/mix-ins" | while read -A line; do choices=(+$line -$line $choices) done
 
-  _values "Choices" $choices && return 0
+  _values "Choices" $choices && ret=0
 }
 
 _epro-subarch-choices() {
@@ -48,10 +56,10 @@ _epro-subarch-choices() {
 
   _call_program help-command "ls -1 $PROFILE_DIR/arch/$arch/subarch" | while read -A line; do choices=($line $choices) done
 
-  _values "Choices" $choices && return 0
+  _values "Choices" $choices && ret=0
 }
 
-_epro() {
+_ego-profile() {
   local curcontext="$curcontext" ret=1
 
   if ((CURRENT == 2)); then
@@ -69,4 +77,18 @@ _epro() {
   fi
 }
 
-compdef _epro epro
+_ego() {
+  local curcontext="$curcontext" ret=1
+
+  if ((CURRENT == 2)); then
+    _ego-modulelist
+  else
+    shift words
+    (( CURRENT -- ))
+    curcontext="${curcontext%:*:*}:ego-$words[1]:"
+    _call_function ret _ego-$words[1]
+  fi
+}
+
+compdef _ego-profile epro
+compdef _ego ego
