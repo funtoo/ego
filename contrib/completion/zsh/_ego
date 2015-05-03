@@ -59,7 +59,11 @@ _epro-mixins-choices() {
 }
 
 _epro-subarch-choices() {
-  local arch=$(grep "$profile_dir/arch/[^/]\+$" $base_profile|sed "s:^.*/\([^/]\+\)$:\1:")
+  local arch
+
+  while read -r parentpro; do
+    [[ $parentpro == *":$profile_dir/arch/"* ]] && arch=${${parentpro##*/arch/}%%/*}
+  done < $base_profile
 
   _epro-fetch-choices arch/$arch/subarch
 }
