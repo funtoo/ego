@@ -1,6 +1,15 @@
 #compdef epro ego
 
-PROFILE_DIR="/usr/portage/profiles/funtoo/1.0/linux-gnu"
+# vim: set et sw=2 sts=2 ts=2 ft=zsh :
+# ZSH completion for `ego`
+# Written by Antoine Pinsard <antoine.pinsard@gmail.com>
+
+while read -r portdir; do
+  [[ $portdir == 'PORTDIR='* ]] && eval $portdir
+done < <(emerge --info)
+
+profile_dir="funtoo/1.0/linux-gnu"
+base_profile="/etc/portage/make.profile/parent"
 
 _ego-modulelist() {
   local -a modules
@@ -31,32 +40,31 @@ _epro-fetch-choices() {
   local profile=$1
   local -a choices
 
-  choices=()
-
-  _call_program help-command "ls -1 $PROFILE_DIR/$profile" | while read -A line; do choices=($line $choices) done
+  choices=("$PORTDIR"/profiles/$profile_dir/$profile/*(/N:t))
 
   _values "Choices" $choices && ret=0
 }
 
 _epro-mixins-choices() {
   local line
+  local -a mixins
   local -a choices
 
   choices=()
-
-  _call_program help-command "ls -1 $PROFILE_DIR/mix-ins" | while read -A line; do choices=(+$line -$line $choices) done
+  mixins=("$PORTDIR"/profiles/$profile_dir/mix-ins/*(/N:t))
+  for choice in $choices; do
+    choices=(+$choice -$choice $choices)
+  done
 
   _values "Choices" $choices && ret=0
 }
 
 _epro-subarch-choices() {
   local line
-  local arch=$(grep "funtoo/1.0/linux-gnu/arch/[^/]\+$" /etc/portage/make.profile/parent|sed "s:^.*/\([^/]\+\)$:\1:")
+  local arch=$(grep "$profile_dir/arch/[^/]\+$" $base_profile|sed "s:^.*/\([^/]\+\)$:\1:")
   local -a choices
 
-  _call_program help-command "ls -1 $PROFILE_DIR/arch/$arch/subarch" | while read -A line; do choices=($line $choices) done
-
-  _values "Choices" $choices && ret=0
+  _epro-fetch-choices arch/$arch/subarch
 }
 
 _ego-profile() {
