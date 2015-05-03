@@ -36,7 +36,6 @@ _epro-list() {
 }
 
 _epro-fetch-choices() {
-  local line
   local profile=$1
   local -a choices
 
@@ -60,9 +59,7 @@ _epro-mixins-choices() {
 }
 
 _epro-subarch-choices() {
-  local line
   local arch=$(grep "$profile_dir/arch/[^/]\+$" $base_profile|sed "s:^.*/\([^/]\+\)$:\1:")
-  local -a choices
 
   _epro-fetch-choices arch/$arch/subarch
 }
