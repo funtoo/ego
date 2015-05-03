@@ -45,7 +45,6 @@ _epro-fetch-choices() {
 }
 
 _epro-mixins-choices() {
-  local line
   local -a mixins
   local -a choices
 
