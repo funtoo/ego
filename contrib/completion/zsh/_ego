@@ -14,7 +14,7 @@ base_profile="/etc/portage/make.profile/parent"
 _ego-modulelist() {
   local -a modules
 
-  modules=( 'profile' )
+  modules=( 'profile' 'info' 'help' )
 
   _values 'Modules' $modules && ret=0
 }
@@ -23,6 +23,8 @@ _epro-actionlist() {
   local -a actions
 
   actions=( 'show' 'list' 'flavor' 'mix-ins' 'subarch' 'arch' 'build' )
+
+  [[ $curcontext == ":complete:ego-profile:" ]] && actions=( 'info' 'help' $actions )
 
   _values 'Actions' $actions && ret=0
 }
