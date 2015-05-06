@@ -1,0 +1,104 @@
+#compdef epro ego
+
+# vim: set et sw=2 sts=2 ts=2 ft=zsh :
+# ZSH completion for `ego`
+# Written by Antoine Pinsard <antoine.pinsard@gmail.com>
+
+while read -r portdir; do
+  [[ $portdir == 'PORTDIR='* ]] && eval $portdir
+done < <(emerge --info)
+
+profile_dir="funtoo/1.0/linux-gnu"
+base_profile="/etc/portage/make.profile/parent"
+
+_ego-modulelist() {
+  local -a modules
+
+  modules=( 'profile' 'info' 'help' )
+
+  _values 'Modules' $modules && ret=0
+}
+
+_epro-actionlist() {
+  local -a actions
+
+  actions=( 'show' 'list' 'flavor' 'mix-ins' 'subarch' 'arch' 'build' )
+
+  [[ $curcontext == ":complete:ego-profile:" ]] && actions=( 'info' 'help' $actions )
+
+  _values 'Actions' $actions && ret=0
+}
+
+_epro-list() {
+  local -a profiles
+
+  profiles=( 'flavor' 'mix-ins' 'subarch' 'arch' 'build' )
+
+  _values 'Profiles' $profiles && ret=0
+}
+
+_epro-fetch-choices() {
+  local profile=$1
+  local -a choices
+
+  choices=("$PORTDIR"/profiles/$profile_dir/$profile/*(/N:t))
+
+  _values "Choices" $choices && ret=0
+}
+
+_epro-mixins-choices() {
+  local -a mixins
+  local -a choices
+
+  choices=()
+  mixins=("$PORTDIR"/profiles/$profile_dir/mix-ins/*(/N:t))
+  for choice in $choices; do
+    choices=(+$choice -$choice $choices)
+  done
+
+  _values "Choices" $choices && ret=0
+}
+
+_epro-subarch-choices() {
+  local arch
+
+  while read -r parentpro; do
+    [[ $parentpro == *":$profile_dir/arch/"* ]] && arch=${${parentpro##*/arch/}%%/*}
+  done < $base_profile
+
+  _epro-fetch-choices arch/$arch/subarch
+}
+
+_ego-profile() {
+  local curcontext="$curcontext" ret=1
+
+  if ((CURRENT == 2)); then
+    _epro-actionlist
+  elif ((CURRENT == 3)); then
+    if [[ $words[2] == list ]]; then
+      _epro-list
+    elif [[ $words[2] == mix-ins ]]; then
+      _epro-mixins-choices
+    elif [[ $words[2] == subarch ]]; then
+      _epro-subarch-choices
+    elif [[ $words[2] == (flavor|arch|build) ]]; then
+      _epro-fetch-choices $words[2]
+    fi
+  fi
+}
+
+_ego() {
+  local curcontext="$curcontext" ret=1
+
+  if ((CURRENT == 2)); then
+    _ego-modulelist
+  else
+    shift words
+    (( CURRENT -- ))
+    curcontext="${curcontext%:*:*}:ego-$words[1]:"
+    _call_function ret _ego-$words[1]
+  fi
+}
+
+compdef _ego-profile epro
+compdef _ego ego
