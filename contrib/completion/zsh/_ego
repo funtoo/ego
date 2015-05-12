@@ -1,12 +1,10 @@
 #compdef epro ego
 
 # vim: set et sw=2 sts=2 ts=2 ft=zsh :
-# ZSH completion for `ego`
+# ZSH completion for ego(8)
 # Written by Antoine Pinsard <antoine.pinsard@gmail.com>
 
-while read -r portdir; do
-  [[ $portdir == 'PORTDIR='* ]] && eval $portdir
-done < <(emerge --info)
+portdir=$(python -c 'import portage;print(portage.settings["PORTDIR"])')
 
 profile_dir="funtoo/1.0/linux-gnu"
 base_profile="/etc/portage/make.profile/parent"
@@ -41,7 +39,7 @@ _epro-fetch-choices() {
   local profile=$1
   local -a choices
 
-  choices=("$PORTDIR"/profiles/$profile_dir/$profile/*(/N:t))
+  choices=("$portdir"/profiles/$profile_dir/$profile/*(/N:t))
 
   _values "Choices" $choices && ret=0
 }
@@ -51,8 +49,8 @@ _epro-mixins-choices() {
   local -a choices
 
   choices=()
-  mixins=("$PORTDIR"/profiles/$profile_dir/mix-ins/*(/N:t))
-  for choice in $choices; do
+  mixins=("$portdir"/profiles/$profile_dir/mix-ins/*(/N:t))
+  for choice in $mixins; do
     choices=(+$choice -$choice $choices)
   done
 
