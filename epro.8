@@ -1,0 +1,51 @@
+.\" -*- coding: utf-8 -*-
+.\" Copyright 2015 Funtoo Solutions Inc.
+.\" Distributed under the terms of the GNU GPL version 2 or later
+.\"
+.TH EPRO 8 "April 2015" "Funtoo Linux" epro
+.SH NAME
+epro \- Funtoo's profile management tool
+.SH SYNOPSIS
+.B epro
+.RI [ "list" | "show" | [ "profile desired-profile" ] ]
+.SH DESCRIPTION
+.B epro
+is Funtoo's profile management tool. It is a module of
+.B ego
+, meaning you can also access it using
+.B ego profile.
+Typing
+.BR epro
+will give you an overview of all set profiles.
+.SH USAGE
+To specify an arch, subarch, build or flavor, just use it like:
+.IP
+.B epro
+.I profile
+.I desired-profile
+.TP
+For example, set your architecture to pure64 by using:
+.IP
+.B epro arch pure64
+.TP
+Since you can have several mix-ins enabled, you can specify more than one option when changing your mix-ins. Use the plus(+) sign or none sign at all, to add a mix-in. And the minus(-) sign to remove it.
+.TP
+For example, deselect the kde and cinnamon mix-ins and enable the gnome one instead by using:
+.IP
+.B epro mix-ins -kde -cinnamon +gnome
+.SH COMMANDS
+.TP
+.B list
+Displays a list of all available profiles. Enabled profiles are highlighted in cyan, directly enabled ones are printed in bold and have a asterisk appended.
+.TP
+.B show
+Displays your profile settings. Same as running it without any arguments.
+.SH AUTHORS
+.TP
+Daniel Robbins <drobbins@funtoo.org>
+.br
+.SH COMMENTS
+.TP
+This manpage was written by Michael Vetter <g.bluehut@gmail.com>.
+.SH "SEE ALSO"
+.BR ego (8)

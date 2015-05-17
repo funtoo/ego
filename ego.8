@@ -1,0 +1,33 @@
+.\" -*- coding: utf-8 -*-
+.\" Copyright 2015 Funtoo Solutions Inc.
+.\" Distributed under the terms of the GNU GPL version 2 or later
+.\"
+.TH EGO 8 "April 2015" "Funtoo Linux" ego
+.SH NAME
+ego \- Funtoo's personality tool
+.SH SYNOPSIS
+.B ego
+.RI [ module ]
+.RI [ info|options ]
+.SH DESCRIPTION
+.P
+.B ego
+is Funtoo's configuration and management meta-tool.
+.P
+Typing
+.BR ego
+will print a list of available commands. Those commands are called ego modules. New modules can be implemented in any language. Ego's modules are designed to be stand-alone commands, so it allows you to access them via shortcuts as well.
+.SH MODULES
+.TP
+.B profile
+.P
+Manage Funtoo Linux profiles like: arch, subarch, build, flavor and mix-ins. Shortcut is:
+.B epro.
+.SH AUTHORS
+.TP
+Daniel Robbins <drobbins@funtoo.org>
+.br
+.SH COMMENTS
+This manpage was written by Michael Vetter <g.bluehut@gmail.com>.
+.SH "SEE ALSO"
+.BR epro (8)
