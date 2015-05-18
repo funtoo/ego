@@ -30,7 +30,7 @@ def run(mod, cmdargs=[], env={}):
 	if not os.path.exists(cmd):
 		print("Ego module %s does not exist." % mod)
 		return
-	subprocess.call([ego_mod_dir + "/" + mod + ".ego"] + cmdargs, env=env)
+	subprocess.call([cmd] + cmdargs, env=env)
 
 def header(info):
 	print("\n=== "+color.BOLD+color.GREEN+info+color.END+": ===\n")
