@@ -228,7 +228,7 @@ else:
 	action = "show"
 args = sys.argv[2:]
 
-if action not in [ "show", "list", "flavor", "mix-in", "mix-ins", "subarch", "arch", "build" ]:
+if action not in [ "show", "show-json", "list", "flavor", "mix-in", "mix-ins", "subarch", "arch", "build" ]:
 	print("Please specify a valid action.")
 	sys.exit(1)
 
@@ -246,7 +246,7 @@ class color:
 
 # We use a ProfileLister for everything but show:
 
-if action != "show":
+if action not in [ "show", "show-json" ]:
 	if "arch" in ps.descendents and len(ps.descendents) != 0:
 		# We list subarches based on the arch path, ie. "arch/x86-64bit/subarch" -- so we need to provide arch name:
 		pl = ProfileLister(repodir,egodescfile, arch=ps.descendents["arch"][0].shortname)
@@ -262,6 +262,19 @@ def shortList():
 			for item in ps.descendents[key]:
 				print("%s%12s%s: %s%s%s" % ( color.BOLD, key, color.END, color.CYAN, item.shortname, color.END ))
 	print()
+
+def shortJSON():
+	outdict = {}
+	for key in key_order:
+		outdict[key] = []
+		for item in ps.descendents[key]:
+			out = {}
+			out["shortname"] = item.shortname
+			if item.path != None:
+				out["path"] = item.path
+			outdict[key].append(out)
+	return outdict
+
 if action == "show":
 	shortList()
 	inherited_things = []
@@ -293,6 +306,8 @@ if action == "show":
 						iccl = "mix-in"
 					print("      %s%26s%s (from %s %s)" % ( color.CYAN, i.shortname, color.END, i.child.shortname, iccl ))
 	print()
+elif action == "show-json":
+	print(json.dumps(shortJSON(),indent=4))
 elif action == "list":
 	args = sys.argv[2:]
 	for key in pl.keys():
