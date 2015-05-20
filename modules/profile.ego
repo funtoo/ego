@@ -225,7 +225,7 @@ else:
 	action = "show"
 args = sys.argv[2:]
 
-if action not in valid_actions:
+if action not in valid_actions + [ "mix-in" ]:
 	print("Please specify a valid action.")
 	sys.exit(1)
 
