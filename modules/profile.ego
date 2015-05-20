@@ -13,7 +13,7 @@ reponamefile = os.path.join(repodir,"repo_name")
 valid_single_profiles = [ "flavor", "build", "arch", "subarch" ]
 valid_multi_profiles = [ "mix-ins" ]
 valid_profiles = valid_single_profiles + valid_multi_profiles
-valid_actions = valid_profiles + [ "show", "show-json", "list" ]
+valid_actions = valid_profiles + [ "show", "show-json", "get", "list" ]
 
 if os.path.exists(reponamefile):
 	with open(reponamefile,"r") as rnf:
@@ -305,6 +305,13 @@ if action == "show":
 	print()
 elif action == "show-json":
 	print(json.dumps(shortJSON(),indent=4))
+elif action == "get":
+	if len(sys.argv) >= 3 and sys.argv[2] in valid_profiles:
+		short_json = shortJSON()
+		print(' '.join(p['shortname'] for p in short_json[sys.argv[2]]))
+	else:
+		print("Please specify a valid target.")
+		sys.exit(1)
 elif action == "list":
 	args = sys.argv[2:]
 	for key in pl.keys():
@@ -368,8 +375,8 @@ elif action == "list":
 elif action in valid_profiles + [ "mix-in" ]:
 	if action in valid_single_profiles:
 		if len(sys.argv) < 3:
-		    print("Please specify a valid target.")
-		    sys.exit(1)
+			print("Please specify a valid target.")
+			sys.exit(1)
 		newset = sys.argv[2]
 		if newset not in pl.list(action):
 			warning("%s %s not available. Can't set." % ( action, newset ))
