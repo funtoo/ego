@@ -2,12 +2,12 @@
 .\" Copyright 2015 Funtoo Solutions Inc.
 .\" Distributed under the terms of the GNU GPL version 2 or later
 .\"
-.TH EPRO 8 "April 2015" "Funtoo Linux" epro
+.TH EPRO 8 "May 2015" "Funtoo Linux" epro
 .SH NAME
 epro \- Funtoo's profile management tool
 .SH SYNOPSIS
 .B epro
-.RI [ "list" | "show" | [ "profile desired-profile" ] ]
+.RI [ "list" | "show" | "show-json" | [ "profile desired-profile" ] ]
 .SH DESCRIPTION
 .B epro
 is Funtoo's profile management tool. It is a module of
@@ -40,6 +40,9 @@ Displays a list of all available profiles. Enabled profiles are highlighted in c
 .TP
 .B show
 Displays your profile settings. Same as running it without any arguments.
+.TP
+.B show-json
+Outputs profile settings and paths in JSON format, suitable for parsing by other applications.
 .SH AUTHORS
 .TP
 Daniel Robbins <drobbins@funtoo.org>

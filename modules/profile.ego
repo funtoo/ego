@@ -267,6 +267,8 @@ def shortJSON():
 	outdict = {}
 	for key in key_order:
 		outdict[key] = []
+		if not key in ps.descendents:
+			continue
 		for item in ps.descendents[key]:
 			out = {}
 			out["shortname"] = item.shortname
