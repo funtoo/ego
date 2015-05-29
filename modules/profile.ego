@@ -32,9 +32,17 @@ class ProfileLister(object):
 		if os.path.exists(p):
 			with open(p,"r") as ed:
 				self.info = json.loads(ed.read())
-		# The subarch entry is dynamically generated based on the system's arch:
+		for k in self.info:
+			if not isinstance(self.info[k], list):
+				# move everything inside a list. We can have multiple mix-in directories now (subarch mix-ins, etc.)
+				self.info[k] = [self.info[k]]
+		if "mix-ins" not in self.info:
+			self.info["mix-ins"] = []
+		# The subarch entry is dynamically generated based on the system's arch. We assume we only have one arch set:
 		if arch != None and "arch" in self.info:
-			self.info["subarch"] = self.info["arch"] + "/" + self.arch + "/subarch"
+			self.info["subarch"] = [ self.info["arch"][0] + "/" + self.arch + "/subarch" ]
+			# We now have subarch mix-ins! Specific to subarches. :)
+			self.info["mix-ins"].append(self.info["arch"][0] + "/" + self.arch + "/mix-ins")
 
 	def keys(self):
 		r = []
@@ -49,11 +57,14 @@ class ProfileLister(object):
 		return None
 
 	def list(self,key):
-		p = self.repodir + "/" + self[key]
-		if os.path.exists(p):
-			return os.listdir(p)
-		else:
-			return []
+		things = []
+		for item in self[key]:
+			p = self.repodir + "/" + item
+			if os.path.exists(p):
+				for thing in os.listdir(p):
+					if os.path.isdir(p + "/" + thing):
+						things.append(thing)
+		return things
 
 # This is used to record all enabled thingsr, even by inheritance. Short names, not live objects are stored here.
 
@@ -311,6 +322,9 @@ if action == "show":
 elif action == "show-json":
 	print(json.dumps(shortJSON(),indent=4))
 elif action == "list":
+
+	# Time to list all available profile settings.
+
 	args = sys.argv[2:]
 	for key in pl.keys():
 		if args != [] and key not in args:
@@ -327,10 +341,8 @@ elif action == "list":
 				active_keys.append(my_ps.shortname)
 
 		header(key)
-		dirp = repodir + "/" + pl[key]
-		if dirp == None:
-			continue
-		avail = []
+		items = pl.list(key)
+		items.sort()
 
 		# We handle our own output formatting/spacing/newlines. These vars are used for this.
 		# lpos - column position; maxpos - when to wrap; count - item count.
@@ -338,11 +350,12 @@ elif action == "list":
 		lpos = 4
 		maxpos = 60
 		count = 0
-		sys.stdout.write(" " * lpos)
-		items = os.listdir(dirp)
-		items.sort()
 
 		# write each item out -- when we cross maxpos characters, add a newline and indent:
+		sys.stdout.write(" " * lpos)
+		if not items:
+			sys.stdout.write("None available")
+			continue
 		for x in items:
 			if lpos > maxpos:
 				sys.stdout.write("\n")
@@ -360,14 +373,13 @@ elif action == "list":
 				outx = color.DARKCYAN + x + color.END
 			else:
 				outx = x
-			if os.path.isdir(dirp+"/"+x):
-				count += 1
-				if count == 1 or lpos == 4:
-					sys.stdout.write(outx)
-					lpos += len(x)
-				else:
-					sys.stdout.write(", "+outx)
-					lpos += len(x) + 2
+			count += 1
+			if count == 1 or lpos == 4:
+				sys.stdout.write(outx)
+				lpos += len(x)
+			else:
+				sys.stdout.write(", "+outx)
+				lpos += len(x) + 2
 		print()
 	print()
 elif action in [ "flavor", "mix-in", "mix-ins", "subarch", "build", "arch" ]:
