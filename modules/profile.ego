@@ -254,7 +254,7 @@ class color:
 
 # We use a ProfileLister for everything but show:
 
-if action not in [ "show", "show-json" ]:
+if action not in [ "show", "show-json", "get" ]:
 	if "arch" in ps.descendents and len(ps.descendents) != 0:
 		# We list subarches based on the arch path, ie. "arch/x86-64bit/subarch" -- so we need to provide arch name:
 		pl = ProfileLister(repodir,egodescfile, arch=ps.descendents["arch"][0].shortname)
