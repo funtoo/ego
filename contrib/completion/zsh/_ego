@@ -2,12 +2,9 @@
 
 # vim: set et sw=2 sts=2 ts=2 ft=zsh :
 # ZSH completion for ego(8)
-# Written by Antoine Pinsard <antoine.pinsard@gmail.com>
 
-portdir=$(python -c 'import portage;print(portage.settings["PORTDIR"])')
-
-profile_dir="funtoo/1.0/linux-gnu"
-base_profile="/etc/portage/make.profile/parent"
+local portdir=$(python -c 'import portage;print(portage.settings["PORTDIR"])')
+local profile_dir="funtoo/1.0/linux-gnu"
 
 _ego-modulelist() {
   local -a modules
@@ -20,14 +17,14 @@ _ego-modulelist() {
 _epro-actionlist() {
   local -a actions
 
-  actions=( 'show' 'list' 'flavor' 'mix-ins' 'subarch' 'arch' 'build' )
+  actions=( 'show' 'show-json' 'get' 'list' 'flavor' 'mix-ins' 'subarch' 'arch' 'build' )
 
   [[ $curcontext == ":complete:ego-profile:" ]] && actions=( 'info' 'help' $actions )
 
   _values 'Actions' $actions && ret=0
 }
 
-_epro-list() {
+_epro-profile-choices() {
   local -a profiles
 
   profiles=( 'flavor' 'mix-ins' 'subarch' 'arch' 'build' )
@@ -58,13 +55,7 @@ _epro-mixins-choices() {
 }
 
 _epro-subarch-choices() {
-  local arch
-
-  while read -r parentpro; do
-    [[ $parentpro == *":$profile_dir/arch/"* ]] && arch=${${parentpro##*/arch/}%%/*}
-  done < $base_profile
-
-  _epro-fetch-choices arch/$arch/subarch
+  _epro-fetch-choices arch/$(epro get arch)/subarch
 }
 
 _ego-profile() {
@@ -73,14 +64,18 @@ _ego-profile() {
   if ((CURRENT == 2)); then
     _epro-actionlist
   elif ((CURRENT == 3)); then
-    if [[ $words[2] == list ]]; then
-      _epro-list
+    if [[ $words[2] == (list|get) ]]; then
+      _epro-profile-choices
     elif [[ $words[2] == mix-ins ]]; then
       _epro-mixins-choices
     elif [[ $words[2] == subarch ]]; then
       _epro-subarch-choices
     elif [[ $words[2] == (flavor|arch|build) ]]; then
       _epro-fetch-choices $words[2]
+    fi
+  elif ((CURRENT > 3)); then
+    if [[ $words[2] == list ]]; then
+      _epro-profile-choices
     fi
   fi
 }
