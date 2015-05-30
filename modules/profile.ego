@@ -10,6 +10,11 @@ egodescfile = repodir + "/profiles.ego.desc"
 profiledir = "/etc/portage/make.profile"
 reponamefile = os.path.join(repodir,"repo_name")
 
+valid_single_profiles = [ "flavor", "build", "arch", "subarch" ]
+valid_multi_profiles = [ "mix-ins" ]
+valid_profiles = valid_single_profiles + valid_multi_profiles
+valid_actions = valid_profiles + [ "show", "show-json", "get", "list" ]
+
 if os.path.exists(reponamefile):
 	with open(reponamefile,"r") as rnf:
 		reponame = rnf.read().strip()
@@ -46,7 +51,7 @@ class ProfileLister(object):
 
 	def keys(self):
 		r = []
-		for k in [ "arch", "subarch", "build", "flavor", "mix-ins" ]:
+		for k in valid_profiles:
 			if k in self.info:
 				r.append(k)
 		return r
@@ -66,9 +71,9 @@ class ProfileLister(object):
 						things.append(thing)
 		return things
 
-# This is used to record all enabled thingsr, even by inheritance. Short names, not live objects are stored here.
+# This is used to record all enabled things, even by inheritance. Short names, not live objects are stored here.
 
-all_enabled = { "flavor" : set(), "mix-ins" : set(), "subarch" : set(), "build" : set() }
+all_enabled = dict((p, set()) for p in valid_profiles)
 
 # ProfileSetting will recurse into the system's profile settings and determine heirarchical relationships
 # of the profile, and create a tree of ProfileSetting objects (linked via self.child, self.descendents).
@@ -190,16 +195,8 @@ class ProfileSetting(object):
 	def classify(self):
 		ps = self.path.split("/")
 		pstag = ps[-2:-1][0]
-		if pstag == "flavor":
-			return "flavor"
-		elif pstag == "arch":
-			return "arch"
-		elif pstag == "mix-ins":
-			return "mix-ins"
-		elif pstag == "subarch":
-			return "subarch"
-		elif pstag == "build":
-			return "build"
+		if pstag in valid_profiles:
+			return pstag
 		else:
 			return "misc"
 
@@ -239,7 +236,7 @@ else:
 	action = "show"
 args = sys.argv[2:]
 
-if action not in [ "show", "show-json", "list", "flavor", "mix-in", "mix-ins", "subarch", "arch", "build" ]:
+if action not in valid_actions + [ "mix-in" ]:
 	print("Please specify a valid action.")
 	sys.exit(1)
 
@@ -321,6 +318,13 @@ if action == "show":
 	print()
 elif action == "show-json":
 	print(json.dumps(shortJSON(),indent=4))
+elif action == "get":
+	if len(sys.argv) >= 3 and sys.argv[2] in valid_profiles:
+		short_json = shortJSON()
+		print(' '.join(p['shortname'] for p in short_json[sys.argv[2]]))
+	else:
+		print("Please specify a valid target.")
+		sys.exit(1)
 elif action == "list":
 
 	# Time to list all available profile settings.
@@ -382,11 +386,11 @@ elif action == "list":
 				lpos += len(x) + 2
 		print()
 	print()
-elif action in [ "flavor", "mix-in", "mix-ins", "subarch", "build", "arch" ]:
-	if action in [ "flavor", "subarch", "build", "arch" ]:
+elif action in valid_profiles + [ "mix-in" ]:
+	if action in valid_single_profiles:
 		if len(sys.argv) < 3:
-		    print("Please specify a valid target.")
-		    sys.exit(1)
+			print("Please specify a valid target.")
+			sys.exit(1)
 		newset = sys.argv[2]
 		if newset not in pl.list(action):
 			warning("%s %s not available. Can't set." % ( action, newset ))
@@ -404,7 +408,6 @@ elif action in [ "flavor", "mix-in", "mix-ins", "subarch", "build", "arch" ]:
 	else:
 		if action == "mix-in":
 			action = "mix-ins"
-		# action == "mix-in":
 		adds = set()
 		subs = set()
 		for i in sys.argv[2:]:
@@ -463,7 +466,7 @@ elif action in [ "flavor", "mix-in", "mix-ins", "subarch", "build", "arch" ]:
 
 for x in ps.parents:
 	c = x.cl
-	if c in [ "flavor", "arch", "subarch", "build" ] and len(ps.descendents[c]) > 1:
+	if c in valid_single_profiles and len(ps.descendents[c]) > 1:
 		warning("Extra profile of type '%s' defined: '%s'. Will be removed." % ( c, x.shortname))
 		writeout = True
 for key in required_keys:
