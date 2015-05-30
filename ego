@@ -1,5 +1,9 @@
 #!/usr/bin/python3
+"""
+ego
 
+Funtoo's personality tool
+"""
 import os, sys
 import glob
 import json
@@ -20,39 +24,39 @@ class color:
 	END = '\033[0m'
 
 ego_dir = "/usr/share/ego"
-ego_mod_dir = "%s/modules" % ego_dir
-ego_mod_inf = "%s/modules-info" % ego_dir
+ego_mods_dir = "%s/modules" % ego_dir
+ego_mods_info_dir = "%s/modules-info" % ego_dir
 ego_mods = []
-ego_mod_info = {}
+ego_mods_info = {}
 
 def run(mod, cmdargs=[], env={}):
-	cmd = ego_mod_dir + "/" + mod + ".ego"
+	cmd = ego_mods_dir + "/" + mod + ".ego"
 	if not os.path.exists(cmd):
 		print("Ego module %s does not exist." % mod)
 		return
-	subprocess.call([ego_mod_dir + "/" + mod + ".ego"] + cmdargs, env=env)
+	subprocess.call([cmd] + cmdargs, env=env)
 
 def header(info):
 	print("\n=== "+color.BOLD+color.GREEN+info+color.END+": ===\n")
 
-if os.path.isdir(ego_mod_dir):
-	for match in glob.glob(ego_mod_dir + "/*.ego"):
+if os.path.isdir(ego_mods_dir):
+	for match in glob.glob(ego_mods_dir + "/*.ego"):
 		ego_mods.append(match.split("/")[-1][:-4])
 for mod in ego_mods:
-	inf_path = ego_mod_inf + "/" + mod + ".json"
+	inf_path = ego_mods_info_dir + "/" + mod + ".json"
 	if os.path.exists(inf_path):
 		with open(inf_path,"r") as inf:
-			ego_mod_info[mod] = json.loads(inf.read())
+			ego_mods_info[mod] = json.loads(inf.read())
 
 if len(sys.argv) == 1 or ( len(sys.argv) == 2 and sys.argv[1] in [ "info", "help" ] ):
 	print("Usage: %s [module] [info|options]..." % os.path.basename(sys.argv[0]))
 	header("Available ego modules")
 	for mod in ego_mods:
 		inf = ''
-		if mod in ego_mod_info and "description" in ego_mod_info[mod]:
-			inf = ego_mod_info[mod]["description"]
-		if "shortcut" in ego_mod_info[mod]:
-			inf += " (%s%s%s)" % ( color.BOLD, ego_mod_info[mod]["shortcut"], color.END )
+		if mod in ego_mods_info and "description" in ego_mods_info[mod]:
+			inf = ego_mods_info[mod]["description"]
+		if "shortcut" in ego_mods_info[mod]:
+			inf += " (%s%s%s)" % ( color.BOLD, ego_mods_info[mod]["shortcut"], color.END )
 		print("%s%15s%s - %s" % ( color.CYAN, mod, color.END, inf ))
 	print()
 elif len(sys.argv) == 3 and sys.argv[2] in [ "info", "help"]:
@@ -61,17 +65,17 @@ elif len(sys.argv) == 3 and sys.argv[2] in [ "info", "help"]:
 	if mod not in ego_mods:
 		print("Module not found: %s. Exiting." % mod)
 		sys.exit(1)
-	if mod not in ego_mod_info:
+	if mod not in ego_mods_info:
 		print("No %s is available for %s ego module." % (action, mod))
 	else:
 		if action == "info":
 			print("Extended information for %s ego module:" % mod)
-			for key in ego_mod_info[mod]:
-				print("%20s: %s" % (key, ego_mod_info[mod][key]))
+			for key in ego_mods_info[mod]:
+				print("%20s: %s" % (key, ego_mods_info[mod][key]))
 			print()
 		else:
-			if "help" in ego_mod_info[mod]:
-				print(ego_mod_info[mod]["help"])
+			if "help" in ego_mods_info[mod]:
+				print(ego_mods_info[mod]["help"])
 			else:
 				print("No help available for this ego module.")
 else:
