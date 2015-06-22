@@ -1,0 +1,6 @@
+CFLAGS="-O2 -fomit-frame-pointer -march=k6 -pipe"
+CXXFLAGS="${CFLAGS}"
+FFLAGS="${CFLAGS}"
+FCFLAGS="${CFLAGS}"
+
+CPU_FLAGS_X86="mmx"

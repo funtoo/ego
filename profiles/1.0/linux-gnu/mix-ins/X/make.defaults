@@ -1,0 +1,2 @@
+USE="X udev dbus"							# desktop gui frameworks
+USE="$USE dri"		                             			# desktop hardware support
