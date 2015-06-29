@@ -71,6 +71,14 @@ class ProfileLister(object):
 						things.append(thing)
 		return things
 
+	def find(self,key,val):
+		if not key in self.info:
+			return None
+		for path in self.info[key]:
+			if os.path.exists(os.path.join(self.repodir,path,val)):
+				return path
+		return None
+
 # This is used to record all enabled things, even by inheritance. Short names, not live objects are stored here.
 
 all_enabled = dict((p, set()) for p in valid_profiles)
@@ -402,7 +410,8 @@ elif action in valid_profiles + [ "mix-in" ]:
 		# ps is the head of our heirarchy of ProfileSettings. Hack it -- inject our new profile info as a
 		# direct descendent of ps. Then the write() function will write the correct stuff out to the
 		# profile.
-		ps.descendents[action] = [ProfileSetting(ps.repomap,name=newset,cl=action,parent_line=reponame + ":" + pl[action] + "/" + newset,child=ps)]
+		action_path = pl.find(action,newset)
+		ps.descendents[action] = [ProfileSetting(ps.repomap,name=newset,cl=action,parent_line=reponame + ":" + action_path + "/" + newset,child=ps)]
 		shortList()
 		print(">>> Set %s to %s." % ( action, newset ))
 	else:
@@ -444,7 +453,8 @@ elif action in valid_profiles + [ "mix-in" ]:
 			if new_shortname in active:
 				notadded.add(new_shortname)
 				continue
-			new_ps = ProfileSetting(ps.repomap,name=new_shortname,cl="mix-ins",parent_line=reponame + ":" + pl["mix-ins"] + "/" + new_shortname,child=ps)
+			mixin_path = pl.find("mix-ins",new_shortname)
+			new_ps = ProfileSetting(ps.repomap,name=new_shortname,cl="mix-ins",parent_line=reponame + ":" + mixin_path + "/" + new_shortname,child=ps)
 			if "mix-ins" not in ps.descendents:
 				ps.descendents["mix-ins"] = []
 			ps.descendents["mix-ins"].append(new_ps)
