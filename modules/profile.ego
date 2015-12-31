@@ -260,7 +260,7 @@ class ProfileSetting(object):
 	def write(self):
 		if not self.parentfile:
 			return
-		out = self.genProfileString()
+		out = self._genProfileString()
 		with open(self.parentfile,"w") as f:
 			f.write(out)
 
