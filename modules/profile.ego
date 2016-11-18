@@ -127,7 +127,12 @@ all_enabled = dict((p, set()) for p in valid_profiles)
 
 class ProfileSetting(object):
 
-	def __init__(self,repomap={},name=None,cl=None,path=None,child=None,parent_line=None,top={ "mix-ins" : None, "flavor" : None}):
+	def __init__(self,repomap=None,name=None,cl=None,path=None,child=None,parent_line=None,top=None):
+		if repomap is None:
+			repomap = {}
+		if top is None:
+			top = {"mix-ins": None, "flavor": None}
+
 		# For user-specified settings (changing flavors, etc.) -- we use self.name, and self.cl (for type)
 
 		self.name = name

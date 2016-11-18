@@ -29,7 +29,11 @@ ego_mods_info_dir = "%s/modules-info" % ego_dir
 ego_mods = []
 ego_mods_info = {}
 
-def run(mod, cmdargs=[], env={}):
+def run(mod, cmdargs=None, env=None):
+	if cmdargs is None:
+		cmdargs = []
+	if env is None:
+		env = {}
 	cmd = ego_mods_dir + "/" + mod + ".ego"
 	if not os.path.exists(cmd):
 		print("Ego module %s does not exist." % mod)
