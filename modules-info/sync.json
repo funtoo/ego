@@ -1,0 +1,6 @@
+{
+	"description" : "Synchronize Portage tree.",
+	"author" : "Daniel Robbins",
+	"version" : "1.0",
+	"actions" : [ "update" ]
+}
