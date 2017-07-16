@@ -4,28 +4,33 @@ import os, sys
 
 class TreeSyncer(object):
 
-	def update(self):
-		if not os.path.exists("/var/git/meta-repo"):
-			if not os.path.exists("/var/git"):
-				os.makedirs("/var/git")
-			os.system("(cd /var/git; git clone https://github.com/funtoo/meta-repo && cd meta-repo && git submodules init && git submodules update)")
+	def __init__(self,opts=[]):
+		self.opts = opts
+
+	def update(self,dest="/var/git"):
+		d = dest + "/meta-repo"
+		if not os.path.exists(d):
+			if not os.path.exists(dest):
+				os.makedirs(dest)
+			os.system("(cd %s; git clone https://github.com/funtoo/meta-repo && cd meta-repo && git submodule init && git submodule update %s)" % (dest," ".join(self.opts)))
 		else:
-			os.system("(cd /var/git/meta-repo; git pull -f && git submodule init && git submodule update)")
-		os.system("chown -R portage:portage /var/git/meta-repo")
+			os.system("(cd %s; git pull -f && git submodule init && git submodule update %s)" % (d, " ".join(self.opts)))
+		os.system("chown -R portage:portage %s" % d)
 
 writeout = False
 
-if len(sys.argv) > 1:
-	action = sys.argv[1]
-else:
-	action = "update"
-args = sys.argv[2:]
+action = "update"
 
-if action not in [ "update" ]:
-	print("Please specify a valid action.")
-	sys.exit(1)
+# grab options for submodule update
+opts = []
+dest = "/var/git"
+for x in sys.argv[1:]:
+	if x.startswith("--dest="):
+		dest = x[7:]
+	elif x.startswith("-"):
+		opts.append(x)
 
-a = TreeSyncer()
-a.update()
+a = TreeSyncer(opts=opts)
+a.update(dest=dest)
 
 # vim: ts=4 noet sw=4
