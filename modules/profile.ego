@@ -128,9 +128,14 @@ all_enabled = dict((p, set()) for p in valid_profiles)
 # a profile setting, we tweak the top object's decendents info. Then the write() method will write out the
 # updated information.
 
+upgrade_to_core_kit = False
+
 class ProfileSetting(object):
 
 	def __init__(self,repomap=None,name=None,cl=None,path=None,child=None,parent_line=None,top=None):
+		global upgrade_to_core_kit
+		global reponame
+
 		if repomap is None:
 			repomap = {}
 		if top is None:
@@ -149,7 +154,6 @@ class ProfileSetting(object):
 		# Parent_line contains line from the parent file that refers to this profile entry.
 
 		self.parent_line = parent_line
-
 
 		# for top-level (user-selected) flavors and mix-ins, self.inherited will hold a list of
 		# child flavors and mix-ins inherited via parent.
@@ -185,6 +189,9 @@ class ProfileSetting(object):
 
 		self.parentfile = None
 
+		if reponame == "core-kit" and self.reponame and self.reponame == "gentoo":
+			upgrade_to_core_kit = True
+
 		if path != None:
 
 			# If we are creating a fake ProfileSetting to change a flavor, etc, then path will be None.
@@ -207,6 +214,16 @@ class ProfileSetting(object):
 					if self.top[ty] != None:
 						self.top[ty].inherited[self.cl].append(self)
 			self._process()
+
+	@property
+	def reponame(self):
+		if self.parent_line == None:
+			return None
+		sp = self.parent_line.split(":")
+		if len(sp) == 2:
+			return sp[0]
+		else:
+			return None
 
 	def _nextTop(self):
 		# This function returns a dict of top values to be used by _process()
@@ -255,6 +272,7 @@ class ProfileSetting(object):
 			return "misc"
 
 	def _genProfileString(self):
+		global reponame
 		out = ""
 		for key in key_order:
 			if key in self.descendents and len(self.descendents[key]):
@@ -262,6 +280,9 @@ class ProfileSetting(object):
 					for item in self.descendents[key]:
 						out += item.parent_line + "\n"
 				else:
+					if reponame == "core-kit" and self.descendents[key][0].reponame == "gentoo":
+						# convert "gentoo" references to "core-kit"
+						self.descendents[key][0].parent_line = "core-kit:" + self.descendents[key][0].parent_line.split(":")[1]
 					out += self.descendents[key][0].parent_line + "\n"
 		return out
 
@@ -280,15 +301,13 @@ def header(info):
 	print("\n=== "+color.BOLD+color.GREEN+info+color.END+": ===\n")
 
 # Use ProfileSetting to recurse into the current system's profile settings, and see what is enabled and inherited.
-
 ps = ProfileSetting(repomap={reponame:repodir},path=profiledir)
-
 inherit_order = "original"
 
 # If the profile needs to be written out for any reason, to either update it or fix it, writeout will be set to
 # true.
 
-writeout = False
+writeout = upgrade_to_core_kit
 
 if len(sys.argv) > 1:
 	action = sys.argv[1]
@@ -537,6 +556,8 @@ for key in required_profiles:
 
 
 if writeout:
+	if upgrade_to_core_kit:
+		warning("Upgrading gentoo repository references to core-kit.")
 	ps.write()
 
 # vim: ts=4 noexpandtab sw=4
