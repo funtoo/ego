@@ -5,12 +5,7 @@ import portage
 import portage.repository.config
 import json
 
-# We are currently relying on portage.settings["PORTDIR"] to find the root location of the profile
-# information.
-#portdir = portage.settings["PORTDIR"]
-
-#New method that works with kits:
-portdir = portage.repository.config.load_repository_config(portage.settings).mainRepoLocation()
+portdir = portage.settings.repositories.mainRepoLocation()
 repodir = portdir + "/profiles"
 egodescfile = repodir + "/profiles.ego.desc"
 
