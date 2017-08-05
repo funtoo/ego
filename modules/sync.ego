@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 
-import os, sys
+import os, sys, subprocess
 
 class TreeSyncer(object):
 
@@ -14,7 +14,15 @@ class TreeSyncer(object):
 				os.makedirs(dest)
 			os.system("(cd %s; git clone https://github.com/funtoo/meta-repo && cd meta-repo && git submodule init && git submodule update %s)" % (dest," ".join(self.opts)))
 		else:
-			os.system("(cd %s; git pull -f && git submodule init && git submodule update %s)" % (d, " ".join(self.opts)))
+			os.system("(cd %s; git pull -f)" % (d))
+			output = subprocess.check_output("(cd %s; git submodule foreach --quiet 'echo $path $(git rev-parse --abbrev-ref HEAD)')" % (d), shell=True)
+			kits = [kit.split(' ') for kit in output.decode('utf-8').split('\n')[:-1]]
+			for path, rev in kits:
+				os.system("(cd %s; git submodule init %s)" % (d, path))
+				if rev == 'HEAD':
+					os.system("(cd %s; git submodule update %s %s)" % (d, path, " ".join(self.opts)))
+				else:
+					os.system("(cd %s/%s; git pull -f)" % (d, path))
 		os.system("chown -R portage:portage %s" % d)
 
 writeout = False
