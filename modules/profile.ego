@@ -4,6 +4,7 @@ import os, sys
 import portage
 import portage.repository.config
 import json
+import subprocess
 
 portdir = portage.settings.repositories.mainRepoLocation()
 repodir = portdir + "/profiles"
@@ -29,7 +30,7 @@ required_profiles = [ "arch", "build", "flavor" ]
 valid_single_profiles = [ "flavor", "build", "arch", "subarch" ]
 valid_multi_profiles = [ "mix-ins" ]
 valid_profiles = valid_single_profiles + valid_multi_profiles
-valid_actions = valid_profiles + [ "show", "show-json", "get", "list" ]
+valid_actions = valid_profiles + [ "show", "show-json", "get", "list", "update" ]
 
 if os.path.exists(reponamefile):
 	with open(reponamefile,"r") as rnf:
@@ -282,6 +283,11 @@ class ProfileSetting(object):
 						# convert "gentoo" references to "core-kit"
 						self.descendents[key][0].parent_line = "core-kit:" + self.descendents[key][0].parent_line.split(":")[1]
 					out += self.descendents[key][0].parent_line + "\n"
+		python_kit_branch = pythonKitBranch()
+		for kit in os.listdir("/var/git/meta-repo/kits"):
+			python_path = "/var/git/meta-repo/kits/" + kit + "/profiles/funtoo/kits/python-kit/" + python_kit_branch
+			if os.path.exists(python_path):
+				out += "%s:funtoo/kits/python-kit/" + python_kit_branch + "\n"
 		return out
 
 	def write(self):
@@ -331,12 +337,19 @@ class color:
 
 # We use a ProfileLister for everything but show:
 
+def pythonKitBranch():
+	return subprocess.getoutput("cd /var/git/meta-repo/kits/python-kit && git branch --remote --verbose --no-abbrev --contains | sed -rne 's/^[^\/]*\/([^\ ]+).*$/\\1/p' | grep -v HEAD")
+
 if action not in [ "show", "show-json", "get" ]:
 	if "arch" in ps.descendents and len(ps.descendents) != 0:
 		# We list subarches based on the arch path, ie. "arch/x86-64bit/subarch" -- so we need to provide arch name:
 		pl = ProfileLister(repodir,egodescfile, arch=ps.descendents["arch"][0].shortname)
 	else:
 		pl = ProfileLister(repodir,egodescfile)
+
+def pythonInfo():
+	header("Python kit")
+	print("%s%12s%s: %s%s%s" % ( color.BOLD, "branch", color.END, color.CYAN, pythonKitBranch(), color.END ))
 
 def shortList():
 	header("Enabled Profiles")
@@ -364,6 +377,7 @@ def shortJSON():
 
 if action == "show":
 	shortList()
+	pythonInfo()
 	inherited_things = []
 	if "flavor" in ps.descendents and len(ps.descendents["flavor"]):
 		# follow first flavor:
@@ -464,7 +478,9 @@ elif action == "list":
 		print()
 	print()
 elif action in valid_profiles + [ "mix-in" ]:
-	if action in valid_single_profiles:
+	if action == "update":
+		ps.write()
+	elif action in valid_single_profiles:
 		if len(sys.argv) < 3:
 			print("Please specify a valid target.")
 			sys.exit(1)
