@@ -273,7 +273,10 @@ class ProfileSetting(object):
 			if key in self.descendents and len(self.descendents[key]):
 				if key in valid_multi_profiles:
 					for item in self.descendents[key]:
-						out += item.parent_line + "\n"
+						if item.parent_line.startswith("gentoo:"):
+							out += "core-kit:" + item.parent_line[7:] + "\n"
+						else:
+							out += item.parent_line + "\n"
 				else:
 					if reponame == "core-kit" and self.descendents[key][0].reponame == "gentoo":
 						# convert "gentoo" references to "core-kit"
