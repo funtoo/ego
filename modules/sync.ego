@@ -1,6 +1,23 @@
 #!/usr/bin/python3
 
 import os, sys
+import subprocess
+import shutil
+import textwrap
+
+term_size = shutil.get_terminal_size((80,20))
+
+class color:
+	PURPLE = '\033[95m'
+	CYAN = '\033[96m'
+	DARKCYAN = '\033[36m'
+	BLUE = '\033[94m'
+	GREEN = '\033[92m'
+	YELLOW = '\033[93m'
+	RED = '\033[91m'
+	BOLD = '\033[1m'
+	UNDERLINE = '\033[4m'
+	END = '\033[0m'
 
 class TreeSyncer(object):
 
@@ -8,13 +25,61 @@ class TreeSyncer(object):
 		self.opts = opts
 
 	def update(self,dest="/var/git"):
+		global auto_upgrade
 		d = dest + "/meta-repo"
+		tag = ""
 		if not os.path.exists(d):
 			if not os.path.exists(dest):
 				os.makedirs(dest)
-			os.system("(cd %s; git clone https://github.com/funtoo/meta-repo && cd meta-repo && git submodule init && git submodule update %s)" % (dest," ".join(self.opts)))
+			os.system("(cd %s && git clone https://github.com/funtoo/meta-repo && cd meta-repo && git submodule init && git submodule update %s)" % (dest," ".join(self.opts)))
 		else:
-			os.system("(cd %s; git pull -f && git submodule init && git submodule update %s)" % (d, " ".join(self.opts)))
+			print(color.PURPLE + "Performing fetch..." + color.END)
+			status, depend=subprocess.getstatusoutput("(cd %s && git fetch >/dev/null 2>&1 && git show --raw origin/master:DEPEND)" % d)
+			if status == 0:
+				from portage.dbapi.vartree import vardbapi
+				from portage.dep import Atom
+				v = vardbapi()
+				deps = depend.split("\n")
+				upgrade = False
+				for dep_line in deps:
+					dep_split = dep_line.split()
+					dep = dep_split[0]
+					tag = dep_split[1]
+					match = v.match(dep)
+					if len(match) == 0:
+						upgrade = True
+						a = Atom(dep)
+						cur_match = v.cp_list(a.cp)
+						if not auto_upgrade:
+							# no match -- inform user
+							print()
+							print("    " + color.BOLD + color.UNDERLINE + "UPGRADE REQUIRED" + color.END + "\n")
+							outstr = "The latest version of meta-repo requires " + color.CYAN + dep + color.END + " but the current version installed is " + color.CYAN + cur_match[-1] + color.END + "."
+							outstr += " To upgrade, meta-repo will switch to tag " + color.GREEN + tag + color.END + ". At this point, update " + a.cp + " by running:"
+							print(textwrap.fill(outstr, term_size[0], initial_indent="   ", subsequent_indent="   "))
+							print()
+							print("       " + color.BOLD + "emerge -1 %s" % a.cp + color.END)
+							print()
+							outstr = "If you would like ego to perfom these steps for you automatically, type:"
+							print(textwrap.fill(outstr, term_size[0], initial_indent="   ", subsequent_indent="   "))
+							print()
+							print("       " + color.BOLD + "ego sync auto-upgrade" + color.END)
+							print()
+							print()
+							print(color.PURPLE + "Switching to tag %s..."  % tag + color.END)
+							os.system("(cd %s && git checkout %s && git submodule init && git submodule update %s)" % (d, tag, " ".join(self.opts)))
+						else:
+							print(color.PURPLE + "Switching to tag %s..."  % tag + color.END)
+							os.system("(cd %s && git checkout %s && git submodule init && git submodule update %s)" % (d, tag, " ".join(self.opts)))
+							print(color.PURPLE + "Performing auto-upgrade..." + color.END)
+							os.system("emerge -1 %s" % a.cp)
+							print(color.PURPLE + "Auto-upgrade complete. Please run ego sync again." + color.END)
+						# only handle one line in DEPEND file per iteration.
+						break
+				if not upgrade:
+					# normal sync
+					print("(cd %s && git pull -f %s && git submodule init && git submodule update %s)" % (d, tag, " ".join(self.opts)))
+		print(color.PURPLE + "Updating permissions..." + color.END)
 		os.system("chown -R portage:portage %s" % d)
 
 writeout = False
@@ -23,13 +88,16 @@ action = "update"
 
 # grab options for submodule update
 opts = []
+auto_upgrade = False
 dest = "/var/git"
 for x in sys.argv[1:]:
 	if x.startswith("--dest="):
 		dest = x[7:]
 	elif x.startswith("-"):
 		opts.append(x)
-
+	if x == "auto-upgrade":
+		auto_upgrade = True
+		
 a = TreeSyncer(opts=opts)
 a.update(dest=dest)
 
