@@ -1,0 +1,70 @@
+#!/usr/bin/python3
+
+import sys
+import appi
+
+
+def handle_version_action(atom_string):
+	"""Given a valid atom string, print version, slot, repository and a marker
+	if installed for each ebuild matching the atom.
+	"""
+	atom = appi.QueryAtom(atom_string, strict=False)
+	ebuilds = sorted(atom.list_matching_ebuilds(), key=lambda x: (
+		x.category, x.package, x.get_version()))
+
+	old_cat_pkg = None
+	old_slot = None
+	cols_size = [4, 4, 4]
+	lines = []
+	for ebuild in ebuilds:
+		cat_pkg = '{}/{}'.format(ebuild.category, ebuild.package)
+		slot = ebuild.vars['SLOT']
+		if cat_pkg != old_cat_pkg:
+			if old_cat_pkg is not None:
+				lines.append(None)
+			lines.append((cat_pkg, 'slot', 'repo'))
+			cols_size[0] = max(cols_size[0], len(cat_pkg))
+			old_cat_pkg = cat_pkg
+			old_slot = None
+		if old_slot != slot:
+			lines.append('-')
+			old_slot = slot
+		else:
+			slot = ''
+		repo = str(ebuild.repository)
+		version = str(ebuild.version)
+		if ebuild.is_installed():
+			version = '* ' + version
+		cols_size = [
+			max(cols_size[0], len(version)),
+			max(cols_size[1], len(slot)),
+			max(cols_size[2], len(repo)),
+		]
+		lines.append((version, slot, repo))
+
+
+	for line in lines:
+		if line is None:
+			sys.stdout.write('\n')
+			continue
+		elif line == '-':
+			cols = ['-' * (s + 1) for s in cols_size]
+			sep = '+'
+		else:
+			cols = [line[i].rjust(cols_size[i] + 1) for i in range(3)]
+			sep = '|'
+		sys.stdout.write(sep.join(cols) + '\n')
+
+if __name__ == '__main__':
+	actions = {
+		'versions': handle_version_action,
+	}
+
+	action = sys.argv[1]
+	if action not in actions:
+		print("'{}' is not a valid action".format(action))
+		sys.exit(1)
+
+	actions[action](*sys.argv[2:])
+
+# vim: ts=4 noexpandtab sw=4
