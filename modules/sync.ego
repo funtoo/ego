@@ -35,12 +35,13 @@ class TreeSyncer(object):
 		else:
 			print(color.PURPLE + "Performing fetch..." + color.END)
 			status, depend=subprocess.getstatusoutput("(cd %s && git fetch >/dev/null 2>&1 && git show --raw origin/master:DEPEND)" % d)
+			upgrade = False
 			if status == 0:
+				# we got a DEPEND file from the remote... let's process it.
 				from portage.dbapi.vartree import vardbapi
 				from portage.dep import Atom
 				v = vardbapi()
 				deps = depend.split("\n")
-				upgrade = False
 				for dep_line in deps:
 					dep_split = dep_line.split()
 					dep = dep_split[0]
@@ -76,9 +77,10 @@ class TreeSyncer(object):
 							print(color.PURPLE + "Auto-upgrade complete. Please run ego sync again." + color.END)
 						# only handle one line in DEPEND file per iteration.
 						break
-				if not upgrade:
-					# normal sync
-					print("(cd %s && git pull -f %s && git submodule init && git submodule update %s)" % (d, tag, " ".join(self.opts)))
+			# time to just do a regular update
+			if not upgrade:
+				# normal sync
+				print("(cd %s && git pull -f %s && git submodule init && git submodule update %s)" % (d, tag, " ".join(self.opts)))
 		print(color.PURPLE + "Updating permissions..." + color.END)
 		os.system("chown -R portage:portage %s" % d)
 
