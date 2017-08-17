@@ -80,7 +80,7 @@ class TreeSyncer(object):
 			# time to just do a regular update
 			if not upgrade:
 				# normal sync
-				print("(cd %s && git pull -f %s && git submodule init && git submodule update %s)" % (d, tag, " ".join(self.opts)))
+				os.system("(cd %s && git pull -f %s && git submodule init && git submodule update %s)" % (d, tag, " ".join(self.opts)))
 		print(color.PURPLE + "Updating permissions..." + color.END)
 		os.system("chown -R portage:portage %s" % d)
 
