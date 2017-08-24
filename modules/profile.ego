@@ -287,7 +287,7 @@ class ProfileSetting(object):
 		for kit in os.listdir("/var/git/meta-repo/kits"):
 			python_path = "/var/git/meta-repo/kits/" + kit + "/profiles/funtoo/kits/python-kit/" + python_kit_branch
 			if os.path.exists(python_path):
-				out += "%s:funtoo/kits/python-kit/" + python_kit_branch + "\n"
+				out += "%s:funtoo/kits/python-kit/" % kit + python_kit_branch + "\n"
 		return out
 
 	def write(self):
@@ -407,6 +407,8 @@ if action == "show":
 						iccl = "mix-in"
 					print("      %s%26s%s (from %s %s)" % ( color.CYAN, i.shortname, color.END, i.child.shortname, iccl ))
 	print()
+elif action == "update":
+	ps.write()
 elif action == "show-json":
 	print(json.dumps(shortJSON(),indent=4))
 elif action == "get":
@@ -478,9 +480,7 @@ elif action == "list":
 		print()
 	print()
 elif action in valid_profiles + [ "mix-in" ]:
-	if action == "update":
-		ps.write()
-	elif action in valid_single_profiles:
+	if action in valid_single_profiles:
 		if len(sys.argv) < 3:
 			print("Please specify a valid target.")
 			sys.exit(1)
