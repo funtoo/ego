@@ -8,11 +8,11 @@ def usage():
 	message = (
 		"Usage: ego query <action> [action-args...]\n\n"
 		"Actions:\n"
-		"\tversions <atom>\n"
-		"\t\tShow available ebuild versions matching the given atom. Shortcut: v\n"
-		"\t\tExamples:\n"
-		"\t\t\t- ego query versions postgresql\n"
-		"\t\t\t- ego query v '=dev-lang/python-3*'\n"
+		"  versions <atom>\n"
+		"    Show available ebuild versions matching the given atom. Shortcut: v\n"
+		"    Examples:\n"
+		"      - ego query versions postgresql\n"
+		"      - ego query v '=dev-lang/python-3*'\n"
 	)
 	sys.stdout.write(message)
 
@@ -81,10 +81,15 @@ if __name__ == '__main__':
 		usage()
 		sys.exit(1)
 	if action not in actions:
-		sys.stderr.write("'{}' is not a valid action".format(action))
+		sys.stderr.write("'{}' is not a valid action\n".format(action))
 		usage()
 		sys.exit(1)
 
-	actions[action](*sys.argv[2:])
+	try:
+		actions[action](*sys.argv[2:])
+	except TypeError:
+		sys.stderr.write("Invalid number of arguments\n")
+		usage()
+		sys.exit(1)
 
 # vim: ts=4 noexpandtab sw=4
