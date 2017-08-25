@@ -4,6 +4,19 @@ import sys
 import appi
 
 
+def usage():
+	message = (
+		"Usage: ego query <action> [action-args...]\n\n"
+		"Actions:\n"
+		"\tversions <atom>\n"
+		"\t\tShow available ebuild versions matching the given atom. Shortcut: v\n"
+		"\t\tExamples:\n"
+		"\t\t\t- ego query versions postgresql\n"
+		"\t\t\t- ego query v '=dev-lang/python-3*'\n"
+	)
+	sys.stdout.write(message)
+
+
 def handle_version_action(atom_string):
 	"""Given a valid atom string, print version, slot, repository and a marker
 	if installed for each ebuild matching the atom.
@@ -55,14 +68,21 @@ def handle_version_action(atom_string):
 			sep = '|'
 		sys.stdout.write(sep.join(cols) + '\n')
 
+
 if __name__ == '__main__':
 	actions = {
 		'versions': handle_version_action,
+		'v': handle_version_action,
 	}
 
-	action = sys.argv[1]
+	try:
+		action = sys.argv[1]
+	except IndexError:
+		usage()
+		sys.exit(1)
 	if action not in actions:
-		print("'{}' is not a valid action".format(action))
+		sys.stderr.write("'{}' is not a valid action".format(action))
+		usage()
 		sys.exit(1)
 
 	actions[action](*sys.argv[2:])
