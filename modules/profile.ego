@@ -287,7 +287,7 @@ class ProfileSetting(object):
 		for kit in os.listdir("/var/git/meta-repo/kits"):
 			python_path = "/var/git/meta-repo/kits/" + kit + "/profiles/funtoo/kits/python-kit/" + python_kit_branch
 			if os.path.exists(python_path):
-				out += "core-kit:funtoo/kits/python-kit/" + python_kit_branch + "\n"
+				out += "%s:funtoo/kits/python-kit/" + python_kit_branch + "\n"
 		return out
 
 	def write(self):
