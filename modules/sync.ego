@@ -112,6 +112,7 @@ class MetaRepoSyncHandler(object):
 			return False
 		else:
 			print(color.GREEN + "Sync successful and kits in alignment! :)" + color.END)
+			subprocess.getstatusoutput("epro update")
 			return True
 
 	def sync_kit(self, kit_name, branch=None):
