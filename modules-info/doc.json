@@ -1,0 +1,7 @@
+{
+	"description" : "Display wiki documentation",
+	"author" : "Daniel Robbins",
+	"version" : "1.0",
+	"actions" : [ ],
+	"shortcut" : "/usr/bin/edoc"
+}

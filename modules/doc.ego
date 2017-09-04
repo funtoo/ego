@@ -1,0 +1,21 @@
+#!/usr/bin/python3
+
+import sys
+import mediawiki_api
+from mediawiki_cli_parser import *
+
+def main(config, args):
+	miwiki = mediawiki_api.Wiki("http://www.funtoo.org/api.php")
+	print("Fetching doc \"%s\" from wiki... (http://www.funtoo.org/%s)" % (args[0], args[0]))
+	sys.stdout.flush()
+	try:
+		wikitext_page = miwiki.getPage(args[0])
+		for block in parse(getMainNodes(wikitext_page), wrap=text_width, article_title=args[0]):
+			sys.stdout.write(block)
+	except BrokenPipeError:
+		# this gets rid of ugly broken pipe message from python:
+		sys.stderr.close()
+		sys.exit(1)
+
+# vim: ts=4 noet sw=4
+

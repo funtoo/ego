@@ -3,7 +3,6 @@
 import sys
 import appi
 
-
 def handle_version_action(atom_string):
 	"""Given a valid atom string, print version, slot, repository and a marker
 	if installed for each ebuild matching the atom.
@@ -55,16 +54,18 @@ def handle_version_action(atom_string):
 			sep = '|'
 		sys.stdout.write(sep.join(cols) + '\n')
 
-if __name__ == '__main__':
+def main(config, args):
 	actions = {
 		'versions': handle_version_action,
 	}
 
-	action = sys.argv[1]
+	action = None
+	if len(args):
+		action = args[0]
 	if action not in actions:
-		print("'{}' is not a valid action".format(action))
+		print("'%s' is not a valid action. Use one of these: %s" % (action, " ".join(actions.keys())))
 		sys.exit(1)
 
-	actions[action](*sys.argv[2:])
+	actions[action](*args[1:])
 
-# vim: ts=4 noexpandtab sw=4
+# vim: ts=4 noet sw=4

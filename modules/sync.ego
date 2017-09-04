@@ -1,106 +1,161 @@
 #!/usr/bin/python3
 
-import os, sys
+from ego_helpers import *
+
 import subprocess
-import shutil
-import textwrap
+import sys
 
-term_size = shutil.get_terminal_size((80,20))
+def runShell( cmd):
+	return os.system(cmd)
 
-class color:
-	PURPLE = '\033[95m'
-	CYAN = '\033[96m'
-	DARKCYAN = '\033[36m'
-	BLUE = '\033[94m'
-	GREEN = '\033[92m'
-	YELLOW = '\033[93m'
-	RED = '\033[91m'
-	BOLD = '\033[1m'
-	UNDERLINE = '\033[4m'
-	END = '\033[0m'
+def runShell_so(cmd):
+	return subprocess.getstatusoutput(cmd)
 
-class TreeSyncer(object):
+class GitHelper(object):
+	
+	def __init__(self, root):
+		self.root = root
+	
+	def localBranches(self):
+		if os.path.exists(root):
+			retval, out = runShell_so("(cd %s && git for-each-ref --format=\"(refname)\" refs/heads)")
+			if retval == 0:
+				for ref in out.split():
+					yield ref.split("/")[-1]
 
-	def __init__(self,opts=[]):
-		self.opts = opts
-
-	def update(self,dest="/var/git"):
-		global auto_upgrade
-		d = dest + "/meta-repo"
-		tag = ""
-		if not os.path.exists(d):
-			if not os.path.exists(dest):
-				os.makedirs(dest)
-			os.system("(cd %s && git clone https://github.com/funtoo/meta-repo && cd meta-repo && git submodule init && git submodule update %s)" % (dest," ".join(self.opts)))
+	@property
+	def currentLocalBranch(self):
+		s, branch = runShell_so("( cd %s && git symbolic-ref --short -q HEAD )" % self.root)
+		if s:
+			return None
 		else:
-			print(color.PURPLE + "Performing fetch..." + color.END)
-			status, depend=subprocess.getstatusoutput("(cd %s && git fetch >/dev/null 2>&1 && git show --raw origin/master:DEPEND)" % d)
-			upgrade = False
-			if status == 0:
-				# we got a DEPEND file from the remote... let's process it.
-				from portage.dbapi.vartree import vardbapi
-				from portage.dep import Atom
-				v = vardbapi()
-				deps = depend.split("\n")
-				for dep_line in deps:
-					dep_split = dep_line.split()
-					dep = dep_split[0]
-					tag = dep_split[1]
-					match = v.match(dep)
-					if len(match) == 0:
-						upgrade = True
-						a = Atom(dep)
-						cur_match = v.cp_list(a.cp)
-						if not auto_upgrade:
-							# no match -- inform user
-							print()
-							print("    " + color.BOLD + color.UNDERLINE + "UPGRADE REQUIRED" + color.END + "\n")
-							outstr = "The latest version of meta-repo requires " + color.CYAN + dep + color.END + " but the current version installed is " + color.CYAN + cur_match[-1] + color.END + "."
-							outstr += " To upgrade, meta-repo will switch to tag " + color.GREEN + tag + color.END + ". At this point, update " + a.cp + " by running:"
-							print(textwrap.fill(outstr, term_size[0], initial_indent="   ", subsequent_indent="   "))
-							print()
-							print("       " + color.BOLD + "emerge -1 %s" % a.cp + color.END)
-							print()
-							outstr = "If you would like ego to perfom these steps for you automatically, type:"
-							print(textwrap.fill(outstr, term_size[0], initial_indent="   ", subsequent_indent="   "))
-							print()
-							print("       " + color.BOLD + "ego sync auto-upgrade" + color.END)
-							print()
-							print()
-							print(color.PURPLE + "Switching to tag %s..."  % tag + color.END)
-							os.system("(cd %s && git checkout %s && git submodule init && git submodule update %s)" % (d, tag, " ".join(self.opts)))
-						else:
-							print(color.PURPLE + "Switching to tag %s..."  % tag + color.END)
-							os.system("(cd %s && git checkout %s && git submodule init && git submodule update %s)" % (d, tag, " ".join(self.opts)))
-							print(color.PURPLE + "Performing auto-upgrade..." + color.END)
-							os.system("emerge -1 %s" % a.cp)
-							print(color.PURPLE + "Auto-upgrade complete. Please run ego sync again." + color.END)
-						# only handle one line in DEPEND file per iteration.
-						break
-			# time to just do a regular update
-			if not upgrade:
-				# normal sync
-				os.system("(cd %s && git pull -f %s && git submodule init && git submodule update %s)" % (d, tag, " ".join(self.opts)))
-		print(color.PURPLE + "Updating permissions..." + color.END)
-		os.system("chown -R portage:portage %s" % d)
+			return branch
 
-writeout = False
+	def localBranchExists(self, branch):
+		if runShell("( cd %s && git show-ref --verify --quiet refs/heads/%s )" % ( self.root, branch)):
+			return False
+		else:
+			return True
 
-action = "update"
+	def shallowFetchRemote(self, branch, remote="origin", depth=1):
+		retval = runShell("(cd %s && git fetch --depth=%s %s refs/heads/%s:refs/remotes/%s/%s)" % ( self.root, depth, remote, branch, remote, branch )) 
 
-# grab options for submodule update
-opts = []
-auto_upgrade = False
-dest = "/var/git"
-for x in sys.argv[1:]:
-	if x.startswith("--dest="):
-		dest = x[7:]
-	elif x.startswith("-"):
-		opts.append(x)
-	if x == "auto-upgrade":
-		auto_upgrade = True
-		
-a = TreeSyncer(opts=opts)
-a.update(dest=dest)
+	def shallowClone(self, url, branch, all_branches=[], depth=1):
+		retval = runShell("(cd %s && git clone -b %s --depth=%s --single-branch %s)" % ( os.path.dirname(self.root), branch, depth, url )) 
 
-# vim: ts=4 noet sw=4
+	def pull(self, force=False):
+		opts=""
+		if force:
+			opts += " -f"
+		retval = runShell("(cd %s && git pull %s)" % (self.root, opts)) 
+
+	def exists(self):
+		return os.path.exists(self.root)
+	
+	def isGitRepo(self):
+		return os.path.exists(os.path.join(self.root, ".git"))
+
+	def checkout(self,branch="master"):
+		out = runShell("(cd %s && git checkout %s)" % ( self.root, branch ))
+		if out == 0:
+			return True
+		else:
+			return False
+	
+	@property
+	def commitID(self):
+		retval, out = runShell_so("(cd %s && git show-ref --hash HEAD)" % self.root)
+		if retval == 0:
+			return out.strip()
+		else:
+			return None
+
+class MetaRepoSyncHandler(object):
+	
+	def __init__(self, config):
+		self.config = config
+		self.root = "/var/git/meta-repo"
+		self.load_metadata()
+
+	def load_metadata(self):
+		self.kit_sha1 = self.load_kit_metadata("sha1")
+		self.kit_info = self.load_kit_metadata("info")
+	
+	def load_kit_metadata(self, fn):
+		ksf = os.path.join(self.root, "metadata/kit-%s.json" % fn)
+		if os.path.exists(ksf):
+			with open(ksf) as a:
+				return json.loads(a.read())
+		else:
+			return {}
+
+	def sync_meta_repo(self):
+		repo = GitHelper(self.root)
+		if repo.exists():
+			repo.shallowFetchRemote("master")
+			repo.pull()
+		else:
+			repo.shallowClone("https://github.com/funtoo/meta-repo", "master")
+		self.load_metadata()
+		fails = []
+		for kt in self.kit_info["kit_order"]:
+			branch = None
+			if "kits" in self.config.settings:
+				if kt in self.config.settings["kits"]:
+					branch = self.config.settings["kits"][kt]
+			success = self.sync_kit(kt, branch=branch)
+			if not success:
+				fails.append((kt, branch))
+		if len(fails):
+			for kt, branch in fails:
+				print(color.RED + "There was an error syncing %s." % kt, color.END)
+			return False
+		else:
+			print(color.GREEN + "Sync successful and kits in alignment! :)" + color.END)
+			return True
+
+	def sync_kit(self, kit_name, branch=None):
+		if branch == None:
+			# use default
+			# TODO: informational message
+			branch = self.kit_info["kit_settings"][kit_name]["default"]
+		if branch == self.kit_info["kit_settings"][kit_name]["default"]:
+			print(color.PURPLE + "Syncing", kit_name, "branch", branch, color.END)
+		else:
+			# highlight non-default branches in green for convenience
+			print(color.PURPLE + "Syncing", kit_name, "branch", color.GREEN + branch + color.PURPLE + " (non-default)" + color.END)
+		kit_path = os.path.join(self.root, "kits", kit_name)
+		kit = GitHelper(kit_path)
+		if not kit.isGitRepo():
+			try:
+				os.rmdir(kit.root)
+			except OSError:
+				pass
+		if kit.exists() and not kit.isGitRepo():
+			print("fatal - kit %s is not a git repository" % kit_name)
+			sys.exit(1)
+		elif not kit.exists():
+			kit.shallowClone("https://github.com/funtoo/%s" % kit_name, branch)
+		# do sync
+		sha1 = kit.commitID
+		desired_sha1 = self.kit_sha1[kit_name][branch]
+		if (sha1 == desired_sha1):
+			# a miracle! we're set up the way we want
+			return True
+		tries = 0
+		success = False
+		while (sha1 != desired_sha1) and tries < 3:
+			# try shallow fetches, incrementing depth if first attempt doesn't work
+			kit.shallowFetchRemote(branch, depth=10**tries)
+			sha1 = kit.commitID
+			if (sha1 != desired_sha1):
+				success = kit.checkout(desired_sha1)
+				if success:
+					break
+		return success
+
+def main(config, args):
+	s = MetaRepoSyncHandler(config)
+	s.sync_meta_repo()
+
+# vim: ts=4 sw=4 noet
