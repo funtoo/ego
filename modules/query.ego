@@ -3,6 +3,19 @@
 import sys
 import appi
 
+
+def usage():
+	message = (
+		"Usage: ego query <action> [action-args...]\n\n"
+		"Actions:\n"
+		"  versions <atom>\n"
+		"    Show available ebuild versions matching the given atom. Shortcut: v\n"
+		"    Examples:\n"
+		"      - ego query versions postgresql\n"
+		"      - ego query v '=dev-lang/python-3*'\n"
+	)
+	sys.stdout.write(message)
+
 def handle_version_action(atom_string):
 	"""Given a valid atom string, print version, slot, repository and a marker
 	if installed for each ebuild matching the atom.
@@ -55,8 +68,10 @@ def handle_version_action(atom_string):
 		sys.stdout.write(sep.join(cols) + '\n')
 
 def main(install_path, config, args):
+	
 	actions = {
 		'versions': handle_version_action,
+		'v': handle_version_action,
 	}
 
 	action = None
@@ -66,6 +81,11 @@ def main(install_path, config, args):
 		print("'%s' is not a valid action. Use one of these: %s" % (action, " ".join(actions.keys())))
 		sys.exit(1)
 
-	actions[action](*args[1:])
+	try:
+		actions[action](*args[1:])
+	except TypeError:
+		sys.stderr.write("Invalid number of arguments\n")
+		usage()
+		sys.exit(1)
 
 # vim: ts=4 noet sw=4
