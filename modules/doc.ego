@@ -4,7 +4,7 @@ import sys
 import mediawiki_api
 from mediawiki_cli_parser import *
 
-def main(config, args):
+def main(install_path, config, args):
 	miwiki = mediawiki_api.Wiki("http://www.funtoo.org/api.php")
 	print("Fetching doc \"%s\" from wiki... (http://www.funtoo.org/%s)" % (args[0], args[0]))
 	sys.stdout.flush()

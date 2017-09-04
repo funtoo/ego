@@ -3,11 +3,33 @@
 import os
 import json
 import glob
+import importlib.machinery
 
 # Ego Helpers module.
 #
 # Copyright 2017 Daniel Robbins and Funtoo Solutions, Inc.
 # See LICENSE.txt for terms of distribution. 
+
+def get_install_path(settings):
+	if "global" in settings and "install_path" in settings["global"]:
+		return settings["global"]["install_path"]
+	else:
+		return "/usr/share/ego"
+
+def get_ego_module(install_path, modname):
+	loader = importlib.machinery.SourceFileLoader(modname, '%s/modules/%s.ego' % (install_path, modname))
+	try:
+		return loader.load_module()
+	except FileNotFoundError:
+		return None
+
+def run_ego_module(install_path, modname, config, args):
+	mod = get_ego_module(install_path, modname)
+	if mod:
+		mod.main(install_path, config, args)
+	else:
+		print(color.RED + "Error: ego module \"%s\" not found." % modname + color.END)
+		sys.exit(1)
 
 class EgoConfig(object):
 

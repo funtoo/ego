@@ -4,11 +4,14 @@ from ego_helpers import *
 
 import subprocess
 import sys
+import re
 
 def runShell( cmd):
+	print(cmd)
 	return os.system(cmd)
 
 def runShell_so(cmd):
+	print(cmd)
 	return subprocess.getstatusoutput(cmd)
 
 class GitHelper(object):
@@ -37,17 +40,17 @@ class GitHelper(object):
 		else:
 			return True
 
-	def shallowFetchRemote(self, branch, remote="origin", depth=1):
-		retval = runShell("(cd %s && git fetch --depth=%s %s refs/heads/%s:refs/remotes/%s/%s)" % ( self.root, depth, remote, branch, remote, branch )) 
+	def fetchRemote(self, branch, remote="origin"):
+		return runShell("(cd %s && git fetch %s refs/heads/%s:refs/remotes/%s/%s)" % ( self.root, remote, branch, remote, branch )) 
 
 	def shallowClone(self, url, branch, all_branches=[], depth=1):
-		retval = runShell("(cd %s && git clone -b %s --depth=%s --single-branch %s)" % ( os.path.dirname(self.root), branch, depth, url )) 
+		return runShell("(cd %s && git clone -b %s --depth=%s --single-branch %s)" % ( os.path.dirname(self.root), branch, depth, url )) 
 
 	def pull(self, force=False):
 		opts=""
 		if force:
-			opts += " -f"
-		retval = runShell("(cd %s && git pull %s)" % (self.root, opts)) 
+			opts += "-f"
+		return runShell("(cd %s && git pull %s)" % (self.root, opts)) 
 
 	def exists(self):
 		return os.path.exists(self.root)
@@ -55,8 +58,12 @@ class GitHelper(object):
 	def isGitRepo(self):
 		return os.path.exists(os.path.join(self.root, ".git"))
 
-	def checkout(self,branch="master"):
-		out = runShell("(cd %s && git checkout %s)" % ( self.root, branch ))
+	def checkout(self,origin=None, branch="master"):
+		if origin != None:
+			args = "%s %s" % (origin, branch)
+		else:
+			args = branch
+		out = runShell("(cd %s && git checkout %s)" % ( self.root, args ))
 		if out == 0:
 			return True
 		else:
@@ -72,11 +79,12 @@ class GitHelper(object):
 
 class MetaRepoSyncHandler(object):
 	
-	def __init__(self, config):
+	def __init__(self, config, install_path):
 		self.config = config
 		self.root = "/var/git/meta-repo"
+		self.install_path = install_path
 		self.load_metadata()
-
+		self.hex_re = re.compile('[0-9a-fA-F]+')
 	def load_metadata(self):
 		self.kit_sha1 = self.load_kit_metadata("sha1")
 		self.kit_info = self.load_kit_metadata("info")
@@ -89,11 +97,25 @@ class MetaRepoSyncHandler(object):
 		else:
 			return {}
 
+	def getSelectedKit(self, kit):
+		# returns the kit selected in ego.conf, or if none specified there, the funtoo default kit
+		branch = None
+		if "kits" in self.config.settings and kit in self.config.settings["kits"]:
+			branch = self.config.settings["kits"][kit]
+		else:
+			branch = self.kit_info["kit_settings"][kit]["default"]
+		return branch
+
 	def sync_meta_repo(self):
 		repo = GitHelper(self.root)
+		print(color.GREEN + "Syncing meta-repo" + color.END)
 		if repo.exists():
-			repo.shallowFetchRemote("master")
-			repo.pull()
+			retval = repo.fetchRemote("master")
+			retval = repo.pull(force=True)
+			if retval != 0:
+				print(color.RED + "There was an error syncing meta-repo." , color.END)
+				sys.exit(1)
+
 		else:
 			repo.shallowClone("https://github.com/funtoo/meta-repo", "master")
 		self.load_metadata()
@@ -112,7 +134,9 @@ class MetaRepoSyncHandler(object):
 			return False
 		else:
 			print(color.GREEN + "Sync successful and kits in alignment! :)" + color.END)
-			subprocess.getstatusoutput("epro update")
+			print(color.GREEN + "Updating profiles..." + color.END)
+			ego_profile = get_ego_module(self.install_path, "profile")
+			ego_profile.main(self.install_path, self.config, [ "update" ] )
 			return True
 
 	def sync_kit(self, kit_name, branch=None):
@@ -140,23 +164,30 @@ class MetaRepoSyncHandler(object):
 		# do sync
 		sha1 = kit.commitID
 		desired_sha1 = self.kit_sha1[kit_name][branch]
-		if (sha1 == desired_sha1):
-			# a miracle! we're set up the way we want
-			return True
-		tries = 0
 		success = False
-		while (sha1 != desired_sha1) and tries < 3:
-			# try shallow fetches, incrementing depth if first attempt doesn't work
-			kit.shallowFetchRemote(branch, depth=10**tries)
+
+		def sha1_check(sha1, desired_sha1):
+			if not self.hex_re.match(sha1):
+				print(color.RED + "Fatal: kit CommitID not a SHA1: %s" % sha1 + color.END)
+				sys.exit(1)
+			if not self.hex_re.match(desired_sha1):
+				print(color.RED + "Fatal: kit-sha1.json value not a SHA1: %s" % desired_sha1 + color.END)
+				sys.exit(1)
+
+		sha1_check(sha1, desired_sha1)
+
+		if (sha1 == desired_sha1):
+			return True
+		else:
+			retval = kit.fetchRemote(branch)
 			sha1 = kit.commitID
+			sha1_check(sha1, desired_sha1)
 			if (sha1 != desired_sha1):
 				success = kit.checkout(desired_sha1)
-				if success:
-					break
 		return success
 
-def main(config, args):
-	s = MetaRepoSyncHandler(config)
+def main(install_path, config, args):
+	s = MetaRepoSyncHandler(config, install_path)
 	s.sync_meta_repo()
 
 # vim: ts=4 sw=4 noet

@@ -54,7 +54,7 @@ def handle_version_action(atom_string):
 			sep = '|'
 		sys.stdout.write(sep.join(cols) + '\n')
 
-def main(config, args):
+def main(install_path, config, args):
 	actions = {
 		'versions': handle_version_action,
 	}

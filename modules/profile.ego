@@ -8,6 +8,7 @@ import portage.repository.config
 import json
 import subprocess
 
+
 # ProfileLister will allow us to see what profile settings -- flavors, subarches, mix-ins, builds --
 # are available. It is initialized by specifying a repository directory, a path to an ego.desc file
 # in the repository (which is JSON that in turn contains paths to where to find each type of sub-
@@ -268,12 +269,9 @@ def header(info):
 
 # We use a ProfileLister for everything but show:
 
-def pythonKitBranch():
-	return subprocess.getoutput("cd /var/git/meta-repo/kits/python-kit && git branch --remote --verbose --no-abbrev --contains | sed -rne 's/^[^\/]*\/([^\ ]+).*$/\\1/p' | grep -v HEAD")
-
 def pythonInfo():
 	header("Python kit")
-	print("%s%12s%s: %s%s%s" % ( color.BOLD, "branch", color.END, color.CYAN, pythonKitBranch(), color.END ))
+	print("%s%12s%s: %s%s%s" % ( color.BOLD, "branch", color.END, color.CYAN, self.ego_sync.getSelectedKit("python-kit"), color.END ))
 
 def shortList(ps, key_order):
 	header("Enabled Profiles")
@@ -299,7 +297,7 @@ def shortJSON(ps, key_order):
 			outdict[key].append(out)
 	return outdict
 
-def main(config, args):
+def main(install_path, config, args):
 	portdir = portage.settings.repositories.mainRepoLocation()
 	repodir = portdir + "/profiles"
 	egodescfile = repodir + "/profiles.ego.desc"
@@ -334,6 +332,10 @@ def main(config, args):
 	else:
 		print("Unable to find the repository name in %s - exiting." % reponamefile)
 		sys.exit(1)
+
+	# connect to ego sync module:
+
+	self.ego_sync = get_ego_module(install_path, "sync")
 
 	# all_enabled is used to record all enabled sub-profile settings, even those enabled through inheritance.
 	# It is a dict that is indexed by sub-profile type. Each key has a value that is a list.
