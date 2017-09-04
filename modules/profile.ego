@@ -91,8 +91,9 @@ class ProfileLister(object):
 # updated information.
 class ProfileSetting(object):
 
-	def __init__(self,repomap=None,name=None, reponame=None, all_enabled=None, valid_profiles=None, cl=None,path=None,child=None,parent_line=None,top=None):
+	def __init__(self,ego_sync=None,repomap=None,name=None, reponame=None, all_enabled=None, valid_profiles=None, cl=None,path=None,child=None,parent_line=None,top=None):
 		global upgrade_to_core_kit
+		self.ego_sync = ego_sync
 		self._reponame = reponame
 		self.valid_profiles = valid_profiles
 		self.all_enabled = all_enabled
@@ -211,13 +212,13 @@ class ProfileSetting(object):
 			colsplit = l.split(":")
 			if l[0] == ":":
 				# ":base" format
-				ps = ProfileSetting(self.repomap,valid_profiles=self.valid_profiles, all_enabled=self.all_enabled, reponame=self._reponame,path=os.path.join(self.repomap[self._reponame],l[1:]),child=self,parent_line=l,top=self._nextTop())
+				ps = ProfileSetting(repomap=self.repomap,ego_sync=self.ego_sync,valid_profiles=self.valid_profiles, all_enabled=self.all_enabled, reponame=self._reponame,path=os.path.join(self.repomap[self._reponame],l[1:]),child=self,parent_line=l,top=self._nextTop())
 			elif len(colsplit) == 2 and colsplit[0] in self.repomap:
 				# "gentoo:foo" format
-				ps = ProfileSetting(self.repomap,valid_profiles=self.valid_profiles,all_enabled=self.all_enabled, reponame=self._reponame,path=os.path.join(self.repomap[colsplit[0]],colsplit[1]),child=self,parent_line=l,top=self._nextTop())
+				ps = ProfileSetting(repomap=self.repomap,ego_sync=self.ego_sync,valid_profiles=self.valid_profiles,all_enabled=self.all_enabled, reponame=self._reponame,path=os.path.join(self.repomap[colsplit[0]],colsplit[1]),child=self,parent_line=l,top=self._nextTop())
 			else:
 				# "../../foo/bar" format
-				ps = ProfileSetting(self.repomap,valid_profiles=self.valid_profiles, all_enabled=self.all_enabled, reponame=self._reponame,path=os.path.normpath(os.path.join(self.path,l)),child=self,parent_line=l,top=self._nextTop())
+				ps = ProfileSetting(repomap=self.repomap,ego_sync=self.ego_sync,valid_profiles=self.valid_profiles, all_enabled=self.all_enabled, reponame=self._reponame,path=os.path.normpath(os.path.join(self.path,l)),child=self,parent_line=l,top=self._nextTop())
 			self.parents.append(ps)
 			if not ps.cl in self.descendents:
 				self.descendents[ps.cl] = []
@@ -246,7 +247,7 @@ class ProfileSetting(object):
 						# convert "gentoo" references to "core-kit"
 						self.descendents[key][0].parent_line = "core-kit:" + self.descendents[key][0].parent_line.split(":")[1]
 					out += self.descendents[key][0].parent_line + "\n"
-		python_kit_branch = pythonKitBranch()
+		python_kit_branch = self.ego_sync.getSelectedKit("python-kit")
 		for kit in os.listdir("/var/git/meta-repo/kits"):
 			python_path = "/var/git/meta-repo/kits/" + kit + "/profiles/funtoo/kits/python-kit/" + python_kit_branch
 			if os.path.exists(python_path):
@@ -269,9 +270,9 @@ def header(info):
 
 # We use a ProfileLister for everything but show:
 
-def pythonInfo():
+def pythonInfo(ego_sync):
 	header("Python kit")
-	print("%s%12s%s: %s%s%s" % ( color.BOLD, "branch", color.END, color.CYAN, self.ego_sync.getSelectedKit("python-kit"), color.END ))
+	print("%s%12s%s: %s%s%s" % ( color.BOLD, "branch", color.END, color.CYAN, ego_sync.getSelectedKit("python-kit"), color.END ))
 
 def shortList(ps, key_order):
 	header("Enabled Profiles")
@@ -296,6 +297,15 @@ def shortJSON(ps, key_order):
 				out["path"] = item.path
 			outdict[key].append(out)
 	return outdict
+
+class SyncModuleLink(object):
+
+	def __init__(self, config, install_path):
+		self.ego_sync = get_ego_module(install_path, "sync")
+		self.sync_handler = self.ego_sync.MetaRepoSyncHandler(config, install_path)	
+
+	def getSelectedKit(self, kit):
+		return self.sync_handler.getSelectedKit(kit)
 
 def main(install_path, config, args):
 	portdir = portage.settings.repositories.mainRepoLocation()
@@ -335,15 +345,16 @@ def main(install_path, config, args):
 
 	# connect to ego sync module:
 
-	self.ego_sync = get_ego_module(install_path, "sync")
 
 	# all_enabled is used to record all enabled sub-profile settings, even those enabled through inheritance.
 	# It is a dict that is indexed by sub-profile type. Each key has a value that is a list.
 
 	all_enabled = dict((p, set()) for p in valid_profiles)
 
+	sync_link = SyncModuleLink(config, install_path)
+
 	# Use ProfileSetting to recurse into the current system's profile settings, and see what is enabled and inherited.
-	ps = ProfileSetting(repomap={reponame:repodir},reponame=reponame,path=profiledir,valid_profiles=valid_profiles,all_enabled=all_enabled)
+	ps = ProfileSetting(repomap={reponame:repodir},ego_sync=sync_link,reponame=reponame,path=profiledir,valid_profiles=valid_profiles,all_enabled=all_enabled)
 	inherit_order = "original"
 
 	# If the profile needs to be written out for any reason, to either update it or fix it, writeout will be set to
