@@ -41,10 +41,14 @@ class GitHelper(object):
 			return True
 
 	def fetchRemote(self, branch, remote="origin"):
+		runShell("(cd %s && git remote set-branches --add %s %s)" % ( self.root, remote, branch ))
 		return runShell("(cd %s && git fetch %s refs/heads/%s:refs/remotes/%s/%s)" % ( self.root, remote, branch, remote, branch )) 
 
-	def shallowClone(self, url, branch, all_branches=[], depth=1):
+	def shallowClone(self, url, branch, depth=1):
 		return runShell("(cd %s && git clone -b %s --depth=%s --single-branch %s)" % ( os.path.dirname(self.root), branch, depth, url )) 
+
+	def createNewLocalBranchToTrackRemote(self, branch):
+		return runShell("(cd %s && git checkout -b %s --track origin/%s)" % ( self.root, branch, branch )) 
 
 	def pull(self, force=False):
 		opts=""
@@ -58,7 +62,7 @@ class GitHelper(object):
 	def isGitRepo(self):
 		return os.path.exists(os.path.join(self.root, ".git"))
 
-	def checkout(self,origin=None, branch="master"):
+	def checkout(self, branch="master", origin=None):
 		if origin != None:
 			args = "%s %s" % (origin, branch)
 		else:
@@ -71,7 +75,7 @@ class GitHelper(object):
 	
 	@property
 	def commitID(self):
-		retval, out = runShell_so("(cd %s && git show-ref --hash HEAD)" % self.root)
+		retval, out = runShell_so("(cd %s && git rev-parse HEAD)" % self.root)
 		if retval == 0:
 			return out.strip()
 		else:
@@ -142,8 +146,10 @@ class MetaRepoSyncHandler(object):
 	def sync_kit(self, kit_name, branch=None):
 		if branch == None:
 			# use default
-			# TODO: informational message
 			branch = self.kit_info["kit_settings"][kit_name]["default"]
+		if branch == None:
+			print(color.RED + "Fatal: branch cannot be None." + color.END)
+			sys.exit(1)
 		if branch == self.kit_info["kit_settings"][kit_name]["default"]:
 			print(color.PURPLE + "Syncing", kit_name, "branch", branch, color.END)
 		else:
@@ -161,6 +167,11 @@ class MetaRepoSyncHandler(object):
 			sys.exit(1)
 		elif not kit.exists():
 			kit.shallowClone("https://github.com/funtoo/%s" % kit_name, branch)
+
+		if not kit.localBranchExists(branch):
+			kit.fetchRemote(branch)
+		kit.checkout(branch)
+	
 		# do sync
 		sha1 = kit.commitID
 		desired_sha1 = self.kit_sha1[kit_name][branch]

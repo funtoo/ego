@@ -382,7 +382,7 @@ def main(install_path, config, args):
 
 	if action == "show":
 		shortList(ps, key_order)
-		pythonInfo()
+		pythonInfo(sync_link)
 		inherited_things = []
 		if "flavor" in ps.descendents and len(ps.descendents["flavor"]):
 			# follow first flavor:
