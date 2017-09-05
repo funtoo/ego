@@ -50,10 +50,8 @@ class GitHelper(object):
 	def createNewLocalBranchToTrackRemote(self, branch):
 		return runShell("(cd %s && git checkout -b %s --track origin/%s)" % ( self.root, branch, branch )) 
 
-	def pull(self, force=False):
-		opts=""
-		if force:
-			opts += "-f"
+	def pull(self, options=[]):
+		opts=" ".join(options) if options else ""
 		return runShell("(cd %s && git pull %s)" % (self.root, opts)) 
 
 	def exists(self):
@@ -115,7 +113,7 @@ class MetaRepoSyncHandler(object):
 		print(color.GREEN + "Syncing meta-repo" + color.END)
 		if repo.exists():
 			retval = repo.fetchRemote("master")
-			retval = repo.pull(force=True)
+			retval = repo.pull(options=["-f","--no-recurse-submodules"])
 			if retval != 0:
 				print(color.RED + "There was an error syncing meta-repo." , color.END)
 				sys.exit(1)
@@ -171,6 +169,7 @@ class MetaRepoSyncHandler(object):
 		if not kit.localBranchExists(branch):
 			kit.fetchRemote(branch)
 		kit.checkout(branch)
+		kit.pull(options=["-f"])
 	
 		# do sync
 		sha1 = kit.commitID
