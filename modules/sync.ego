@@ -54,6 +54,14 @@ class GitHelper(object):
 		opts=" ".join(options) if options else ""
 		return runShell("(cd %s && git pull %s)" % (self.root, opts)) 
 
+	def reset(self, options=[]):
+		opts=" ".join(options) if options else ""
+		return runShell("(cd %s && git reset %s)" % (self.root, opts)) 
+
+	def clean(self, options=[]):
+		opts=" ".join(options) if options else ""
+		return runShell("(cd %s && git clean %s)" % (self.root, opts)) 
+
 	def exists(self):
 		return os.path.exists(self.root)
 	
@@ -169,6 +177,8 @@ class MetaRepoSyncHandler(object):
 		if not kit.localBranchExists(branch):
 			kit.fetchRemote(branch)
 		kit.checkout(branch)
+		kit.reset(options=["--hard"])
+		kit.clean(options=["-fd"])
 		kit.pull(options=["-f"])
 	
 		# do sync
