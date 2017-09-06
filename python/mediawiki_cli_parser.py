@@ -5,8 +5,6 @@
 # Copyright 2017 Daniel Robbins and Funtoo Solutions, Inc.
 # See LICENSE.txt for terms of distribution. 
 
-import sys
-import types
 import shutil
 import mwparserfromhell
 import html

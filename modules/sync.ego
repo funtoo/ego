@@ -20,7 +20,7 @@ class GitHelper(object):
 		self.root = root
 	
 	def localBranches(self):
-		if os.path.exists(root):
+		if os.path.exists(self.root):
 			retval, out = runShell_so("(cd %s && git for-each-ref --format=\"(refname)\" refs/heads)")
 			if retval == 0:
 				for ref in out.split():

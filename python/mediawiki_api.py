@@ -196,9 +196,5 @@ class Wiki(object):
 			else:
 				self.failed_pages.append(xmldata)
 				return False
-	
-	def exportXMLAndRename(self, title, new_title):
-		xmldata = self.exportXML(title)
-		return changeXMLTitle(xmldata, new_title)
 
 # vim: ts=4 noet sw=4
