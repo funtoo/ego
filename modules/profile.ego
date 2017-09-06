@@ -3,6 +3,8 @@
 from ego_helpers import *
 
 import os, sys
+if os.path.exists("/usr/share/portage/pym"):
+	sys.path.insert(0,"/usr/share/portage/pym")
 import portage
 import portage.repository.config
 import json
