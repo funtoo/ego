@@ -546,7 +546,7 @@ def main(install_path, config, args):
 					notadded.add(new_shortname)
 					continue
 				mixin_path = pl.find("mix-ins",new_shortname)
-				new_ps = ProfileSetting(ps.repomap,name=new_shortname,cl="mix-ins",parent_line=reponame + ":" + mixin_path + "/" + new_shortname,child=ps)
+				new_ps = ProfileSetting(ps.repomap,name=new_shortname,cl="mix-ins",all_enabled=all_enabled,parent_line=reponame + ":" + mixin_path + "/" + new_shortname,child=ps)
 				if "mix-ins" not in ps.descendents:
 					ps.descendents["mix-ins"] = []
 				ps.descendents["mix-ins"].append(new_ps)
