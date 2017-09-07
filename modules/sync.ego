@@ -92,6 +92,8 @@ class MetaRepoSyncHandler(object):
 	def __init__(self, config, install_path):
 		self.config = config
 		self.root = "/var/git/meta-repo"
+		if not os.path.exists(os.path.dirname(self.root)):
+			os.makedirs(os.path.dirname(self.root))
 		self.install_path = install_path
 		self.load_metadata()
 		self.hex_re = re.compile('[0-9a-fA-F]+')
