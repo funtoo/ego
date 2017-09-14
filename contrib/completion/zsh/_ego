@@ -17,7 +17,7 @@ _ego-modulelist() {
 _epro-actionlist() {
   local -a actions
 
-  actions=( 'show' 'show-json' 'get' 'list' 'flavor' 'mix-ins' 'subarch' 'arch' 'build' )
+  actions=( 'show' 'show-json' 'get' 'list' 'flavor' 'mix-ins' 'subarch' 'arch' )
 
   [[ $curcontext == ":complete:ego-profile:" ]] && actions=( 'info' 'help' $actions )
 
@@ -27,7 +27,7 @@ _epro-actionlist() {
 _epro-profile-choices() {
   local -a profiles
 
-  profiles=( 'flavor' 'mix-ins' 'subarch' 'arch' 'build' )
+  profiles=( 'flavor' 'mix-ins' 'subarch' 'arch' )
 
   _values 'Profiles' $profiles && ret=0
 }
@@ -70,7 +70,7 @@ _ego-profile() {
       _epro-mixins-choices
     elif [[ $words[2] == subarch ]]; then
       _epro-subarch-choices
-    elif [[ $words[2] == (flavor|arch|build) ]]; then
+    elif [[ $words[2] == (flavor|arch) ]]; then
       _epro-fetch-choices $words[2]
     fi
   elif ((CURRENT > 3)); then
@@ -83,7 +83,7 @@ _ego-profile() {
 _equery-actionlist() {
   local -a actions
 
-  actions=( 'versions' )
+  actions=( 'versions' 'origin' )
 
   _values 'Actions' $actions && ret=0
 }
