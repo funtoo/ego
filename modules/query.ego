@@ -92,7 +92,7 @@ def handle_origin_action(atom_string):
 		'faustoo': 'https://github.com/fmoro/faustoo',
 		'fusion809': 'https://github.com/fusion809/fusion809-overlay',
 		'flora': 'https://github.com/funtoo/flora',
-		'genoo-staging': 'http://git.funtoo.org/gentoo-staging/',
+		'gentoo-staging': 'http://git.funtoo.org/gentoo-staging/',
 		'kit-fixups': 'https://github.com/funtoo/kit-fixups',
 		'rh1': 'https://github.com/x48rph/glassfish.git',
 	}
