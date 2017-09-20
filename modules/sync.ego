@@ -158,7 +158,7 @@ class MetaRepoSyncHandler(object):
 			print(color.GREEN + "Syncing meta-repo" + color.END)
 			if repo.exists():
 				retval = repo.fetchRemote("master")
-				retval = repo.pull(options=["-f","--no-recurse-submodules"])
+				retval = repo.pull(options=["--no-commit", "-f","--no-recurse-submodules"])
 				if retval != 0:
 					print(color.RED + "There was an error syncing meta-repo." , color.END)
 					sys.exit(1)
@@ -219,7 +219,7 @@ class MetaRepoSyncHandler(object):
 		kit.checkout(branch)
 		kit.reset(options=["--hard"])
 		kit.clean(options=["-fd"])
-		kit.pull(options=["-f"])
+		kit.pull(options=["-f", "--no-commit"])
 	
 		# do sync
 		sha1 = kit.commitID
