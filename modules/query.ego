@@ -6,6 +6,8 @@ from xml.etree import ElementTree
 
 import appi
 
+from ego_helpers import color
+
 
 def usage():
 	message = (
@@ -113,9 +115,10 @@ def handle_origin_action(atom_string):
 					cat=category.attrib['name'],
 					pkg=package.attrib['name'],
 					kit=package.attrib['kit'],
-					repo=package.attrib['repository'],
-					url=repo_urls.get(package.attrib['repository'],
-									  "Unknown repository URL")
+					repo=color.green(package.attrib['repository']),
+					url=color.blue(repo_urls.get(
+						package.attrib['repository'], "Unknown repository URL"
+					)),
 				)
 			)
 

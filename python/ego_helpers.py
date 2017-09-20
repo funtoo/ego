@@ -90,6 +90,46 @@ class color:
 	END = ColorType('\033[0m')
 	AUTOFLUSH = ColorType("")
 
+	@classmethod
+	def colorize(cls, color, text):
+		return color + text + cls.END
+
+	@classmethod
+	def purple(cls, text):
+		return cls.colorize(cls.PURPLE, text)
+
+	@classmethod
+	def cyan(cls, text):
+		return cls.colorize(cls.CYAN, text)
+
+	@classmethod
+	def darkcyan(cls, text):
+		return cls.colorize(cls.DARKCYAN, text)
+
+	@classmethod
+	def blue(cls, text):
+		return cls.colorize(cls.BLUE, text)
+
+	@classmethod
+	def green(cls, text):
+		return cls.colorize(cls.GREEN, text)
+
+	@classmethod
+	def yellow(cls, text):
+		return cls.colorize(cls.YELLOW, text)
+
+	@classmethod
+	def red(cls, text):
+		return cls.colorize(cls.RED, text)
+
+	@classmethod
+	def bold(cls, text):
+		return cls.colorize(cls.BOLD, text)
+
+	@classmethod
+	def underline(cls, text):
+		return cls.colorize(cls.UNDERLINE, text)
+
 def header(info):
 	print("\n=== "+color.BOLD+color.GREEN+info+color.END+": ===\n")
 
