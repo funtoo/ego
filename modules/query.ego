@@ -1,6 +1,9 @@
 #!/usr/bin/python3
-
+import requests
+import subprocess
 import sys
+from xml.etree import ElementTree
+
 import appi
 
 
@@ -28,6 +31,7 @@ def handle_version_action(atom_string):
 	old_slot = None
 	cols_size = [4, 4, 4]
 	lines = []
+	repo_branches = {}
 	for ebuild in ebuilds:
 		cat_pkg = '{}/{}'.format(ebuild.category, ebuild.package)
 		slot = ebuild.vars['SLOT']
@@ -43,7 +47,18 @@ def handle_version_action(atom_string):
 			old_slot = slot
 		else:
 			slot = ''
-		repo = str(ebuild.repository)
+		repo = ebuild.repository
+		if repo.name in repo_branches:
+			branch = repo_branches[repo.name]
+		else:
+			branch = subprocess.run([
+				'git', '-C', repo.location,
+				'rev-parse', '--abbrev-ref', 'HEAD',
+			], stdout=subprocess.PIPE).stdout.decode('ascii').strip()
+			repo_branches[repo.name] = branch
+		repo = repo.name
+		if branch:
+			repo += '/' + branch
 		version = str(ebuild.version)
 		if ebuild.is_installed():
 			version = '* ' + version
@@ -67,11 +82,50 @@ def handle_version_action(atom_string):
 			sep = '|'
 		sys.stdout.write(sep.join(cols) + '\n')
 
+def handle_origin_action(atom_string):
+	"""Given a valid atom string, print the origin repository where this
+	package was retrieved before being merged to kits.
+	Using another information than category, package and repository in the
+	atom is useless and will be ignored.
+	"""
+	repo_urls = {
+		'faustoo': 'https://github.com/fmoro/faustoo',
+		'fusion809': 'https://github.com/fusion809/fusion809-overlay',
+		'flora': 'https://github.com/funtoo/flora',
+		'gentoo-staging': 'http://git.funtoo.org/gentoo-staging/',
+		'kit-fixups': 'https://github.com/funtoo/kit-fixups',
+		'rh1': 'https://github.com/x48rph/glassfish.git',
+	}
+	atom = appi.QueryAtom(atom_string, strict=False)
+	r = requests.get('http://ports.funtoo.org/packages.xml')
+	root = ElementTree.fromstring(r.text)
+	xpath = 'category'
+	if atom.category:
+		xpath += '[@name="{}"]'.format(atom.category)
+	categories = root.findall(xpath)
+	for category in categories:
+		xpath = 'package[@name="{}"]'.format(atom.package)
+		if atom.repository:
+			xpath += '[@kit="{}"]'.format(atom.repository)
+		for package in category.findall(xpath):
+			sys.stdout.write(
+				"{cat}/{pkg}::{kit} comes from {repo} ({url})\n".format(
+					cat=category.attrib['name'],
+					pkg=package.attrib['name'],
+					kit=package.attrib['kit'],
+					repo=package.attrib['repository'],
+					url=repo_urls.get(package.attrib['repository'],
+									  "Unknown repository URL")
+				)
+			)
+
 def main(install_path, config, args):
 	
 	actions = {
 		'versions': handle_version_action,
 		'v': handle_version_action,
+		'origin': handle_origin_action,
+		'o': handle_origin_action,
 	}
 
 	action = None
