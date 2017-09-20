@@ -39,6 +39,11 @@ specify a setting such as the following in \fB/etc/ego.conf\fR:
 
 python-kit = 3.6-prime
 .fi
+
+It is also possible to use the \fBsync_user\fR [global] setting to specify a username to use for performing git operations. The
+default is now 'portage'. And the [global] \fBmeta_repo_path\fR and \fBkits_path\fR options are available for setting the location
+of meta-repo as well as kits. If the \fBkits_path\fR is a relative path, it will be relative to \fBmeta_repo_path\fR, but it can
+also be set to an absolute path in which case it will be used as the kits directory location, unmodified.
 .TP
 .B query
 Query informations about packages. For instance, \fBego query versions dev-lang/python\fR will show all python versions available and some extra information.

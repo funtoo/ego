@@ -52,6 +52,23 @@ class EgoConfig(object):
 				self.ego_mods_info[mod] = {}
 		self.settings = settings
 
+		self.meta_repo_root = "/var/git/meta-repo"
+		if "global" in self.settings and "meta_repo_path" in self.settings["global"]:
+			self.meta_repo_root = self.settings["global"]["meta_repo_path"]
+
+		kit_path = "kits"
+		if "global" in self.settings and "kits_path" in self.settings["global"]:
+			kit_path = self.settings["global"]["kits_path"]
+		if kit_path.startswith("/"):
+			self.kit_root = kit_path
+		else:
+			self.kit_root = os.path.join(self.meta_repo_root, kit_path)
+
+		if "global" in self.settings and "sync_user" in self.settings["global"]:
+			self.sync_user = self.settings["global"]["sync_user"]
+		else:
+			self.sync_user = "portage"
+
 	def available_modules(self):
 		for x in self.ego_mods:
 			yield x, self.ego_mods_info[x]

@@ -40,7 +40,25 @@ class GitHelper(object):
 		else:
 			return True
 
+	def isReadOnly(self):
+		from pathlib import Path
+		try:
+			Path(self.root + "/foo").touch()
+		except FileNotFoundError:
+			return True
+		except PermissionError:
+			return True
+		else:
+			os.unlink(self.root + "/foo")
+			return False
+
+	def readOnlyCheck(self):
+		if self.isReadOnly():
+			print(color.RED + "Repository is at %s is read-only. Cannot update." % self.root, color.END)
+			sys.exit(1)
+
 	def fetchRemote(self, branch, remote="origin"):
+		self.readOnlyCheck()
 		runShell("(cd %s && git remote set-branches --add %s %s)" % ( self.root, remote, branch ))
 		return runShell("(cd %s && git fetch %s refs/heads/%s:refs/remotes/%s/%s)" % ( self.root, remote, branch, remote, branch )) 
 
@@ -48,17 +66,21 @@ class GitHelper(object):
 		return runShell("(cd %s && git clone -b %s --depth=%s --single-branch %s)" % ( os.path.dirname(self.root), branch, depth, url )) 
 
 	def createNewLocalBranchToTrackRemote(self, branch):
+		self.readOnlyCheck()
 		return runShell("(cd %s && git checkout -b %s --track origin/%s)" % ( self.root, branch, branch )) 
 
 	def pull(self, options=[]):
+		self.readOnlyCheck()
 		opts=" ".join(options) if options else ""
 		return runShell("(cd %s && git pull %s)" % (self.root, opts)) 
 
 	def reset(self, options=[]):
+		self.readOnlyCheck()
 		opts=" ".join(options) if options else ""
 		return runShell("(cd %s && git reset %s)" % (self.root, opts)) 
 
 	def clean(self, options=[]):
+		self.readOnlyCheck()
 		opts=" ".join(options) if options else ""
 		return runShell("(cd %s && git clean %s)" % (self.root, opts)) 
 
@@ -91,12 +113,13 @@ class MetaRepoSyncHandler(object):
 	
 	def __init__(self, config, install_path):
 		self.config = config
-		self.root = "/var/git/meta-repo"
+		self.root = config.meta_repo_root
 		if not os.path.exists(os.path.dirname(self.root)):
 			os.makedirs(os.path.dirname(self.root))
 		self.install_path = install_path
 		self.load_metadata()
 		self.hex_re = re.compile('[0-9a-fA-F]+')
+
 	def load_metadata(self):
 		self.kit_sha1 = self.load_kit_metadata("sha1")
 		self.kit_info = self.load_kit_metadata("info")
@@ -118,18 +141,29 @@ class MetaRepoSyncHandler(object):
 			branch = self.kit_info["kit_settings"][kit]["default"]
 		return branch
 
-	def sync_meta_repo(self):
-		repo = GitHelper(self.root)
-		print(color.GREEN + "Syncing meta-repo" + color.END)
-		if repo.exists():
-			retval = repo.fetchRemote("master")
-			retval = repo.pull(options=["-f","--no-recurse-submodules"])
-			if retval != 0:
-				print(color.RED + "There was an error syncing meta-repo." , color.END)
-				sys.exit(1)
+	def sync_meta_repo(self, args):
+		import pwd
 
-		else:
-			repo.shallowClone("https://github.com/funtoo/meta-repo", "master")
+		uid = pwd.getpwnam(self.config.sync_user).pw_uid
+		if "HOME" in os.environ:
+			# git will look here for various things
+			del os.environ["HOME"]
+		if os.path.exists(self.root):
+			stat_info = os.stat(self.root)
+			if stat_info.st_uid != uid and self.config.sync_user != "root":
+				runShell("(cd %s && chown -R %s:%s * )" % (self.root, "portage", "portage"))
+		os.setuid(uid)
+		if "kits" not in args:
+			repo = GitHelper(self.root)
+			print(color.GREEN + "Syncing meta-repo" + color.END)
+			if repo.exists():
+				retval = repo.fetchRemote("master")
+				retval = repo.pull(options=["-f","--no-recurse-submodules"])
+				if retval != 0:
+					print(color.RED + "There was an error syncing meta-repo." , color.END)
+					sys.exit(1)
+			else:
+				repo.shallowClone("https://github.com/funtoo/meta-repo", "master")
 		self.load_metadata()
 		fails = []
 		for kt in self.kit_info["kit_order"]:
@@ -147,8 +181,12 @@ class MetaRepoSyncHandler(object):
 		else:
 			print(color.GREEN + "Sync successful and kits in alignment! :)" + color.END)
 			print(color.GREEN + "Updating profiles..." + color.END)
-			ego_profile = get_ego_module(self.install_path, "profile")
-			ego_profile.main(self.install_path, self.config, [ "update" ] )
+			try:
+				ego_profile = get_ego_module(self.install_path, "profile")
+				ego_profile.main(self.install_path, self.config, [ "update" ] )
+			except PermissionError:
+				print(color.RED + "Could not update ego profiles automatically due to permissions (code in /root, most likely.)")
+				print("Please run epro update manually as root." + color.END)
 			return True
 
 	def sync_kit(self, kit_name, branch=None):
@@ -163,7 +201,7 @@ class MetaRepoSyncHandler(object):
 		else:
 			# highlight non-default branches in green for convenience
 			print(color.PURPLE + "Syncing", kit_name, "branch", color.GREEN + branch + color.PURPLE + " (non-default)" + color.END)
-		kit_path = os.path.join(self.root, "kits", kit_name)
+		kit_path = os.path.join(self.config.kit_root, kit_name)
 		kit = GitHelper(kit_path)
 		if not kit.isGitRepo():
 			try:
@@ -189,6 +227,7 @@ class MetaRepoSyncHandler(object):
 		success = False
 
 		def sha1_check(sha1, desired_sha1):
+			print(sha1, desired_sha1)
 			if not self.hex_re.match(sha1):
 				print(color.RED + "Fatal: kit CommitID not a SHA1: %s" % sha1 + color.END)
 				sys.exit(1)
@@ -210,6 +249,6 @@ class MetaRepoSyncHandler(object):
 
 def main(install_path, config, args):
 	s = MetaRepoSyncHandler(config, install_path)
-	s.sync_meta_repo()
+	s.sync_meta_repo(args)
 
 # vim: ts=4 sw=4 noet
