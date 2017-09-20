@@ -58,18 +58,18 @@ def handle_version_action(atom_string):
 				'rev-parse', '--abbrev-ref', 'HEAD',
 			], stdout=subprocess.PIPE).stdout.decode('ascii').strip()
 			repo_branches[repo.name] = branch
-		repo = repo.name
+		repo = color.blue(repo.name)
 		if branch:
-			repo += '/' + branch
-		version = str(ebuild.version)
+			repo = (repo + '/') + color.green(branch)
+		version = color.cyan(ebuild.version)
 		if ebuild.is_installed():
-			version = '* ' + version
+			version = color.bold('* ') + color.bold(version)
 		cols_size = [
 			max(cols_size[0], len(version)),
 			max(cols_size[1], len(slot)),
 			max(cols_size[2], len(repo)),
 		]
-		lines.append((version, slot, repo))
+		lines.append((version, color.yellow(slot), repo))
 
 
 	for line in lines:
@@ -80,7 +80,7 @@ def handle_version_action(atom_string):
 			cols = ['-' * (s + 1) for s in cols_size]
 			sep = '+'
 		else:
-			cols = [line[i].rjust(cols_size[i] + 1) for i in range(3)]
+			cols = [str(line[i].rjust(cols_size[i] + 1)) for i in range(3)]
 			sep = '|'
 		sys.stdout.write(sep.join(cols) + '\n')
 

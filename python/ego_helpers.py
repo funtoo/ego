@@ -91,44 +91,65 @@ class color:
 	AUTOFLUSH = ColorType("")
 
 	@classmethod
-	def colorize(cls, color, text):
-		return color + text + cls.END
-
-	@classmethod
 	def purple(cls, text):
-		return cls.colorize(cls.PURPLE, text)
+		return cls((cls.PURPLE, text))
 
 	@classmethod
 	def cyan(cls, text):
-		return cls.colorize(cls.CYAN, text)
+		return cls((cls.CYAN, text))
 
 	@classmethod
 	def darkcyan(cls, text):
-		return cls.colorize(cls.DARKCYAN, text)
+		return cls((cls.DARKCYAN, text))
 
 	@classmethod
 	def blue(cls, text):
-		return cls.colorize(cls.BLUE, text)
+		return cls((cls.BLUE, text))
 
 	@classmethod
 	def green(cls, text):
-		return cls.colorize(cls.GREEN, text)
+		return cls((cls.GREEN, text))
 
 	@classmethod
 	def yellow(cls, text):
-		return cls.colorize(cls.YELLOW, text)
+		return cls((cls.YELLOW, text))
 
 	@classmethod
 	def red(cls, text):
-		return cls.colorize(cls.RED, text)
+		return cls((cls.RED, text))
 
 	@classmethod
 	def bold(cls, text):
-		return cls.colorize(cls.BOLD, text)
+		return cls((cls.BOLD, text))
 
 	@classmethod
 	def underline(cls, text):
-		return cls.colorize(cls.UNDERLINE, text)
+		return cls((cls.UNDERLINE, text))
+
+	@classmethod
+	def default(cls, text):
+		return cls((cls.END, text))
+
+	def __init__(self, *chunks):
+		self.chunks = chunks
+
+	def __str__(self):
+		return ''.join([x[0] + str(x[1]) + self.END for x in self.chunks])
+
+	def __len__(self):
+		return sum([len(x[1]) for x in self.chunks])
+
+	def __add__(self, text):
+		if not isinstance(text, self.__class__):
+			text = self.__class__((self.END, text))
+		chunks = self.chunks + text.chunks
+		return self.__class__(*chunks)
+
+	def rjust(self, width, fillchar=' '):
+		return self.default(' ' * (width - len(self))) + self
+
+	def ljust(self, width, fillchar=' '):
+		return self + self.default(' ' * (width - len(self)))
 
 def header(info):
 	print("\n=== "+color.BOLD+color.GREEN+info+color.END+": ===\n")
