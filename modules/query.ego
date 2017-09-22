@@ -1,4 +1,5 @@
 #!/usr/bin/python3
+import json
 import requests
 import subprocess
 import sys
@@ -122,6 +123,39 @@ def handle_origin_action(atom_string):
 				)
 			)
 
+def handle_bugs_action(atom_string):
+	"""Given a valid atom string, list related bugs on bugs.funtoo.org."""
+	atom = appi.QueryAtom(atom_string, strict=False)
+	searches = set(
+		'{}/{}'.format(x.category, x.package)
+		for x in atom.list_matching_ebuilds()
+	)
+	lines = []
+	cols_size = [1, 1, 1]
+	for search in searches:
+		r = requests.post(
+			'https://bugs.funtoo.org/rest/api/2/search', data=json.dumps({
+				'jql': r'summary ~ "\"{}\""'.format(search),
+			}),
+			headers={'Content-Type': 'application/json'})
+		result = r.json()
+		for issue in result['issues']:
+			cols_size = [
+				max(cols_size[0], len(issue['key'])),
+				max(cols_size[1], len(issue['fields']['status']['name'])),
+				max(cols_size[2], len(issue['fields']['summary'])),
+			]
+			lines.append((
+				color.red(issue['key']),
+				color.purple(issue['fields']['status']['name']),
+				color.yellow(issue['fields']['summary'])
+			))
+
+	for line in lines:
+		cols = [str(line[i].ljust(cols_size[i])) for i in range(3)]
+		sys.stdout.write(' '.join(cols) + '\n')
+
+
 def main(install_path, config, args):
 	
 	actions = {
@@ -129,6 +163,7 @@ def main(install_path, config, args):
 		'v': handle_version_action,
 		'origin': handle_origin_action,
 		'o': handle_origin_action,
+		'bugs': handle_bugs_action,
 	}
 
 	action = None

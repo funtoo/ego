@@ -2,5 +2,5 @@
 	"description" : "Query package information",
 	"author" : "Antoine Pinsard",
 	"version" : "1.0",
-	"actions" : [ "versions", "origin" ]
+	"actions" : [ "versions", "origin", "bugs" ]
 }
