@@ -7,7 +7,7 @@ from xml.etree import ElementTree
 
 import appi
 
-from ego_helpers import color
+from ego_helpers import color, Table
 
 
 def usage():
@@ -32,21 +32,19 @@ def handle_version_action(atom_string):
 
 	old_cat_pkg = None
 	old_slot = None
-	cols_size = [4, 4, 4]
-	lines = []
+	table = Table(3, align='rrr', col_sep='|', join='+', lpad=1)
 	repo_branches = {}
 	for ebuild in ebuilds:
 		cat_pkg = '{}/{}'.format(ebuild.category, ebuild.package)
 		slot = ebuild.vars['SLOT']
 		if cat_pkg != old_cat_pkg:
 			if old_cat_pkg is not None:
-				lines.append(None)
-			lines.append((cat_pkg, 'slot', 'repo'))
-			cols_size[0] = max(cols_size[0], len(cat_pkg))
+				table.separator('')
+			table.append(cat_pkg, 'slot', 'repo')
 			old_cat_pkg = cat_pkg
 			old_slot = None
 		if old_slot != slot:
-			lines.append('-')
+			table.separator('-')
 			old_slot = slot
 		else:
 			slot = ''
@@ -65,25 +63,10 @@ def handle_version_action(atom_string):
 		version = color.cyan(ebuild.version)
 		if ebuild.is_installed():
 			version = color.bold('* ') + color.bold(version)
-		cols_size = [
-			max(cols_size[0], len(version)),
-			max(cols_size[1], len(slot)),
-			max(cols_size[2], len(repo)),
-		]
-		lines.append((version, color.yellow(slot), repo))
+		table.append(version, color.yellow(slot), repo)
 
+	sys.stdout.write(str(table))
 
-	for line in lines:
-		if line is None:
-			sys.stdout.write('\n')
-			continue
-		elif line == '-':
-			cols = ['-' * (s + 1) for s in cols_size]
-			sep = '+'
-		else:
-			cols = [str(line[i].rjust(cols_size[i] + 1)) for i in range(3)]
-			sep = '|'
-		sys.stdout.write(sep.join(cols) + '\n')
 
 def handle_origin_action(atom_string):
 	"""Given a valid atom string, print the origin repository where this
@@ -130,8 +113,7 @@ def handle_bugs_action(atom_string):
 		'{}/{}'.format(x.category, x.package)
 		for x in atom.list_matching_ebuilds()
 	)
-	lines = []
-	cols_size = [1, 1, 1]
+	table = Table(3)
 	for search in searches:
 		r = requests.post(
 			'https://bugs.funtoo.org/rest/api/2/search', data=json.dumps({
@@ -140,20 +122,13 @@ def handle_bugs_action(atom_string):
 			headers={'Content-Type': 'application/json'})
 		result = r.json()
 		for issue in result['issues']:
-			cols_size = [
-				max(cols_size[0], len(issue['key'])),
-				max(cols_size[1], len(issue['fields']['status']['name'])),
-				max(cols_size[2], len(issue['fields']['summary'])),
-			]
-			lines.append((
+			table.append(
 				color.red(issue['key']),
 				color.purple(issue['fields']['status']['name']),
 				color.yellow(issue['fields']['summary'])
-			))
+			)
 
-	for line in lines:
-		cols = [str(line[i].ljust(cols_size[i])) for i in range(3)]
-		sys.stdout.write(' '.join(cols) + '\n')
+	sys.stdout.write(str(table))
 
 
 def main(install_path, config, args):
@@ -175,7 +150,8 @@ def main(install_path, config, args):
 
 	try:
 		actions[action](*args[1:])
-	except TypeError:
+	except TypeError as e:
+		raise e
 		sys.stderr.write("Invalid number of arguments\n")
 		usage()
 		sys.exit(1)

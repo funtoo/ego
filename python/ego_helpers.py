@@ -154,4 +154,64 @@ class color:
 def header(info):
 	print("\n=== "+color.BOLD+color.GREEN+info+color.END+": ===\n")
 
+class Table:
+
+	def __init__(self, nb_columns, *, align='', col_sep=' ', row_sep='', lpad=0, rpad=0, join=None):
+		self.align = align
+		self.col_sep = col_sep
+		self.row_sep = row_sep
+		self.lpad = lpad
+		self.rpad = rpad
+		self.join = join or row_sep
+		self.rows = []
+		self.cols_width = (1,) * nb_columns
+
+	def append(self, *cells):
+		if self.lpad or self.rpad:
+			cells = tuple(
+				color.default(' ' * self.lpad) + c + (' ' * self.rpad)
+				for c in cells
+			)
+		self.cols_width = [
+			max(self.cols_width[i], len(x)) for i, x in enumerate(cells)
+		]
+		self.rows.append(cells)
+
+	def separator(self, separator=None):
+		self.rows.append(separator or self.row_sep)
+
+	def __str__(self):
+		output = ''
+		for row in self.rows:
+			if not row:
+				output += '\n'
+			elif isinstance(row, tuple):
+				cells = []
+				for i, cell in enumerate(row):
+					try:
+						align = self.align[i]
+					except IndexError:
+						align = 'l'
+					if align == 'l':
+						cells.append(cell.ljust(self.cols_width[i]))
+					elif align == 'r':
+						cells.append(cell.rjust(self.cols_width[i]))
+					elif align == 'c':
+						cells.append(cell.center(self.cols_width[i]))
+					else:
+						raise ValueError("Invalid alignment '{}'".format(align))
+				output += self.col_sep.join([str(c) for c in cells]) + '\n'
+				if self.row_sep:
+					output += self.join.join([
+						(self.row_sep * width)[:width] for width in self.cols_width
+					]) + '\n'
+			else:
+				row = str(row)
+				output += self.join.join([
+					(row * width)[:width] for width in self.cols_width
+				]) + '\n'
+		return output
+
+
+
 # vim: ts=4 sw=4 noet
