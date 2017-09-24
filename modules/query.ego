@@ -75,12 +75,12 @@ def handle_origin_action(atom_string):
 	atom is useless and will be ignored.
 	"""
 	repo_urls = {
-		'faustoo': 'https://github.com/fmoro/faustoo',
-		'fusion809': 'https://github.com/fusion809/fusion809-overlay',
-		'flora': 'https://github.com/funtoo/flora',
-		'gentoo-staging': 'http://git.funtoo.org/gentoo-staging/',
-		'kit-fixups': 'https://github.com/funtoo/kit-fixups',
-		'rh1': 'https://github.com/x48rph/glassfish.git',
+		'faustoo': 'https://github.com/fmoro/faustoo/tree/master/{cat}/{pkg}',
+		'fusion809': 'https://github.com/fusion809/fusion809-overlay/tree/master/{cat}/{pkg}',
+		'flora': 'https://github.com/funtoo/flora/tree/master/{cat}/{pkg}',
+		'gentoo-staging': 'http://git.funtoo.org/gentoo-staging/tree/{cat}/{pkg}',
+		'kit-fixups': 'https://github.com/funtoo/kit-fixups/tree/master/{kit}/{branch}/{cat}/{pkg}',
+		'rh1': 'https://github.com/x48rph/glassfish/tree/master/{cat}/{pkg}',
 	}
 	atom = appi.QueryAtom(atom_string, strict=False)
 	r = requests.get('http://ports.funtoo.org/packages.xml')
@@ -94,17 +94,32 @@ def handle_origin_action(atom_string):
 		if atom.repository:
 			xpath += '[@kit="{}"]'.format(atom.repository)
 		for package in category.findall(xpath):
+			cat = category.attrib['name']
+			pkg = package.attrib['name']
+			kit = package.attrib['kit']
+			repository = package.attrib['repository']
+			base_url = repo_urls.get(repository, '')
+			if '{branch}' in base_url:
+				repo = appi.conf.Repository[kit]
+				branch = subprocess.run([
+					'git', '-C', repo.location,
+					'rev-parse', '--abbrev-ref', 'HEAD',
+				], stdout=subprocess.PIPE).stdout.decode('ascii').strip()
+			else:
+				branch = None
+			url = base_url.format(kit=kit, branch=branch, cat=cat, pkg=pkg)
 			sys.stdout.write(
-				"{cat}/{pkg}::{kit} comes from {repo} ({url})\n".format(
-					cat=category.attrib['name'],
-					pkg=package.attrib['name'],
-					kit=package.attrib['kit'],
-					repo=color.green(package.attrib['repository']),
-					url=color.blue(repo_urls.get(
-						package.attrib['repository'], "Unknown repository URL"
-					)),
+				"{cat}/{pkg}::{kit} comes from {repo}\n\t{url}\n".format(
+					cat=cat, pkg=pkg, kit=kit,
+					repo=color.green(repository),
+					url=color.blue(url or "Unknown repository URL"),
 				)
 			)
+			if '{branch}' in base_url:
+				sys.stdout.write('\t{url}\n'.format(url=color.blue(
+					base_url.format(kit=kit, branch='global', cat=cat, pkg=pkg)
+				)))
+
 
 def handle_bugs_action(atom_string):
 	"""Given a valid atom string, list related bugs on bugs.funtoo.org."""
