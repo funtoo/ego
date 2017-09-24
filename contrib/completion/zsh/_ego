@@ -83,7 +83,7 @@ _ego-profile() {
 _equery-actionlist() {
   local -a actions
 
-  actions=( 'versions' 'origin' )
+  actions=( 'versions' 'origin' 'bugs' )
 
   _values 'Actions' $actions && ret=0
 }
