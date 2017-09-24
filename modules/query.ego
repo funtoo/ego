@@ -36,7 +36,7 @@ def handle_version_action(atom_string):
 	repo_branches = {}
 	for ebuild in ebuilds:
 		cat_pkg = '{}/{}'.format(ebuild.category, ebuild.package)
-		slot = ebuild.vars['SLOT']
+		slot = ebuild.vars.get('SLOT', '0')
 		if cat_pkg != old_cat_pkg:
 			if old_cat_pkg is not None:
 				table.separator('')
