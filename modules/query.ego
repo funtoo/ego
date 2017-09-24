@@ -19,6 +19,16 @@ def usage():
 		"    Examples:\n"
 		"      - ego query versions postgresql\n"
 		"      - ego query v '=dev-lang/python-3*'\n"
+		"  origin <package>\n"
+		"    Show from which repository the given package comes from. Shortcut: o\n"
+		"    Examples:\n"
+		"      - ego query origin ego\n"
+		"      - ego query o dev-python/appi\n"
+		"  bugs <package>\n"
+		"    Show Funtoo bugs related to the given package.\n"
+		"    Examples:\n"
+		"      - ego query bugs chromium\n"
+		"      - ego query bugs media-libs/mesa\n"
 	)
 	sys.stdout.write(message)
 
@@ -108,6 +118,8 @@ def handle_origin_action(atom_string):
 			else:
 				branch = None
 			url = base_url.format(kit=kit, branch=branch, cat=cat, pkg=pkg)
+			if 'branch' in base_url and requests.get(url).status_code == 404:
+				url = base_url.format(kit=kit, branch='global', cat=cat, pkg=pkg)
 			sys.stdout.write(
 				"{cat}/{pkg}::{kit} comes from {repo}\n\t{url}\n".format(
 					cat=cat, pkg=pkg, kit=kit,
@@ -115,10 +127,6 @@ def handle_origin_action(atom_string):
 					url=color.blue(url or "Unknown repository URL"),
 				)
 			)
-			if '{branch}' in base_url:
-				sys.stdout.write('\t{url}\n'.format(url=color.blue(
-					base_url.format(kit=kit, branch='global', cat=cat, pkg=pkg)
-				)))
 
 
 def handle_bugs_action(atom_string):
