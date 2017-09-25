@@ -92,7 +92,7 @@ def handle_origin_action(atom_string):
 		'kit-fixups': 'https://github.com/funtoo/kit-fixups/tree/master/{kit}/{branch}/{cat}/{pkg}',
 		'rh1': 'https://github.com/x48rph/glassfish/tree/master/{cat}/{pkg}',
 	}
-	gentoo_url = 'https://gitweb.gentoo.org/repo/gentoo.git/tree/{cat}/{pkg}'
+	gentoo_base_url = 'https://gitweb.gentoo.org/repo/gentoo.git/tree/{cat}/{pkg}'
 	atom = appi.QueryAtom(atom_string, strict=False)
 	r = requests.get('http://ports.funtoo.org/packages.xml')
 	root = ElementTree.fromstring(r.text)
@@ -121,13 +121,17 @@ def handle_origin_action(atom_string):
 			url = base_url.format(kit=kit, branch=branch, cat=cat, pkg=pkg)
 			if 'branch' in base_url and requests.get(url).status_code == 404:
 				url = base_url.format(kit=kit, branch='global', cat=cat, pkg=pkg)
-			sys.stdout.write((
-				"{cat}/{pkg}::{kit} comes from {repo}\n"
-				"  Funtoo {url}\n  Gentoo {gentoo_url}\n").format(
+			gentoo_url = gentoo_base_url.format(cat=cat, pkg=pkg)
+			if requests.get(gentoo_url).status_code == 404:
+				gentoo_url = ''
+			else:
+				gentoo_url = "\t{}\n".format(color.cyan(gentoo_url))
+			sys.stdout.write(
+				"{cat}/{pkg}::{kit} comes from {repo}\n\t{url}\n{gentoo_url}".format(
 					cat=cat, pkg=pkg, kit=kit,
 					repo=color.green(repository),
 					url=color.blue(url or "Unknown repository URL"),
-					gentoo_url=color.cyan(gentoo_url.format(cat=cat, pkg=pkg)),
+					gentoo_url=gentoo_url,
 				)
 			)
 
