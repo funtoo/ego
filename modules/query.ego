@@ -1,4 +1,5 @@
 #!/usr/bin/python3
+from datetime import datetime
 import json
 import requests
 import subprocess
@@ -143,19 +144,23 @@ def handle_bugs_action(atom_string):
 		'{}/{}'.format(x.category, x.package)
 		for x in atom.list_matching_ebuilds()
 	)
-	table = Table(3)
+	table = Table(4)
 	for search in searches:
 		r = requests.post(
 			'https://bugs.funtoo.org/rest/api/2/search', data=json.dumps({
-				'jql': r'summary ~ "\"{}\""'.format(search),
+				'jql': r'summary ~ "\"{}\"" ORDER BY created DESC'.format(search),
 			}),
 			headers={'Content-Type': 'application/json'})
 		result = r.json()
 		for issue in result['issues']:
+			fields = issue['fields']
+			date_created = datetime.strptime(
+				fields['created'], '%Y-%m-%dT%H:%M:%S.%f%z').date()
 			table.append(
 				color.red(issue['key']),
-				color.purple(issue['fields']['status']['name']),
-				color.yellow(issue['fields']['summary'])
+				color.cyan(str(date_created)),
+				color.purple(fields['status']['name']),
+				color.yellow(fields['summary'])
 			)
 
 	sys.stdout.write(str(table))
