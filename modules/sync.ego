@@ -1,24 +1,28 @@
 #!/usr/bin/python3
-
-from ego_helpers import *
-
+import json
+import os
+import re
 import subprocess
 import sys
-import re
 
-def runShell( cmd):
+from ego_helpers import color, get_ego_module
+
+
+def runShell(cmd):
 	print(cmd)
 	return os.system(cmd)
+
 
 def runShell_so(cmd):
 	print(cmd)
 	return subprocess.getstatusoutput(cmd)
 
+
 class GitHelper(object):
-	
+
 	def __init__(self, root):
 		self.root = root
-	
+
 	def localBranches(self):
 		if os.path.exists(self.root):
 			retval, out = runShell_so("(cd %s && git for-each-ref --format=\"(refname)\" refs/heads)")
@@ -35,7 +39,7 @@ class GitHelper(object):
 			return branch
 
 	def localBranchExists(self, branch):
-		if runShell("( cd %s && git show-ref --verify --quiet refs/heads/%s )" % ( self.root, branch)):
+		if runShell("( cd %s && git show-ref --verify --quiet refs/heads/%s )" % (self.root, branch)):
 			return False
 		else:
 			return True
@@ -59,48 +63,48 @@ class GitHelper(object):
 
 	def fetchRemote(self, branch, remote="origin"):
 		self.readOnlyCheck()
-		runShell("(cd %s && git remote set-branches --add %s %s)" % ( self.root, remote, branch ))
-		return runShell("(cd %s && git fetch %s refs/heads/%s:refs/remotes/%s/%s)" % ( self.root, remote, branch, remote, branch )) 
+		runShell("(cd %s && git remote set-branches --add %s %s)" % (self.root, remote, branch))
+		return runShell("(cd %s && git fetch %s refs/heads/%s:refs/remotes/%s/%s)" % (self.root, remote, branch, remote, branch))
 
 	def shallowClone(self, url, branch, depth=1):
-		return runShell("(cd %s && git clone -b %s --depth=%s --single-branch %s)" % ( os.path.dirname(self.root), branch, depth, url )) 
+		return runShell("(cd %s && git clone -b %s --depth=%s --single-branch %s)" % (os.path.dirname(self.root), branch, depth, url))
 
 	def createNewLocalBranchToTrackRemote(self, branch):
 		self.readOnlyCheck()
-		return runShell("(cd %s && git checkout -b %s --track origin/%s)" % ( self.root, branch, branch )) 
+		return runShell("(cd %s && git checkout -b %s --track origin/%s)" % (self.root, branch, branch))
 
 	def pull(self, options=[]):
 		self.readOnlyCheck()
-		opts=" ".join(options) if options else ""
-		return runShell("(cd %s && git pull %s)" % (self.root, opts)) 
+		opts = " ".join(options)
+		return runShell("(cd %s && git pull %s)" % (self.root, opts))
 
 	def reset(self, options=[]):
 		self.readOnlyCheck()
-		opts=" ".join(options) if options else ""
-		return runShell("(cd %s && git reset %s)" % (self.root, opts)) 
+		opts = " ".join(options)
+		return runShell("(cd %s && git reset %s)" % (self.root, opts))
 
 	def clean(self, options=[]):
 		self.readOnlyCheck()
-		opts=" ".join(options) if options else ""
-		return runShell("(cd %s && git clean %s)" % (self.root, opts)) 
+		opts = " ".join(options) if options else ""
+		return runShell("(cd %s && git clean %s)" % (self.root, opts))
 
 	def exists(self):
 		return os.path.exists(self.root)
-	
+
 	def isGitRepo(self):
 		return os.path.exists(os.path.join(self.root, ".git"))
 
 	def checkout(self, branch="master", origin=None):
-		if origin != None:
+		if origin is not None:
 			args = "%s %s" % (origin, branch)
 		else:
 			args = branch
-		out = runShell("(cd %s && git checkout %s)" % ( self.root, args ))
+		out = runShell("(cd %s && git checkout %s)" % (self.root, args))
 		if out == 0:
 			return True
 		else:
 			return False
-	
+
 	@property
 	def commitID(self):
 		retval, out = runShell_so("(cd %s && git rev-parse HEAD)" % self.root)
@@ -109,8 +113,9 @@ class GitHelper(object):
 		else:
 			return None
 
+
 class MetaRepoSyncHandler(object):
-	
+
 	def __init__(self, config, install_path):
 		self.config = config
 		self.root = config.meta_repo_root
@@ -123,7 +128,7 @@ class MetaRepoSyncHandler(object):
 	def load_metadata(self):
 		self.kit_sha1 = self.load_kit_metadata("sha1")
 		self.kit_info = self.load_kit_metadata("info")
-	
+
 	def load_kit_metadata(self, fn):
 		ksf = os.path.join(self.root, "metadata/kit-%s.json" % fn)
 		if os.path.exists(ksf):
@@ -144,58 +149,65 @@ class MetaRepoSyncHandler(object):
 	def sync_meta_repo(self, args):
 		import pwd
 
-		original_uid = os.getuid()
 		uid = pwd.getpwnam(self.config.sync_user).pw_uid
+		gid = pwd.getpwnam(self.config.sync_user).pw_gid
 		if "HOME" in os.environ:
 			# git will look here for various things
 			del os.environ["HOME"]
-		if os.path.exists(self.root):
-			stat_info = os.stat(self.root)
-			if stat_info.st_uid != uid and self.config.sync_user != "root":
-				runShell("(cd %s && chown -R %s:%s * )" % (self.root, "portage", "portage"))
-		os.seteuid(uid)
-		if "kits" not in args:
-			repo = GitHelper(self.root)
-			print(color.GREEN + "Syncing meta-repo" + color.END)
-			if repo.exists():
-				retval = repo.fetchRemote("master")
-				retval = repo.pull(options=["--no-commit", "-f","--no-recurse-submodules"])
-				if retval != 0:
-					print(color.RED + "There was an error syncing meta-repo." , color.END)
-					sys.exit(1)
-			else:
-				repo.shallowClone("https://github.com/funtoo/meta-repo", "master")
-		self.load_metadata()
-		fails = []
-		for kt in self.kit_info["kit_order"]:
-			branch = None
-			if "kits" in self.config.settings:
-				if kt in self.config.settings["kits"]:
-					branch = self.config.settings["kits"][kt]
-			success = self.sync_kit(kt, branch=branch)
-			if not success:
-				fails.append((kt, branch))
-		if len(fails):
-			for kt, branch in fails:
-				print(color.RED + "There was an error syncing %s." % kt, color.END)
+		if not os.path.exists(self.root):
+			os.mkdir(self.root)
+		stat_info = os.stat(self.root)
+		if stat_info.st_uid != uid and self.config.sync_user != "root":
+			runShell("chown -R %s:%s %s" % ("portage", "portage", self.root))
+		# We need to fork here in order to sync as sync_user and then switch back to root
+		pid = os.fork()
+		if pid == 0:
+			os.setgid(gid)
+			os.setuid(uid)
+			if "kits" not in args:
+				repo = GitHelper(self.root)
+				print(color.GREEN + "Syncing meta-repo" + color.END)
+				if repo.isGitRepo():
+					retval = repo.fetchRemote("master")
+					retval = repo.pull(options=["--no-commit", "-f", "--no-recurse-submodules"])
+					if retval != 0:
+						print(color.RED + "There was an error syncing meta-repo.", color.END)
+						sys.exit(1)
+				else:
+					repo.shallowClone("https://github.com/funtoo/meta-repo", "master")
+			self.load_metadata()
+			fails = []
+			for kt in self.kit_info["kit_order"]:
+				branch = None
+				if "kits" in self.config.settings:
+					if kt in self.config.settings["kits"]:
+						branch = self.config.settings["kits"][kt]
+				success = self.sync_kit(kt, branch=branch)
+				if not success:
+					fails.append((kt, branch))
+			if len(fails):
+				for kt, branch in fails:
+					print(color.RED + "There was an error syncing %s." % kt, color.END)
+				sys.exit(1)
+			sys.exit(0)
+		# Forked process terminated here
+		if os.waitpid(pid, 0)[1] > 0:
 			return False
-		else:
-			print(color.GREEN + "Sync successful and kits in alignment! :)" + color.END)
-			print(color.GREEN + "Updating profiles..." + color.END)
-			os.seteuid(original_uid)
-			try:
-				ego_profile = get_ego_module(self.install_path, "profile")
-				ego_profile.main(self.install_path, self.config, [ "update" ] )
-			except PermissionError:
-				print(color.RED + "Could not update ego profiles automatically due to permissions (code in /root, most likely.)")
-				print("Please run epro update manually as root." + color.END)
-			return True
+		print(color.GREEN + "Sync successful and kits in alignment! :)" + color.END)
+		print(color.GREEN + "Updating profiles..." + color.END)
+		try:
+			ego_profile = get_ego_module(self.install_path, "profile")
+			ego_profile.main(self.install_path, self.config, ["update"])
+		except PermissionError:
+			print(color.RED + "Could not update ego profiles automatically due to permissions (code in /root, most likely.)")
+			print("Please run epro update manually as root." + color.END)
+		return True
 
 	def sync_kit(self, kit_name, branch=None):
-		if branch == None:
+		if branch is None:
 			# use default
 			branch = self.kit_info["kit_settings"][kit_name]["default"]
-		if branch == None:
+		if branch is None:
 			print(color.RED + "Fatal: branch cannot be None." + color.END)
 			sys.exit(1)
 		if branch == self.kit_info["kit_settings"][kit_name]["default"]:
@@ -210,10 +222,7 @@ class MetaRepoSyncHandler(object):
 				os.rmdir(kit.root)
 			except OSError:
 				pass
-		if kit.exists() and not kit.isGitRepo():
-			print("fatal - kit %s is not a git repository" % kit_name)
-			sys.exit(1)
-		elif not kit.exists():
+		if not kit.exists():
 			kit.shallowClone("https://github.com/funtoo/%s" % kit_name, branch)
 
 		if not kit.localBranchExists(branch):
@@ -222,7 +231,7 @@ class MetaRepoSyncHandler(object):
 		kit.reset(options=["--hard"])
 		kit.clean(options=["-fd"])
 		kit.pull(options=["-f", "--no-commit"])
-	
+
 		# do sync
 		sha1 = kit.commitID
 		desired_sha1 = self.kit_sha1[kit_name][branch]
@@ -242,12 +251,13 @@ class MetaRepoSyncHandler(object):
 		if (sha1 == desired_sha1):
 			return True
 		else:
-			retval = kit.fetchRemote(branch)
+			kit.fetchRemote(branch)
 			sha1 = kit.commitID
 			sha1_check(sha1, desired_sha1)
 			if (sha1 != desired_sha1):
 				success = kit.checkout(desired_sha1)
 		return success
+
 
 def main(install_path, config, args):
 	s = MetaRepoSyncHandler(config, install_path)
