@@ -149,8 +149,9 @@ class MetaRepoSyncHandler(object):
 	def sync_meta_repo(self, args):
 		import pwd
 
-		uid = pwd.getpwnam(self.config.sync_user).pw_uid
-		gid = pwd.getpwnam(self.config.sync_user).pw_gid
+		pwnam = pwd.getpwnam(self.config.sync_user)
+		uid = pwnam.pw_uid
+		gid = pwnam.pw_gid
 		if "HOME" in os.environ:
 			# git will look here for various things
 			del os.environ["HOME"]
@@ -158,7 +159,7 @@ class MetaRepoSyncHandler(object):
 			os.mkdir(self.root)
 		stat_info = os.stat(self.root)
 		if stat_info.st_uid != uid and self.config.sync_user != "root":
-			runShell("chown -R %s:%s %s" % ("portage", "portage", self.root))
+			runShell("chown -R %s:%s %s" % (uid, gid, self.root))
 		# We need to fork here in order to sync as sync_user and then switch back to root
 		pid = os.fork()
 		if pid == 0:
