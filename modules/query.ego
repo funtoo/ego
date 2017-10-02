@@ -63,10 +63,10 @@ def handle_version_action(atom_string):
 		if repo.name in repo_branches:
 			branch = repo_branches[repo.name]
 		else:
-			branch = subprocess.run([
+			branch = subprocess.Popen([
 				'git', '-C', repo.location,
 				'rev-parse', '--abbrev-ref', 'HEAD',
-			], stdout=subprocess.PIPE).stdout.decode('ascii').strip()
+			], stdout=subprocess.PIPE).stdout.read().decode('ascii').strip()
 			repo_branches[repo.name] = branch
 		repo = color.blue(repo.name)
 		if branch:
