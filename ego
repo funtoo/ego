@@ -8,10 +8,13 @@ Funtoo's personality tool
 # Main ego program.
 #
 # Copyright 2015-2017 Daniel Robbins and Funtoo Solutions, Inc.
-# See LICENSE.txt for terms of distribution. 
+# See LICENSE.txt for terms of distribution.
 
-import os, sys, configparser
-VERSION = "2.0.10"
+import configparser
+import os
+import sys
+
+VERSION = "2.1.0"
 
 settings = configparser.ConfigParser()
 try:
@@ -23,11 +26,11 @@ except IOError:
 if "global" in settings and "install_path" in settings["global"]:
 	install_path = settings["global"]["install_path"]
 else:
-	install_path = "/usr/share/ego"
+	install_path = "."
 
-sys.path.insert(0,install_path + "/python")
+sys.path.insert(0, install_path + "/python")
 
-from ego_helpers import *
+from ego_helpers import EgoConfig, color, header, run_ego_module
 
 ego_config = EgoConfig(install_path, settings)
 
@@ -45,18 +48,18 @@ if __name__ == "__main__":
 			print(color.RED + "Unrecognized shortcut %s. Type ego help for more info." % exec_name + color.END)
 			sys.exit(1)
 	else:
-		if len(sys.argv) == 1 or ( len(sys.argv) == 2 and sys.argv[1] in [ "info", "help" ] ):
+		if len(sys.argv) == 1 or (len(sys.argv) == 2 and sys.argv[1] in ["info", "help"]):
 			print("Usage: %s [module] [info|options]..." % os.path.basename(sys.argv[0]))
 			header("Available ego modules")
-			for mod,info in ego_config.available_modules():
+			for mod, info in ego_config.available_modules():
 				desc = ''
 				if "description" in info:
 					desc = info["description"]
 				if "shortcut" in info:
-					desc += " (%s%s%s)" % ( color.BOLD, info["shortcut"], color.END )
-				print("%s%15s%s - %s" % ( color.CYAN, mod, color.END, desc ))
+					desc += " (%s%s%s)" % (color.BOLD, info["shortcut"], color.END)
+				print("%s%15s%s - %s" % (color.CYAN, mod, color.END, desc))
 			print()
-		elif len(sys.argv) == 3 and sys.argv[2] in [ "info", "help" ]:
+		elif len(sys.argv) == 3 and sys.argv[2] in ["info", "help"]:
 			mod = sys.argv[1]
 			action = sys.argv[2]
 			if mod not in ego_config.ego_mods:
@@ -76,7 +79,7 @@ if __name__ == "__main__":
 					else:
 						print("No help available for this ego module.")
 		elif len(sys.argv) >= 2:
-			#called as 'ego'
+			# called as 'ego'
 			action = sys.argv[1]
 			args = sys.argv[2:]
 		else:
