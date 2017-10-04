@@ -64,7 +64,7 @@ def handle_version_action(atom_string):
 			branch = repo_branches[repo.name]
 		else:
 			branch = subprocess.Popen([
-				'git', '-C', repo.location,
+				'git', '-C', str(repo.location),
 				'rev-parse', '--abbrev-ref', 'HEAD',
 			], stdout=subprocess.PIPE).stdout.read().decode('ascii').strip()
 			repo_branches[repo.name] = branch
@@ -113,10 +113,10 @@ def handle_origin_action(atom_string):
 			base_url = repo_urls.get(repository, '')
 			if '{branch}' in base_url:
 				repo = appi.conf.Repository[kit]
-				branch = subprocess.run([
-					'git', '-C', repo.location,
+				branch = subprocess.Popen([
+					'git', '-C', str(repo.location),
 					'rev-parse', '--abbrev-ref', 'HEAD',
-				], stdout=subprocess.PIPE).stdout.decode('ascii').strip()
+				], stdout=subprocess.PIPE).stdout.read().decode('ascii').strip()
 			else:
 				branch = None
 			url = base_url.format(kit=kit, branch=branch, cat=cat, pkg=pkg)
