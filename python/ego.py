@@ -15,22 +15,27 @@ class EgoModule:
 	def debug(self, message):
 		if self.verbosity > 1:
 			sys.stdout.write(str(message) + '\n')
+		sys.stdout.flush()
 
 	def log(self, message):
 		if self.verbosity > 0:
 			sys.stdout.write(str(message) + '\n')
+		sys.stdout.flush()
 
 	def echo(self, message):
 		if self.verbosity > 0:
 			sys.stdout.write(str(message))
+		sys.stdout.flush()
 
 	def warning(self, message):
 		if self.verbosity > -1:
 			sys.stdout.write(color.yellow(str(message)) + '\n')
+		sys.stdout.flush()
 
 	def error(self, message):
 		if self.verbosity > -1:
 			sys.stderr.write(color.red(str(message)) + '\n')
+		sys.stderr.flush()
 
 	def fatal(self, message):
 		self.error(message)
