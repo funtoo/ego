@@ -27,8 +27,8 @@ def get_ego_module(install_path, modname):
 def run_ego_module(install_path, modname, config, args):
 	mod = get_ego_module(install_path, modname)
 	if mod:
-		ego_module = mod.Module(install_path, config)
-		ego_module(args)
+		ego_module = mod.Module(modname, install_path, config)
+		ego_module(*args)
 	else:
 		print(color.RED + "Error: ego module \"%s\" not found." % modname + color.END)
 		sys.exit(1)
