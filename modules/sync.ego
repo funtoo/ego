@@ -156,15 +156,33 @@ class MetaRepoSyncHandler(object):
 			# git will look here for various things
 			del os.environ["HOME"]
 		if not os.path.exists(self.root):
-			os.mkdir(self.root)
+			try:
+				os.mkdir(self.root)
+			except PermissionError:
+				print(
+					color.RED + "You don't have enough priviledge. "
+					"You should probably run this command as root. " + color.END)
+				sys.exit(1)
 		stat_info = os.stat(self.root)
 		if stat_info.st_uid != uid and self.config.sync_user != "root":
-			runShell("chown -R %s:%s %s" % (uid, gid, self.root))
+			try:
+				runShell("chown -R %s:%s %s" % (uid, gid, self.root))
+			except PermissionError:
+				print(
+					color.RED + "You don't have enough priviledge. "
+					"You should probably run this command as root. " + color.END)
+				sys.exit(1)
 		# We need to fork here in order to sync as sync_user and then switch back to root
 		pid = os.fork()
 		if pid == 0:
-			os.setgid(gid)
-			os.setuid(uid)
+			try:
+				os.setgid(gid)
+				os.setuid(uid)
+			except PermissionError:
+				print(
+					color.RED + "You don't have enough priviledge. "
+					"You should probably run this command as root. " + color.END)
+				sys.exit(1)
 			if "kits" not in args:
 				repo = GitHelper(self.root)
 				print(color.GREEN + "Syncing meta-repo" + color.END)
