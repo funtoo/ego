@@ -29,12 +29,12 @@ class EgoModule:
 
 	def warning(self, message):
 		if self.verbosity > -1:
-			sys.stdout.write(color.yellow(str(message)) + '\n')
+			sys.stdout.write(str(color.yellow(str(message))) + '\n')
 		sys.stdout.flush()
 
 	def error(self, message):
 		if self.verbosity > -1:
-			sys.stderr.write(color.red(str(message)) + '\n')
+			sys.stderr.write(str(color.red(str(message))) + '\n')
 		sys.stderr.flush()
 
 	def fatal(self, message):
