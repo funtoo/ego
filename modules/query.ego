@@ -180,7 +180,9 @@ def main(install_path, config, args):
 	if len(args):
 		action = args[0]
 	if action not in actions:
-		print("'%s' is not a valid action. Use one of these: %s" % (action, " ".join(actions.keys())))
+		print("'%s' is not a valid action. Use one of these: %s" % (action, " ".join([
+			x for x in actions.keys() if len(x) > 1
+		])))
 		sys.exit(1)
 
 	try:
