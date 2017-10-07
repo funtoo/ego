@@ -36,9 +36,7 @@ class GitHelper:
 	def isReadOnly(self):
 		try:
 			Path(self.root + "/foo").touch()
-		except FileNotFoundError:
-			return True
-		except PermissionError:
+		except (FileNotFoundError, PermissionError):
 			return True
 		else:
 			os.unlink(self.root + "/foo")
@@ -121,13 +119,38 @@ class Module(EgoModule):
 			branch = self.kit_info["kit_settings"][kit]["default"]
 		return branch
 
-	def run_shell(self, command):
+	def _run_subprocess(self, command):
 		self.debug("Run shell: %s" % command)
-		return os.system(command)
+		if isinstance(command, str):
+			command = command.split()
+		return subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
-	def run_shell_so(self, command):
-		self.debug("Run shell: %s" % command)
-		return subprocess.getstatusoutput(command)
+	def run_shell(self, command, output=False, allow_failure=True):
+		proc = self._run_subprocess(command)
+		retval = proc.wait()
+
+		out = proc.stdout.read().decode('utf-8')
+		if out:
+			if output:
+				self.log(out)
+			else:
+				self.debug(out)
+		err = proc.stderr.read().decode('utf-8')
+		if err:
+			self.log(err)
+		if retval != 0 and not allow_failure:
+			sys.exit(1)
+		return retval
+
+	def run_shell_so(self, command, allow_failure=True):
+		proc = self._run_subprocess(command)
+		retval = proc.wait()
+		err = proc.stderr.read().decode('utf-8')
+		if err:
+			self.log(err)
+		if retval != 0 and not allow_failure:
+			sys.exit(1)
+		return (retval, proc.stdout.read().decode('utf-8'))
 
 	def sync_kit(self, kit_name, branch=None):
 		if branch is None:
