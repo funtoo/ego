@@ -55,9 +55,16 @@ class EgoModule:
 		self.name = name
 		self.install_path = install_path
 		self.config = config
+		self.info = config.ego_mods_info[name]
 
 	def __call__(self, *args):
-		parser = argparse.ArgumentParser('ego ' + self.name, description=self.help)
+		parser = argparse.ArgumentParser('ego ' + self.name, description=self.info['description'])
+		parser.add_argument('--version', action='version', version=(
+			"ego %(ego_version)s / %(module)s %(module_version)s (by %(module_author)s)" % {
+				'ego_version': self.config.ego_version, 'module': self.name,
+				'module_version': self.info['version'], 'module_author': self.info['author'],
+			}
+		))
 		verbosity_group = parser.add_mutually_exclusive_group()
 		verbosity_group.add_argument('--verbosity', default=1, type=int, help="Set verbosity level")
 		verbosity_group.add_argument('-v', default=0, action='count', help="Increase verbosity level by 1 per occurrence")

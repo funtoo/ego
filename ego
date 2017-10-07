@@ -32,7 +32,7 @@ sys.path.insert(0, install_path + "/python")
 
 from ego_helpers import EgoConfig, color, header, run_ego_module
 
-ego_config = EgoConfig(install_path, settings)
+ego_config = EgoConfig(install_path, settings, VERSION)
 
 if __name__ == "__main__":
 	exec_name = os.path.basename(sys.argv[0])

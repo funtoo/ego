@@ -301,8 +301,6 @@ class MultiChoicesAction(argparse.Action):
 
 class Module(EgoModule):
 
-	help = "Manage Funtoo Linux profiles."
-
 	# Somewhat self-explanatory, these list profiles that can be specified (up to once), ones that can
 	# be specified up to multiple times, all types of profiles, and all types of actions that this
 	# module can perform.

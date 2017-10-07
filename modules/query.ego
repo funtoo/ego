@@ -14,8 +14,6 @@ from ego_helpers import color, Table
 
 class Module(EgoModule):
 
-	help = """Query package information."""
-
 	def add_arguments(self, parser):
 		subparsers = parser.add_subparsers(title='subcommands', dest='subcommand')
 

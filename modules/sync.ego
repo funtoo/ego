@@ -94,8 +94,6 @@ class GitHelper:
 
 class Module(EgoModule):
 
-	help = "Synchronize Portage tree."
-
 	def add_arguments(self, parser):
 		parser.add_argument('--kits-only', action='store_true', help="Do not sync meta-repo, only kits.")
 

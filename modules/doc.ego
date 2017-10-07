@@ -8,8 +8,6 @@ from mediawiki_cli_parser import parse, getMainNodes, text_width
 
 class Module(EgoModule):
 
-	help = "Display wiki documentation."
-
 	def add_arguments(self, parser):
 		parser.add_argument('wiki_page', help="The name of a wiki page")
 
