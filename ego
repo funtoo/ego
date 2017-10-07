@@ -26,7 +26,7 @@ except IOError:
 if "global" in settings and "install_path" in settings["global"]:
 	install_path = settings["global"]["install_path"]
 else:
-	install_path = "."
+	install_path = "/usr/share/ego"
 
 sys.path.insert(0, install_path + "/python")
 
