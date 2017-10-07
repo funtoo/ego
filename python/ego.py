@@ -12,34 +12,44 @@ class EgoModule:
 
 	verbosity = 1
 
+	def _output(self, message, err=False):
+		message = str(message)
+		if not message.endswith('\n'):
+			message += '\n'
+		out = sys.stderr if err else sys.stdout
+		out.write(message)
+		out.flush()
+
 	def debug(self, message):
+		"""Output debug message to stdout. Auto-append newline if missing"""
 		if self.verbosity > 1:
-			sys.stdout.write(str(message) + '\n')
-		sys.stdout.flush()
+			self._output(message)
 
 	def log(self, message):
+		"""Output message to stdout. Auto-append newline if missing."""
 		if self.verbosity > 0:
-			sys.stdout.write(str(message) + '\n')
-		sys.stdout.flush()
+			self._output(message)
 
 	def echo(self, message):
+		"""Output message as-is to stdout."""
 		if self.verbosity > 0:
 			sys.stdout.write(str(message))
-		sys.stdout.flush()
+			sys.stdout.flush()
 
 	def warning(self, message):
+		"""Output warning message to stdout. Auto-append newline if missing."""
 		if self.verbosity > -1:
-			sys.stdout.write(str(color.yellow(str(message))) + '\n')
-		sys.stdout.flush()
+			self._output(color.yellow(str(message)))
 
 	def error(self, message):
+		"""Output error message to stderr. Auto-append newline if missing."""
 		if self.verbosity > -1:
-			sys.stderr.write(str(color.red(str(message))) + '\n')
-		sys.stderr.flush()
+			self._output(color.red(str(message)), err=True)
 
-	def fatal(self, message):
+	def fatal(self, message, exit_code=1):
+		"""Output error message to stderr and exit. Auto-append newline if missing."""
 		self.error(message)
-		sys.exit(1)
+		sys.exit(exit_code)
 
 	def __init__(self, name, install_path, config):
 		self.name = name

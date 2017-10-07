@@ -49,20 +49,14 @@ class ProfileLister:
 	# keys() returns a list of types of sub-profiles that are defined on this system.
 
 	def keys(self):
-		r = []
-		for k in self.valid_profiles:
-			if k in self.info:
-				r.append(k)
-		return r
+		return [k for k in self.valid_profiles if k in self.info]
 
 	# __getitem__ allows dict-style access to the location(s) for each profile. A list is returned, of
 	# paths relative to repodir. Since Funtoo supports multiple locations for each type of profile, the
 	# find() method can be used to find the actual location of a specific sub-profile.
 
 	def __getitem__(self, key):
-		if key in self.info:
-			return self.info[key]
-		return None
+		return self.info.get(key)
 
 	# list() will return a list of all available sub-profiles of a particular type.
 
@@ -76,7 +70,7 @@ class ProfileLister:
 						things.append(thing)
 		return things
 
-	# find() will find the location of a particular sub-profile named 'val' of type 'key'. An 
+	# find() will find the location of a particular sub-profile named 'val' of type 'key'. An
 	# absolute path is returned, or None if not found.
 
 	def find(self, key, val):
@@ -281,47 +275,6 @@ class ProfileSetting:
 			f.write(out)
 
 
-def warning(info):
-	print("WARNING: %s" % info)
-
-
-def header(info):
-	print("\n=== " + color.BOLD + color.GREEN + info + color.END + ": ===\n")
-
-
-# We use a ProfileLister for everything but show:
-
-def pythonInfo(ego_sync):
-	header("Python kit")
-	print("%s%12s%s: %s%s%s" % (color.BOLD, "branch", color.END, color.CYAN, ego_sync.get_selected_kit("python-kit"), color.END))
-
-
-def shortList(ps, key_order):
-	header("Enabled Profiles")
-	for key in key_order:
-		if key not in ps.descendents or len(ps.descendents[key]) == 0:
-			print("%s%12s%s: (not set)" % (color.BOLD, key, color.END))
-		else:
-			for item in ps.descendents[key]:
-				print("%s%12s%s: %s%s%s" % (color.BOLD, key, color.END, color.CYAN, item.shortname, color.END))
-	print()
-
-
-def shortJSON(ps, key_order):
-	outdict = {}
-	for key in key_order:
-		outdict[key] = []
-		if key not in ps.descendents:
-			continue
-		for item in ps.descendents[key]:
-			out = {}
-			out["shortname"] = item.shortname
-			if item.path is not None:
-				out["path"] = item.path
-			outdict[key].append(out)
-	return outdict
-
-
 class SyncModuleLink:
 
 	def __init__(self, config, install_path):
@@ -393,6 +346,38 @@ class Module(EgoModule):
 		mixins_parser.add_argument('mixins', nargs='*')
 		mixins_parser.set_defaults(handler=self.handle_mix_ins_action)
 
+	def header(self, info):
+		self.log("\n=== " + color.BOLD + color.GREEN + info + color.END + ": ===\n")
+
+	def python_info(self, ego_sync):
+		self.header("Python kit")
+		self.log("%s%12s%s: %s%s%s" % (
+			color.BOLD, "branch", color.END, color.CYAN, ego_sync.get_selected_kit("python-kit"), color.END))
+
+	def short_list(self, ps, key_order):
+		self.header("Enabled Profiles")
+		for key in key_order:
+			if key not in ps.descendents or len(ps.descendents[key]) == 0:
+				self.log("%s%12s%s: (not set)" % (color.BOLD, key, color.END))
+			else:
+				for item in ps.descendents[key]:
+					self.log("%s%12s%s: %s%s%s" % (color.BOLD, key, color.END, color.CYAN, item.shortname, color.END))
+		self.log("")
+
+	def short_JSON(self, ps, key_order):
+		outdict = {}
+		for key in key_order:
+			outdict[key] = []
+			if key not in ps.descendents:
+				continue
+			for item in ps.descendents[key]:
+				out = {}
+				out["shortname"] = item.shortname
+				if item.path is not None:
+					out["path"] = item.path
+				outdict[key].append(out)
+		return outdict
+
 	def get_profile_lister(self):
 		if "arch" in self.ps.descendents and len(self.ps.descendents['arch']) != 0:
 			# We list subarches based on the arch path, ie. "arch/x86-64bit/subarch" -- so we need to provide arch name:
@@ -403,8 +388,8 @@ class Module(EgoModule):
 			return ProfileLister(self.repodir, self.egodescfile, valid_profiles=self.valid_profiles)
 
 	def handle_show_action(self, **options):
-		shortList(self.ps, self.key_order)
-		pythonInfo(self.sync_link)
+		self.short_list(self.ps, self.key_order)
+		self.python_info(self.sync_link)
 		inherited_things = []
 		if "flavor" in self.ps.descendents and len(self.ps.descendents["flavor"]):
 			# follow first flavor:
@@ -424,7 +409,7 @@ class Module(EgoModule):
 					# de-pluralize
 					if icl == "mix-ins":
 						icl = "mix-in"
-					header("All inherited %s from %s %s" % (x, item.shortname, icl))
+					self.header("All inherited %s from %s %s" % (x, item.shortname, icl))
 					for i in ilist:
 						if i == i.child:
 							continue
@@ -432,19 +417,19 @@ class Module(EgoModule):
 						# de-pluralize
 						if iccl == "mix-ins":
 							iccl = "mix-in"
-						print("      %s%26s%s (from %s %s)" % (color.CYAN, i.shortname, color.END, i.child.shortname, iccl))
-		print()
+						self.log("      %s%26s%s (from %s %s)" % (color.CYAN, i.shortname, color.END, i.child.shortname, iccl))
+		self.log("")
 
 	def handle_update_action(self, **options):
 		self.ps.write(self.key_order, self.valid_multi_profiles)
 
 	def handle_show_json_action(self, **options):
-		print(json.dumps(shortJSON(self.ps, self.key_order), indent=4))
+		self.log(json.dumps(self.short_JSON(self.ps, self.key_order), indent=4))
 
 	def handle_get_action(self, **options):
 		profile = options['profile']
-		short_json = shortJSON(self.ps, self.key_order)
-		print(' '.join(p['shortname'] for p in short_json[profile]))
+		short_json = self.short_JSON(self.ps, self.key_order)
+		self.log(' '.join(p['shortname'] for p in short_json[profile]))
 
 	def handle_list_action(self, **options):
 		pl = self.get_profile_lister()
@@ -464,7 +449,7 @@ class Module(EgoModule):
 				for value in self.ps.descendents[key]:
 					active_keys.append(value.shortname)
 
-			header(key)
+			self.header(key)
 			items = pl.list(key)
 			items.sort()
 
@@ -504,8 +489,8 @@ class Module(EgoModule):
 				else:
 					sys.stdout.write(", " + outx)
 					lpos += len(x) + 2
-			print()
-		print()
+			self.log("")
+		self.log("")
 
 	def handle_single_profile_actions(self, **options):
 		action = options['action']
@@ -530,8 +515,8 @@ class Module(EgoModule):
 				child=self.ps,
 			)
 		]
-		shortList(self.ps, self.key_order)
-		print(">>> Set %s to %s." % (action, newset))
+		self.short_list(self.ps, self.key_order)
+		self.log(">>> Set %s to %s." % (action, newset))
 
 	def handle_mix_ins_action(self, **options):
 		mixins = options['mixins']
@@ -586,15 +571,15 @@ class Module(EgoModule):
 		# Do all output here -- our shortList() will reflect the mix-in changes made above. Then put informational messages
 		# underneath for readability:
 
-		shortList(self.ps, self.key_order)
+		self.short_list(self.ps, self.key_order)
 		for mixin in subs.difference(removed):
-			warning("Mix-in %s not found, not removing." % mixin)
+			self.warning("Mix-in %s not found, not removing." % mixin)
 		for mixin in notadded:
-			warning("Mix-in %s already active, not adding." % mixin)
+			self.warning("Mix-in %s already active, not adding." % mixin)
 		for mixin in removed:
-			print(">>> Removed %s mix-in." % mixin)
+			self.log(">>> Removed %s mix-in." % mixin)
 		for mixin in added:
-			print(">>> Added %s mix-in." % mixin)
+			self.log(">>> Added %s mix-in." % mixin)
 
 	def handle(self, **options):
 		portdir = portage.settings.repositories.mainRepoLocation()
@@ -618,7 +603,7 @@ class Module(EgoModule):
 			with open(reponamefile, "r") as rnf:
 				self.reponame = rnf.read().strip()
 		else:
-			print("Unable to find the repository name in %s - exiting." % reponamefile)
+			self.log("Unable to find the repository name in %s - exiting." % reponamefile)
 			sys.exit(1)
 
 		# connect to ego sync module:
