@@ -361,47 +361,27 @@ class Module(EgoModule):
 
 	def add_arguments(self, parser):
 		subparsers = parser.add_subparsers(title='actions', dest='action')
-		subparsers.add_parser('show', help=(
-			""
-		))
-		subparsers.add_parser('show-json', help=(
-			""
-		))
+		subparsers.add_parser('show', help="Print your profiles")
+		subparsers.add_parser('show-json', help="Print your profiles in JSON format")
 
-		get_parser = subparsers.add_parser('get', help=(
-			""
-		))
+		get_parser = subparsers.add_parser('get', help="Print the value of a given profile")
 		get_parser.add_argument('profile', choices=self.valid_profiles)
 
-		list_parser = subparsers.add_parser('list', help=(
-			""
-		))
+		list_parser = subparsers.add_parser('list', help="List given profiles (or all by default)")
 		list_parser.add_argument('profiles', nargs='*', choices=self.valid_profiles, action=MultiChoicesAction)
 
-		subparsers.add_parser('update', help=(
-			""
-		))
+		subparsers.add_parser('update', help="Update your profiles (/etc/portage/make.profile/parent)")
 
 		single_profile_parsers = [
-			subparsers.add_parser('arch', help=(
-				""
-			)),
-			subparsers.add_parser('build', help=(
-				""
-			)),
-			subparsers.add_parser('subarch', help=(
-				""
-			)),
-			subparsers.add_parser('flavor', help=(
-				""
-			)),
+			subparsers.add_parser('arch', help="Change your arch profile"),
+			subparsers.add_parser('build', help="Change your build profile"),
+			subparsers.add_parser('subarch', help="Change your subarch profile"),
+			subparsers.add_parser('flavor', help="Change your flavor profile"),
 		]
 		for subparser in single_profile_parsers:
 			subparser.add_argument('new_value')
 
-		mixins_parser = subparsers.add_parser('mix-ins', aliases=['mix-in'], help=(
-			""
-		))
+		mixins_parser = subparsers.add_parser('mix-ins', aliases=['mix-in'], help="Change your mix-ins profile")
 		mixins_parser.add_argument('mixins', nargs='*')
 
 	def get_profile_lister(self):
