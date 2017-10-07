@@ -324,7 +324,9 @@ class Module(EgoModule):
 		get_parser.set_defaults(handler=self.handle_get_action)
 
 		list_parser = subparsers.add_parser('list', help="List given profiles (or all by default)")
-		list_parser.add_argument('profiles', nargs='*', choices=self.valid_profiles, action=MultiChoicesAction)
+		list_parser.add_argument('profiles', nargs='*', choices=self.valid_profiles, action=MultiChoicesAction, help=(
+			"Profiles to show: %s" % ', '.join(self.valid_profiles)
+		))
 		list_parser.set_defaults(handler=self.handle_list_action)
 
 		update_parser = subparsers.add_parser('update', help="Update your profiles (/etc/portage/make.profile/parent)")
