@@ -23,19 +23,23 @@ class Module(EgoModule):
 			"Show available ebuild versions matching the given atom."
 		))
 		versions_parser.add_argument('atom', type=EgoModule.atom_argument(False))
+		versions_parser.set_defaults(handler=self.handle_versions_subcommand)
 
 		origin_parser = subparsers.add_parser('origin', aliases=['o'], help=(
 			"Show from which repository the given package comes from."
 		))
 		origin_parser.add_argument('package', type=EgoModule.atom_argument(False))
+		origin_parser.set_defaults(handler=self.handle_origin_subcommand)
 
 		bugs_parser = subparsers.add_parser('bugs', help=(
 			"Show Funtoo bugs related to the given package."
 		))
 		bugs_parser.add_argument('package', type=EgoModule.atom_argument(False))
+		bugs_parser.set_defaults(handler=self.handle_bugs_subcommand)
 
 	def handle(self, **options):
-		getattr(self, 'handle_{}_subcommand'.format(options['subcommand']))(**options)
+		handler = options.pop('handler')
+		handler(**options)
 
 	def handle_versions_subcommand(self, **options):
 		"""Given a valid atom string, print version, slot, repository and a marker

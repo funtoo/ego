@@ -361,16 +361,23 @@ class Module(EgoModule):
 
 	def add_arguments(self, parser):
 		subparsers = parser.add_subparsers(title='actions', dest='action')
-		subparsers.add_parser('show', help="Print your profiles")
-		subparsers.add_parser('show-json', help="Print your profiles in JSON format")
+
+		show_parser = subparsers.add_parser('show', help="Print your profiles")
+		show_parser.set_defaults(handler=self.handle_show_action)
+
+		show_json_parser = subparsers.add_parser('show-json', help="Print your profiles in JSON format")
+		show_json_parser.set_defaults(handler=self.handle_show_json_action)
 
 		get_parser = subparsers.add_parser('get', help="Print the value of a given profile")
 		get_parser.add_argument('profile', choices=self.valid_profiles)
+		get_parser.set_defaults(handler=self.handle_get_action)
 
 		list_parser = subparsers.add_parser('list', help="List given profiles (or all by default)")
 		list_parser.add_argument('profiles', nargs='*', choices=self.valid_profiles, action=MultiChoicesAction)
+		list_parser.set_defaults(handler=self.handle_list_action)
 
-		subparsers.add_parser('update', help="Update your profiles (/etc/portage/make.profile/parent)")
+		update_parser = subparsers.add_parser('update', help="Update your profiles (/etc/portage/make.profile/parent)")
+		update_parser.set_defaults(handler=self.handle_update_action)
 
 		single_profile_parsers = [
 			subparsers.add_parser('arch', help="Change your arch profile"),
@@ -380,9 +387,11 @@ class Module(EgoModule):
 		]
 		for subparser in single_profile_parsers:
 			subparser.add_argument('new_value')
+			subparser.set_defaults(handler=self.handle_single_profile_actions)
 
 		mixins_parser = subparsers.add_parser('mix-ins', aliases=['mix-in'], help="Change your mix-ins profile")
 		mixins_parser.add_argument('mixins', nargs='*')
+		mixins_parser.set_defaults(handler=self.handle_mix_ins_action)
 
 	def get_profile_lister(self):
 		if "arch" in self.ps.descendents and len(self.ps.descendents['arch']) != 0:
@@ -632,12 +641,8 @@ class Module(EgoModule):
 
 		self.writeout = upgrade_to_core_kit
 
-		action = options['action'] or 'show'
-
-		if action in self.valid_single_profiles:
-			self.handle_single_profile_actions(**options)
-		else:
-			getattr(self, 'handle_%s_action' % (action.replace('-', '_')))(**options)
+		handler = options.pop('handler', self.handle_show_action)
+		handler(**options)
 
 		for x in self.ps.parents:
 			c = x.cl
