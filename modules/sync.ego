@@ -8,7 +8,7 @@ import subprocess
 import sys
 
 from ego import EgoModule
-from ego_helpers import color, get_ego_module
+from ego_helpers import color, run_ego_module
 
 
 class GitHelper:
@@ -112,6 +112,14 @@ class Module(EgoModule):
 				return json.loads(a.read())
 		else:
 			return {}
+
+	def get_selected_kit(self, kit):
+		branch = None
+		if "kits" in self.config.settings and kit in self.config.settings["kits"]:
+			branch = self.config.settings["kits"][kit]
+		else:
+			branch = self.kit_info["kit_settings"][kit]["default"]
+		return branch
 
 	def run_shell(self, command):
 		self.debug("Run shell: %s" % command)
@@ -243,8 +251,7 @@ class Module(EgoModule):
 		self.log(color.green("Sync successful and kits in alignment! :)"))
 		self.log(color.green("Updating profiles..."))
 		try:
-			ego_profile = get_ego_module(self.install_path, "profile")
-			ego_profile.main(self.install_path, self.config, ["update"])
+			run_ego_module(self.install_path, 'profile', self.config, ['update'])
 		except PermissionError:
 			self.error("Could not update ego profiles automatically due to permissions (code in /root, most likely.)")
 			self.error("Please run epro update manually as root.")

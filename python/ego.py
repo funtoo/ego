@@ -50,7 +50,8 @@ class EgoModule:
 		parser = argparse.ArgumentParser('ego ' + self.name, description=self.help)
 		parser.add_argument('--verbosity', default=1, type=int)
 		self.add_arguments(parser)
-		options = vars(parser.parse_args(args))
+		options = parser.parse_args(args)
+		options = vars(options)
 		self.verbosity = options['verbosity']
 		self.handle(**options)
 
