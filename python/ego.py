@@ -58,11 +58,14 @@ class EgoModule:
 
 	def __call__(self, *args):
 		parser = argparse.ArgumentParser('ego ' + self.name, description=self.help)
-		parser.add_argument('--verbosity', default=1, type=int)
+		verbosity_group = parser.add_mutually_exclusive_group()
+		verbosity_group.add_argument('--verbosity', default=1, type=int, help="Set verbosity level")
+		verbosity_group.add_argument('-v', default=0, action='count', help="Increase verbosity level by 1 per occurrence")
+		verbosity_group.add_argument('-q', default=0, action='count', help="Decrease verbosity level by 1 per occurrence")
 		self.add_arguments(parser)
 		options = parser.parse_args(args)
 		options = vars(options)
-		self.verbosity = options['verbosity']
+		self.verbosity = options.pop('verbosity') + options.pop('v') - options.pop('q')
 		self.handle(**options)
 
 	def add_arguments(self, parser):
