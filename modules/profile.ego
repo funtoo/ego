@@ -7,7 +7,6 @@ import sys
 if os.path.exists("/usr/share/portage/pym"):
 	sys.path.insert(0, "/usr/share/portage/pym")
 import portage
-import portage.repository.config
 
 from ego import EgoModule
 from ego_helpers import color, get_ego_module
@@ -421,7 +420,10 @@ class Module(EgoModule):
 		self.log("")
 
 	def handle_update_action(self, **options):
-		self.ps.write(self.key_order, self.valid_multi_profiles)
+		try:
+			self.ps.write(self.key_order, self.valid_multi_profiles)
+		except PermissionError:
+			self.fatal("You do not have permission to update profiles.")
 
 	def handle_show_json_action(self, **options):
 		self.log(json.dumps(self.short_JSON(self.ps, self.key_order), indent=4))
@@ -461,15 +463,15 @@ class Module(EgoModule):
 			count = 0
 
 			# write each item out -- when we cross maxpos characters, add a newline and indent:
-			sys.stdout.write(" " * lpos)
+			self.echo(" " * lpos)
 			if not items:
-				sys.stdout.write("None available")
+				self.echo("None available")
 				continue
 			for x in items:
 				if lpos > maxpos:
-					sys.stdout.write("\n")
+					self.echo("\n")
 					lpos = 4
-					sys.stdout.write(" " * lpos)
+					self.echo(" " * lpos)
 				if x in active_keys:
 					# make it stand out if it explicitly enabled:
 					outx = color.BOLD + color.CYAN + x + "*" + color.END
@@ -484,10 +486,10 @@ class Module(EgoModule):
 					outx = x
 				count += 1
 				if count == 1 or lpos == 4:
-					sys.stdout.write(outx)
+					self.echo(outx)
 					lpos += len(x)
 				else:
-					sys.stdout.write(", " + outx)
+					self.echo(", " + outx)
 					lpos += len(x) + 2
 			self.log("")
 		self.log("")
@@ -498,11 +500,10 @@ class Module(EgoModule):
 		pl = self.get_profile_lister()
 		if action in ["build", "arch"]:
 			if action in self.ps.descendents and len(action) > 0:
-				warning("%s already set to %s -- typically, user should not change this." % (
+				self.warning("%s already set to %s -- typically, user should not change this." % (
 					action, self.ps.descendents[action][0].shortname))
 		if newset not in pl.list(action):
-			warning("%s %s not available. Can't set." % (action, newset))
-			sys.exit(1)
+			self.fatal("%s %s not available. Can't set." % (action, newset))
 		self.writeout = True
 		# ps is the head of our heirarchy of ProfileSettings. Hack it -- inject our new profile info as a
 		# direct descendent of ps. Then the write() function will write the correct stuff out to the
@@ -533,8 +534,7 @@ class Module(EgoModule):
 		valids = pl.list("mix-ins")
 		for mixin in adds.union(subs):
 			if mixin not in valids:
-				warning("Error: %s is not a valid mix-in." % mixin)
-				sys.exit(1)
+				self.fatal("Error: %s is not a valid mix-in." % mixin)
 		p = 0
 		# remove "-" arguments.
 		removed = set()
@@ -603,8 +603,7 @@ class Module(EgoModule):
 			with open(reponamefile, "r") as rnf:
 				self.reponame = rnf.read().strip()
 		else:
-			self.log("Unable to find the repository name in %s - exiting." % reponamefile)
-			sys.exit(1)
+			self.fatal("Unable to find the repository name in %s - exiting." % reponamefile)
 
 		# connect to ego sync module:
 
@@ -632,16 +631,19 @@ class Module(EgoModule):
 		for x in self.ps.parents:
 			c = x.cl
 			if c in self.valid_single_profiles and len(self.ps.descendents[c]) > 1:
-				warning("Extra profile of type '%s' defined: '%s'. Will be removed." % (c, x.shortname))
+				self.warning("Extra profile of type '%s' defined: '%s'. Will be removed." % (c, x.shortname))
 				self.writeout = True
 		for key in self.required_profiles:
 			if key not in self.ps.descendents:
-				warning("No %s defined. Please set a %s." % (key, key))
+				self.warning("No %s defined. Please set a %s." % (key, key))
 
 		if self.writeout:
 			if upgrade_to_core_kit:
-				warning("Upgrading gentoo repository references to core-kit.")
-			self.ps.write(self.key_order, self.valid_multi_profiles)
+				self.warning("Upgrading gentoo repository references to core-kit.")
+			try:
+				self.ps.write(self.key_order, self.valid_multi_profiles)
+			except PermissionError:
+				self.fatal("You do not have permission to update profiles.")
 
 	def __call__(self, *args):
 		# Little trick to force end of arguments when using mix-ins command to
