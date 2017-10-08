@@ -11,7 +11,7 @@ Funtoo's personality tool
 # See LICENSE.txt for terms of distribution. 
 
 import os, sys, configparser
-VERSION = "2.0.13"
+VERSION = "2.0.14"
 
 settings = configparser.ConfigParser()
 try:
