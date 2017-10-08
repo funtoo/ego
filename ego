@@ -23,7 +23,9 @@ except IOError:
 	print("Config file /etc/ego.conf not found.")
 	sys.exit(1)
 
-if "global" in settings and "install_path" in settings["global"]:
+if 'EGO_INSTALL_PATH' in os.environ:
+	install_path = os.environ['EGO_INSTALL_PATH']
+elif "global" in settings and "install_path" in settings["global"]:
 	install_path = settings["global"]["install_path"]
 else:
 	install_path = "/usr/share/ego"
