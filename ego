@@ -75,6 +75,7 @@ if __name__ == "__main__":
 						print(ego_config.ego_mods_info[mod]["help"])
 					else:
 						print("No help available for this ego module.")
+			action = None
 		elif len(sys.argv) >= 2:
 			#called as 'ego'
 			action = sys.argv[1]

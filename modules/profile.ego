@@ -372,7 +372,7 @@ def main(install_path, config, args):
 		action = "show"
 
 	if action not in [ "show", "show-json", "get" ]:
-		if "arch" in ps.descendents and len(ps.descendents) != 0:
+		if "arch" in ps.descendents and len(ps.descendents['arch']) != 0:
 			# We list subarches based on the arch path, ie. "arch/x86-64bit/subarch" -- so we need to provide arch name:
 			pl = ProfileLister(repodir,egodescfile, valid_profiles=valid_profiles, arch=ps.descendents["arch"][0].shortname)
 		else:
@@ -430,7 +430,6 @@ def main(install_path, config, args):
 
 		# Time to list all available profile settings.
 
-		args = args[1:]
 		for key in pl.keys():
 			if args != [] and key not in args:
 				# user-specified sub-list, only list those things
@@ -504,7 +503,7 @@ def main(install_path, config, args):
 			# direct descendent of ps. Then the write() function will write the correct stuff out to the
 			# profile.
 			action_path = pl.find(action,newset)
-			ps.descendents[action] = [ProfileSetting(ps.repomap, config=config, name=newset,reponame=reponame,all_enabled=all_enabled, valid_profiles=valid_profiles, cl=action,parent_line=reponame + ":" + action_path + "/" + newset,child=ps)]
+			ps.descendents[action] = [ProfileSetting(config=config, repomap=ps.repomap, name=newset,reponame=reponame,all_enabled=all_enabled, valid_profiles=valid_profiles, cl=action,parent_line=reponame + ":" + action_path + "/" + newset,child=ps)]
 			shortList(ps, key_order)
 			print(">>> Set %s to %s." % ( action, newset ))
 		else:
@@ -547,7 +546,7 @@ def main(install_path, config, args):
 					notadded.add(new_shortname)
 					continue
 				mixin_path = pl.find("mix-ins",new_shortname)
-				new_ps = ProfileSetting(ps.repomap,config=config, name=new_shortname,cl="mix-ins",all_enabled=all_enabled,parent_line=reponame + ":" + mixin_path + "/" + new_shortname,child=ps)
+				new_ps = ProfileSetting(config=config, repomap=ps.repomap, name=new_shortname,cl="mix-ins",all_enabled=all_enabled,parent_line=reponame + ":" + mixin_path + "/" + new_shortname,child=ps)
 				if "mix-ins" not in ps.descendents:
 					ps.descendents["mix-ins"] = []
 				ps.descendents["mix-ins"].append(new_ps)
