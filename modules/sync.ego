@@ -160,7 +160,7 @@ class MetaRepoSyncHandler(object):
 				os.mkdir(self.root)
 			except PermissionError:
 				print(
-					color.RED + "You don't have enough priviledge. "
+					color.RED + "You don't have enough privileges. "
 					"You should probably run this command as root. " + color.END)
 				sys.exit(1)
 		stat_info = os.stat(self.root)
@@ -169,7 +169,7 @@ class MetaRepoSyncHandler(object):
 				runShell("chown -R %s:%s %s" % (uid, gid, self.root))
 			except PermissionError:
 				print(
-					color.RED + "You don't have enough priviledge. "
+					color.RED + "You don't have enough privileges. "
 					"You should probably run this command as root. " + color.END)
 				sys.exit(1)
 		# We need to fork here in order to sync as sync_user and then switch back to root
@@ -180,7 +180,7 @@ class MetaRepoSyncHandler(object):
 				os.setuid(uid)
 			except PermissionError:
 				print(
-					color.RED + "You don't have enough priviledge. "
+					color.RED + "You don't have enough privileges. "
 					"You should probably run this command as root. " + color.END)
 				sys.exit(1)
 			if "kits" not in args:

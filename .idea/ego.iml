@@ -5,7 +5,7 @@
       <sourceFolder url="file://$MODULE_DIR$/python" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/modules" isTestSource="false" />
     </content>
-    <orderEntry type="inheritedJdk" />
+    <orderEntry type="jdk" jdkName="Python 3.6.1 (/usr/bin/python3.6m)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="module" module-name="2017" />
     <orderEntry type="module" module-name="portage" />
