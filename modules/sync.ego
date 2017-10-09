@@ -145,7 +145,7 @@ class MetaRepoSyncHandler(object):
 		so that users can see when they've updated ego.conf but forgotten to run ego sync to update their meta-repo.
 
 		I would also like to display the time it was last synced and the timestamp of when the tree was updated
-		remotely. 
+		remotely.
 		"""
 		if not os.path.exists(self.config.meta_repo_root):
 			print(color.green(self.config.meta_repo_root) + ": meta-repo does not exist and needs to be cloned.")
