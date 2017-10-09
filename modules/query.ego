@@ -35,6 +35,18 @@ class Module(EgoModule):
 		bugs_parser.add_argument('package', type=EgoModule.atom_argument(False))
 		bugs_parser.set_defaults(handler=self.handle_bugs_subcommand)
 
+	def get_git_branch(self, repo_location):
+		branch = subprocess.Popen([
+			'git', '-C', str(repo_location),
+			'rev-parse', '--abbrev-ref', 'HEAD',
+		], stdout=subprocess.PIPE).stdout.read().decode('ascii').strip()
+		if branch == 'HEAD':
+			branch = subprocess.Popen([
+				'git', '-C', str(repo_location),
+				'rev-parse', '--short', 'HEAD',
+			], stdout=subprocess.PIPE).stdout.read().decode('ascii').strip()
+		return branch
+
 	def handle(self, **options):
 		handler = options.pop('handler')
 		handler(**options)
@@ -69,10 +81,7 @@ class Module(EgoModule):
 			if repo.name in repo_branches:
 				branch = repo_branches[repo.name]
 			else:
-				branch = subprocess.Popen([
-					'git', '-C', str(repo.location),
-					'rev-parse', '--abbrev-ref', 'HEAD',
-				], stdout=subprocess.PIPE).stdout.read().decode('ascii').strip()
+				branch = self.get_git_branch(repo.location)
 				repo_branches[repo.name] = branch
 			repo = color.blue(repo.name)
 			if branch:
@@ -118,10 +127,7 @@ class Module(EgoModule):
 				base_url = repo_urls.get(repository, '')
 				if '{branch}' in base_url:
 					repo = appi.conf.Repository[kit]
-					branch = subprocess.Popen([
-						'git', '-C', str(repo.location),
-						'rev-parse', '--abbrev-ref', 'HEAD',
-					], stdout=subprocess.PIPE).stdout.read().decode('ascii').strip()
+					branch = self.get_git_branch(repo.location)
 				else:
 					branch = None
 				url = base_url.format(kit=kit, branch=branch, cat=cat, pkg=pkg)
