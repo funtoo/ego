@@ -89,9 +89,10 @@ class ProfileLister:
 # updated information.
 class ProfileSetting:
 
-	def __init__(self, config=None, repomap=None, name=None, reponame=None, all_enabled=None,
+	def __init__(self, config=None, ego_module=None, repomap=None, name=None, reponame=None, all_enabled=None,
 				valid_profiles=None, cl=None, path=None, child=None, parent_line=None, top=None):
 		global upgrade_to_core_kit
+		self.ego_module = ego_module
 		self._reponame = reponame
 		self.valid_profiles = valid_profiles
 		self.all_enabled = all_enabled
@@ -212,21 +213,21 @@ class ProfileSetting:
 			if l[0] == ":":
 				# ":base" format
 				ps = ProfileSetting(
-					repomap=self.repomap, config=self.config, valid_profiles=self.valid_profiles,
+					repomap=self.repomap, ego_module=self, config=self.config, valid_profiles=self.valid_profiles,
 					all_enabled=self.all_enabled, reponame=self._reponame,
 					path=os.path.join(self.repomap[self._reponame], l[1:]), child=self, parent_line=l, top=self._nextTop(),
 				)
 			elif len(colsplit) == 2 and colsplit[0] in self.repomap:
 				# "gentoo:foo" format
 				ps = ProfileSetting(
-					repomap=self.repomap, config=self.config, valid_profiles=self.valid_profiles,
+					repomap=self.repomap, ego_module=self, config=self.config, valid_profiles=self.valid_profiles,
 					all_enabled=self.all_enabled, reponame=self._reponame,
 					path=os.path.join(self.repomap[colsplit[0]], colsplit[1]), child=self, parent_line=l, top=self._nextTop(),
 				)
 			else:
 				# "../../foo/bar" format
 				ps = ProfileSetting(
-					repomap=self.repomap, config=self.config, valid_profiles=self.valid_profiles,
+					repomap=self.repomap, ego_module=self, config=self.config, valid_profiles=self.valid_profiles,
 					all_enabled=self.all_enabled, reponame=self._reponame, path=os.path.normpath(os.path.join(self.path, l)),
 					child=self, parent_line=l, top=self._nextTop(),
 				)
@@ -258,7 +259,7 @@ class ProfileSetting:
 						# convert "gentoo" references to "core-kit"
 						self.descendents[key][0].parent_line = "core-kit:" + self.descendents[key][0].parent_line.split(":")[1]
 					out += self.descendents[key][0].parent_line + "\n"
-		python_kit_branch = self.get_selected_kit("python-kit")
+		python_kit_branch = self.ego_module.get_selected_kit("python-kit")
 		for kit in os.listdir(self.config.kit_root):
 			python_path = os.path.join(self.config.kit_root, kit, "profiles/funtoo/kits/python-kit/", python_kit_branch)
 			if os.path.exists(python_path):
@@ -500,9 +501,9 @@ class Module(EgoModule):
 		action_path = pl.find(action, newset)
 		self.ps.descendents[action] = [
 			ProfileSetting(
-				config=self.config, repomap=self.ps.repomap, name=newset, reponame=self.reponame, all_enabled=self.all_enabled,
-				valid_profiles=self.valid_profiles, cl=action, parent_line='%s:%s/%s' % (self.reponame, action_path, newset),
-				child=self.ps,
+				config=self.config, ego_module=self, repomap=self.ps.repomap, name=newset, reponame=self.reponame,
+				all_enabled=self.all_enabled, valid_profiles=self.valid_profiles, cl=action,
+				parent_line='%s:%s/%s' % (self.reponame, action_path, newset), child=self.ps,
 			)
 		]
 		self.short_list(self.ps, self.key_order)
@@ -548,8 +549,9 @@ class Module(EgoModule):
 				continue
 			mixin_path = pl.find("mix-ins", new_shortname)
 			new_ps = ProfileSetting(
-				config=self.config, repomap=self.ps.repomap, name=new_shortname, cl="mix-ins", all_enabled=self.all_enabled,
-				parent_line=self.reponame + ":" + mixin_path + "/" + new_shortname, child=self.ps,
+				config=self.config, ego_module=self, repomap=self.ps.repomap, name=new_shortname, cl="mix-ins",
+				all_enabled=self.all_enabled, parent_line=self.reponame + ":" + mixin_path + "/" + new_shortname,
+				child=self.ps,
 			)
 			if "mix-ins" not in self.ps.descendents:
 				self.ps.descendents["mix-ins"] = []
@@ -603,7 +605,7 @@ class Module(EgoModule):
 
 		# Use ProfileSetting to recurse into the current system's profile settings, and see what is enabled and inherited.
 		self.ps = ProfileSetting(
-			config=self.config, repomap={self.reponame: self.repodir}, reponame=self.reponame,
+			config=self.config, ego_module=self, repomap={self.reponame: self.repodir}, reponame=self.reponame,
 			path=profiledir, valid_profiles=self.valid_profiles, all_enabled=self.all_enabled
 		)
 

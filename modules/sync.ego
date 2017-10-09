@@ -107,7 +107,7 @@ class Module(EgoModule):
 
 	def add_arguments(self, parser):
 		parser.add_argument('--kits-only', action='store_true', help="Do not sync meta-repo, only kits.")
-		parser.add_argument('--status', action='store_true', help="")
+		parser.add_argument('--status', action='store_true', help="Display selected kit branches.")
 
 	def _run_subprocess(self, command):
 		self.debug("Run shell: %s" % command)
@@ -237,7 +237,6 @@ class Module(EgoModule):
 						self.fatal("There was an error syncing meta-repo.")
 				else:
 					repo.shallowClone(self.config.sync_base_repo % "meta_repo", self.config.meta_repo_branch)
-			del self._kit_info  # Remove cached kit_info to force reloading
 			fails = []
 			for kt in self.kit_info["kit_order"]:
 				branch = None
