@@ -82,7 +82,7 @@ class EgoConfig(object):
 class ColorType(str):
 	pass
 
-class color:
+class color(object):
 	PURPLE = ColorType('\033[95m')
 	CYAN = ColorType('\033[96m')
 	DARKCYAN = ColorType('\033[36m')

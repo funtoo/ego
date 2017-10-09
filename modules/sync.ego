@@ -7,16 +7,13 @@ import sys
 
 from ego_helpers import color, get_ego_module
 
-
 def runShell(cmd):
 	print(cmd)
 	return os.system(cmd)
 
-
 def runShell_so(cmd):
 	print(cmd)
 	return subprocess.getstatusoutput(cmd)
-
 
 class GitHelper(object):
 
@@ -113,6 +110,10 @@ class GitHelper(object):
 		else:
 			return None
 
+		print(color.green(config.meta_repo_root)+ ":")
+
+
+
 
 class MetaRepoSyncHandler(object):
 
@@ -137,14 +138,34 @@ class MetaRepoSyncHandler(object):
 		else:
 			return {}
 
+	def metaRepoInfo(self):
+		"""
+		This implements 'ego sync status' and is just a starting point. It currently displays the ego.conf-defined
+		or default repo, but not the actual git repo that is selected on disk. So it should be a lot more sophisticated
+		so that users can see when they've updated ego.conf but forgotten to run ego sync to update their meta-repo.
+
+		I would also like to display the time it was last synced and the timestamp of when the tree was updated
+		remotely. 
+		"""
+		if not os.path.exists(self.config.meta_repo_root):
+			print(color.green(self.config.meta_repo_root) + ": meta-repo does not exist and needs to be cloned.")
+		else:
+			print(color.green(self.config.meta_repo_root) + ":")
+		self.load_metadata()
+		for kit in self.kit_info["kit_order"]:
+			kit_branch, kit_default_branch = self.getSelectedKit(kit)
+			if kit_branch == kit_default_branch or kit_branch == None:
+				print("  " + kit.ljust(20) + " " + color.BLUE + kit_default_branch + color.END)
+			else:
+				print("  " + kit.ljust(20) + " " +  color.CYAN + kit_branch + color.END + " (default %s)" % kit_default_branch if kit_default_branch else "(None)")
+
 	def getSelectedKit(self, kit):
-		# returns the kit selected in ego.conf, or if none specified there, the funtoo default kit
-		branch = None
+		# returns the kit selected in ego.conf (or None), and the default kit
 		if "kits" in self.config.settings and kit in self.config.settings["kits"]:
 			branch = self.config.settings["kits"][kit]
 		else:
-			branch = self.kit_info["kit_settings"][kit]["default"]
-		return branch
+			branch = None
+		return (branch, self.kit_info["kit_settings"][kit]["default"])
 
 	def sync_meta_repo(self, args):
 		import pwd
@@ -279,7 +300,11 @@ class MetaRepoSyncHandler(object):
 
 
 def main(install_path, config, args):
+
 	s = MetaRepoSyncHandler(config, install_path)
-	s.sync_meta_repo(args)
+	if len(args) and args[0] == "status":
+		s.metaRepoInfo()
+	else:
+		s.sync_meta_repo(args)
 
 # vim: ts=4 sw=4 noet

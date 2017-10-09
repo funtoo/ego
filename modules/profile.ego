@@ -250,7 +250,11 @@ class ProfileSetting(object):
 						# convert "gentoo" references to "core-kit"
 						self.descendents[key][0].parent_line = "core-kit:" + self.descendents[key][0].parent_line.split(":")[1]
 					out += self.descendents[key][0].parent_line + "\n"
-		python_kit_branch = self.ego_sync.getSelectedKit("python-kit")
+		selected_python_kit_branch, default_python_kit_branch = self.ego_sync.getSelectedKit("python-kit")
+		if selected_python_kit_branch == None:
+			python_kit_branch = default_python_kit_branch
+		else:
+			python_kit_branch = selected_python_kit_branch
 		for kit in os.listdir(self.config.kit_root):
 			python_path = os.path.join(self.config.kit_root, kit,  "profiles/funtoo/kits/python-kit/",  python_kit_branch)
 			if os.path.exists(python_path):
