@@ -1,24 +1,28 @@
 #!/usr/bin/python3
-
 import sys
-import mediawiki_api
-from mediawiki_cli_parser import *
 
-def main(install_path, config, args):
-	if not len(args):
-		print("Please specify a wiki page to view.")
-		sys.exit(1)
-	miwiki = mediawiki_api.Wiki("http://www.funtoo.org/api.php")
-	print("Fetching doc \"%s\" from wiki... (http://www.funtoo.org/%s)" % (args[0], args[0]))
-	sys.stdout.flush()
-	try:
-		wikitext_page = miwiki.getPage(args[0])
-		for block in parse(getMainNodes(wikitext_page), wrap=text_width, article_title=args[0]):
-			sys.stdout.write(block)
-	except BrokenPipeError:
-		# this gets rid of ugly broken pipe message from python:
-		sys.stderr.close()
-		sys.exit(1)
+from ego import EgoModule
+import mediawiki_api
+from mediawiki_cli_parser import parse, getMainNodes, text_width
+
+
+class Module(EgoModule):
+
+	def add_arguments(self, parser):
+		parser.add_argument('wiki_page', help="The name of a wiki page")
+
+	def handle(self, **options):
+		miwiki = mediawiki_api.Wiki("http://www.funtoo.org/api.php")
+		self.log((
+			"Fetching doc \"{wiki_page}\" from wiki... (http://www.funtoo.org/{wiki_page})"
+		).format(**options))
+		try:
+			wikitext_page = miwiki.getPage(options['wiki_page'])
+			for block in parse(getMainNodes(wikitext_page), wrap=text_width, article_title=options['wiki_page']):
+				self.echo(block)
+		except BrokenPipeError:
+			# this gets rid of ugly broken pipe message from python:
+			sys.stderr.close()
+			sys.exit(1)
 
 # vim: ts=4 noet sw=4
-

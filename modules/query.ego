@@ -8,189 +8,165 @@ from xml.etree import ElementTree
 
 import appi
 
+from ego import EgoModule
 from ego_helpers import color, Table
 
 
-def usage():
-	message = (
-		"Usage: ego query <action> [action-args...]\n\n"
-		"Actions:\n"
-		"  versions <atom>\n"
-		"    Show available ebuild versions matching the given atom. Shortcut: v\n"
-		"    Examples:\n"
-		"      - ego query versions postgresql\n"
-		"      - ego query v '=dev-lang/python-3*'\n"
-		"  origin <package>\n"
-		"    Show from which repository the given package comes from. Shortcut: o\n"
-		"    Examples:\n"
-		"      - ego query origin ego\n"
-		"      - ego query o dev-python/appi\n"
-		"  bugs <package>\n"
-		"    Show Funtoo bugs related to the given package.\n"
-		"    Examples:\n"
-		"      - ego query bugs chromium\n"
-		"      - ego query bugs media-libs/mesa\n"
-	)
-	sys.stdout.write(message)
+class Module(EgoModule):
 
-def handle_version_action(atom_string):
-	"""Given a valid atom string, print version, slot, repository and a marker
-	if installed for each ebuild matching the atom.
-	"""
-	atom = appi.QueryAtom(atom_string, strict=False)
-	ebuilds = sorted(atom.list_matching_ebuilds(), key=lambda x: (
-		x.category, x.package, x.get_version()))
+	def add_arguments(self, parser):
+		subparsers = parser.add_subparsers(title='subcommands', dest='subcommand')
 
-	old_cat_pkg = None
-	old_slot = None
-	table = Table(3, align='rrr', col_sep='|', join='+', lpad=1)
-	repo_branches = {}
-	for ebuild in ebuilds:
-		cat_pkg = '{}/{}'.format(ebuild.category, ebuild.package)
-		slot = ebuild.vars.get('SLOT', '0')
-		if cat_pkg != old_cat_pkg:
-			if old_cat_pkg is not None:
-				table.separator('')
-			table.append(cat_pkg, 'slot', 'repo')
-			old_cat_pkg = cat_pkg
-			old_slot = None
-		if old_slot != slot:
-			table.separator('-')
-			old_slot = slot
-		else:
-			slot = ''
-		repo = ebuild.repository
-		if repo.name in repo_branches:
-			branch = repo_branches[repo.name]
-		else:
-			branch = subprocess.Popen([
-				'git', '-C', str(repo.location),
-				'rev-parse', '--abbrev-ref', 'HEAD',
-			], stdout=subprocess.PIPE).stdout.read().decode('ascii').strip()
-			repo_branches[repo.name] = branch
-		repo = color.blue(repo.name)
-		if branch:
-			repo = (repo + '/') + color.green(branch)
-		version = color.cyan(ebuild.version)
-		if ebuild.is_installed():
-			version = color.bold('* ') + color.bold(version)
-		table.append(version, color.yellow(slot), repo)
+		versions_parser = subparsers.add_parser('versions', aliases=['v'], help=(
+			"Show available ebuild versions matching the given atom."
+		))
+		versions_parser.add_argument('atom', type=EgoModule.atom_argument(False))
+		versions_parser.set_defaults(handler=self.handle_versions_subcommand)
 
-	sys.stdout.write(str(table))
+		origin_parser = subparsers.add_parser('origin', aliases=['o'], help=(
+			"Show from which repository the given package comes from."
+		))
+		origin_parser.add_argument('package', type=EgoModule.atom_argument(False))
+		origin_parser.set_defaults(handler=self.handle_origin_subcommand)
 
+		bugs_parser = subparsers.add_parser('bugs', help=(
+			"Show Funtoo bugs related to the given package."
+		))
+		bugs_parser.add_argument('package', type=EgoModule.atom_argument(False))
+		bugs_parser.set_defaults(handler=self.handle_bugs_subcommand)
 
-def handle_origin_action(atom_string):
-	"""Given a valid atom string, print the origin repository where this
-	package was retrieved before being merged to kits.
-	Using another information than category, package and repository in the
-	atom is useless and will be ignored.
-	"""
-	repo_urls = {
-		'faustoo': 'https://github.com/fmoro/faustoo/tree/master/{cat}/{pkg}',
-		'fusion809': 'https://github.com/fusion809/fusion809-overlay/tree/master/{cat}/{pkg}',
-		'flora': 'https://github.com/funtoo/flora/tree/master/{cat}/{pkg}',
-		'gentoo-staging': 'http://git.funtoo.org/gentoo-staging/tree/{cat}/{pkg}',
-		'kit-fixups': 'https://github.com/funtoo/kit-fixups/tree/master/{kit}/{branch}/{cat}/{pkg}',
-		'rh1': 'https://github.com/x48rph/glassfish/tree/master/{cat}/{pkg}',
-	}
-	gentoo_base_url = 'https://gitweb.gentoo.org/repo/gentoo.git/tree/{cat}/{pkg}'
-	atom = appi.QueryAtom(atom_string, strict=False)
-	r = requests.get('http://ports.funtoo.org/packages.xml')
-	root = ElementTree.fromstring(r.text)
-	xpath = 'category'
-	if atom.category:
-		xpath += '[@name="{}"]'.format(atom.category)
-	categories = root.findall(xpath)
-	for category in categories:
-		xpath = 'package[@name="{}"]'.format(atom.package)
-		if atom.repository:
-			xpath += '[@kit="{}"]'.format(atom.repository)
-		for package in category.findall(xpath):
-			cat = category.attrib['name']
-			pkg = package.attrib['name']
-			kit = package.attrib['kit']
-			repository = package.attrib['repository']
-			base_url = repo_urls.get(repository, '')
-			if '{branch}' in base_url:
-				repo = appi.conf.Repository[kit]
+	def handle(self, **options):
+		handler = options.pop('handler')
+		handler(**options)
+
+	def handle_versions_subcommand(self, **options):
+		"""Given a valid atom string, print version, slot, repository and a marker
+		if installed for each ebuild matching the atom.
+		"""
+		atom = options['atom']
+		ebuilds = sorted(atom.list_matching_ebuilds(), key=lambda x: (
+			x.category, x.package, x.get_version()))
+
+		old_cat_pkg = None
+		old_slot = None
+		table = Table(3, align='rrr', col_sep='|', join='+', lpad=1)
+		repo_branches = {}
+		for ebuild in ebuilds:
+			cat_pkg = '{}/{}'.format(ebuild.category, ebuild.package)
+			slot = ebuild.vars.get('SLOT', '0')
+			if cat_pkg != old_cat_pkg:
+				if old_cat_pkg is not None:
+					table.separator('')
+				table.append(cat_pkg, 'slot', 'repo')
+				old_cat_pkg = cat_pkg
+				old_slot = None
+			if old_slot != slot:
+				table.separator('-')
+				old_slot = slot
+			else:
+				slot = ''
+			repo = ebuild.repository
+			if repo.name in repo_branches:
+				branch = repo_branches[repo.name]
+			else:
 				branch = subprocess.Popen([
 					'git', '-C', str(repo.location),
 					'rev-parse', '--abbrev-ref', 'HEAD',
 				], stdout=subprocess.PIPE).stdout.read().decode('ascii').strip()
-			else:
-				branch = None
-			url = base_url.format(kit=kit, branch=branch, cat=cat, pkg=pkg)
-			if 'branch' in base_url and requests.get(url).status_code == 404:
-				url = base_url.format(kit=kit, branch='global', cat=cat, pkg=pkg)
-			gentoo_url = gentoo_base_url.format(cat=cat, pkg=pkg)
-			if requests.get(gentoo_url).status_code == 404:
-				gentoo_url = ''
-			else:
-				gentoo_url = "\t{}\n".format(color.cyan(gentoo_url))
-			sys.stdout.write(
-				"{cat}/{pkg}::{kit} comes from {repo}\n\t{url}\n{gentoo_url}".format(
-					cat=cat, pkg=pkg, kit=kit,
-					repo=color.green(repository),
-					url=color.blue(url or "Unknown repository URL"),
-					gentoo_url=gentoo_url,
+				repo_branches[repo.name] = branch
+			repo = color.blue(repo.name)
+			if branch:
+				repo = (repo + '/') + color.green(branch)
+			version = color.cyan(ebuild.version)
+			if ebuild.is_installed():
+				version = color.bold('* ') + color.bold(version)
+			table.append(version, color.yellow(slot), repo)
+
+		self.echo(table)
+
+	def handle_origin_subcommand(self, **options):
+		"""Given a valid atom string, print the origin repository where this
+		package was retrieved before being merged to kits.
+		Using another information than category, package and repository in the
+		atom is useless and will be ignored.
+		"""
+		repo_urls = {
+			'faustoo': 'https://github.com/fmoro/faustoo/tree/master/{cat}/{pkg}',
+			'fusion809': 'https://github.com/fusion809/fusion809-overlay/tree/master/{cat}/{pkg}',
+			'flora': 'https://github.com/funtoo/flora/tree/master/{cat}/{pkg}',
+			'gentoo-staging': 'http://git.funtoo.org/gentoo-staging/tree/{cat}/{pkg}',
+			'kit-fixups': 'https://github.com/funtoo/kit-fixups/tree/master/{kit}/{branch}/{cat}/{pkg}',
+			'rh1': 'https://github.com/x48rph/glassfish/tree/master/{cat}/{pkg}',
+		}
+		gentoo_base_url = 'https://gitweb.gentoo.org/repo/gentoo.git/tree/{cat}/{pkg}'
+		atom = options['package']
+		r = requests.get('http://ports.funtoo.org/packages.xml')
+		root = ElementTree.fromstring(r.text)
+		xpath = 'category'
+		if atom.category:
+			xpath += '[@name="{}"]'.format(atom.category)
+		categories = root.findall(xpath)
+		for category in categories:
+			xpath = 'package[@name="{}"]'.format(atom.package)
+			if atom.repository:
+				xpath += '[@kit="{}"]'.format(atom.repository)
+			for package in category.findall(xpath):
+				cat = category.attrib['name']
+				pkg = package.attrib['name']
+				kit = package.attrib['kit']
+				repository = package.attrib['repository']
+				base_url = repo_urls.get(repository, '')
+				if '{branch}' in base_url:
+					repo = appi.conf.Repository[kit]
+					branch = subprocess.Popen([
+						'git', '-C', str(repo.location),
+						'rev-parse', '--abbrev-ref', 'HEAD',
+					], stdout=subprocess.PIPE).stdout.read().decode('ascii').strip()
+				else:
+					branch = None
+				url = base_url.format(kit=kit, branch=branch, cat=cat, pkg=pkg)
+				if 'branch' in base_url and requests.get(url).status_code == 404:
+					url = base_url.format(kit=kit, branch='global', cat=cat, pkg=pkg)
+				gentoo_url = gentoo_base_url.format(cat=cat, pkg=pkg)
+				if requests.get(gentoo_url).status_code == 404:
+					gentoo_url = ''
+				else:
+					gentoo_url = "\t{}\n".format(color.cyan(gentoo_url))
+				sys.stdout.write(
+					"{cat}/{pkg}::{kit} comes from {repo}\n\t{url}\n{gentoo_url}".format(
+						cat=cat, pkg=pkg, kit=kit,
+						repo=color.green(repository),
+						url=color.blue(url or "Unknown repository URL"),
+						gentoo_url=gentoo_url,
+					)
 				)
-			)
 
+	def handle_bugs_subcommand(self, **options):
+		"""Given a valid atom string, list related bugs on bugs.funtoo.org."""
+		atom = options['package']
+		searches = set(
+			'{}/{}'.format(x.category, x.package)
+			for x in atom.list_matching_ebuilds()
+		)
+		table = Table(4)
+		for search in searches:
+			r = requests.post(
+				'https://bugs.funtoo.org/rest/api/2/search', data=json.dumps({
+					'jql': r'summary ~ "\"{}\"" ORDER BY created DESC'.format(search),
+				}),
+				headers={'Content-Type': 'application/json'})
+			result = r.json()
+			for issue in result['issues']:
+				fields = issue['fields']
+				date_created = datetime.strptime(
+					fields['created'], '%Y-%m-%dT%H:%M:%S.%f%z').date()
+				table.append(
+					color.red(issue['key']),
+					color.cyan(str(date_created)),
+					color.purple(fields['status']['name']),
+					color.yellow(fields['summary'])
+				)
 
-def handle_bugs_action(atom_string):
-	"""Given a valid atom string, list related bugs on bugs.funtoo.org."""
-	atom = appi.QueryAtom(atom_string, strict=False)
-	searches = set(
-		'{}/{}'.format(x.category, x.package)
-		for x in atom.list_matching_ebuilds()
-	)
-	table = Table(4)
-	for search in searches:
-		r = requests.post(
-			'https://bugs.funtoo.org/rest/api/2/search', data=json.dumps({
-				'jql': r'summary ~ "\"{}\"" ORDER BY created DESC'.format(search),
-			}),
-			headers={'Content-Type': 'application/json'})
-		result = r.json()
-		for issue in result['issues']:
-			fields = issue['fields']
-			date_created = datetime.strptime(
-				fields['created'], '%Y-%m-%dT%H:%M:%S.%f%z').date()
-			table.append(
-				color.red(issue['key']),
-				color.cyan(str(date_created)),
-				color.purple(fields['status']['name']),
-				color.yellow(fields['summary'])
-			)
-
-	sys.stdout.write(str(table))
-
-
-def main(install_path, config, args):
-	
-	actions = {
-		'versions': handle_version_action,
-		'v': handle_version_action,
-		'origin': handle_origin_action,
-		'o': handle_origin_action,
-		'bugs': handle_bugs_action,
-	}
-
-	action = None
-	if len(args):
-		action = args[0]
-	if action not in actions:
-		print("'%s' is not a valid action. Use one of these: %s" % (action, " ".join([
-			x for x in actions.keys() if len(x) > 1
-		])))
-		sys.exit(1)
-
-	try:
-		actions[action](*args[1:])
-	except TypeError as e:
-		raise e
-		sys.stderr.write("Invalid number of arguments\n")
-		usage()
-		sys.exit(1)
+		sys.stdout.write(str(table))
 
 # vim: ts=4 noet sw=4
