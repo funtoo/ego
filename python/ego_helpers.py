@@ -40,6 +40,8 @@ class EgoConfig(object):
 		self.ego_mods_info_dir = "%s/modules-info" % self.ego_dir
 		self.ego_mods = []
 		self.ego_mods_info = {}
+		self.sync_base_url = "https://github.com/funtoo/%s"
+		self.meta_repo_branch = "master"
 		if os.path.isdir(self.ego_mods_dir):
 			for match in glob.glob(self.ego_mods_dir + "/*.ego"):
 				self.ego_mods.append(match.split("/")[-1][:-4])
@@ -56,6 +58,10 @@ class EgoConfig(object):
 		if "global" in self.settings and "meta_repo_path" in self.settings["global"]:
 			self.meta_repo_root = self.settings["global"]["meta_repo_path"]
 
+		if "global" in self.settings and "sync_base_url" in self.settings["global"]:
+			self.sync_base_url = self.settings["global"]["sync_base_url"]
+		if "global" in self.settings and "meta_repo_branch" in self.settings["global"]:
+			self.meta_repo_branch = self.settings["global"]["meta_repo_branch"]
 		kit_path = "kits"
 		if "global" in self.settings and "kits_path" in self.settings["global"]:
 			kit_path = self.settings["global"]["kits_path"]

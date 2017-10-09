@@ -193,7 +193,7 @@ class MetaRepoSyncHandler(object):
 						print(color.RED + "There was an error syncing meta-repo.", color.END)
 						sys.exit(1)
 				else:
-					repo.shallowClone("https://github.com/funtoo/meta-repo", "master")
+					repo.shallowClone(self.config.sync_base_repo % "meta_repo", self.config.meta_repo_branch)
 			self.load_metadata()
 			fails = []
 			for kt in self.kit_info["kit_order"]:
@@ -242,7 +242,7 @@ class MetaRepoSyncHandler(object):
 			except OSError:
 				pass
 		if not kit.exists():
-			kit.shallowClone("https://github.com/funtoo/%s" % kit_name, branch)
+			kit.shallowClone(self.config.sync_base_repo % kit_name, branch)
 
 		if not kit.localBranchExists(branch):
 			kit.fetchRemote(branch)

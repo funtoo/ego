@@ -52,6 +52,17 @@ meta-repo. The default value for *meta_repo_path* is ``/var/git/meta-repo``.
 This setting defines the user and group that are used to perform the sync operation, and thus the user and group which
 will end up owning the meta-repo files. The default value for *sync_user* is ``portage``.
 
+**sync_base_url**
+
+This setting defines the base URL to use for cloning of kits as well as meta-repo. Default value is
+``https://github.com/funtoo/%s``. The ``%s`` value is replaced with the name of the kit or with the literal value
+``meta-repo``. Note that this setting only takes effect upon first clone, and if changed, you should remove meta-repo
+and kits and perform an initial ``ego sync`` to reinitialize the repositories.
+
+**meta_repo_branch**
+
+This setting defines the default meta-repo branch to use. Default is ``master``.
+
 Kits Section
 ============
 
