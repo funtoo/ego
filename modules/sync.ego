@@ -306,6 +306,7 @@ class Module(EgoModule):
 				self.log("  " + kit.ljust(20) + " " + color.BLUE + kit_default_branch + color.END)
 			else:
 				self.log("  " + kit.ljust(20) + " " + color.CYAN + kit_branch + color.END + " (default %s)" % (
+					kit_default_branch if kit_default_branch else "(None)"))
 
 	def handle(self, **options):
 		if options['status']:
