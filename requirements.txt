@@ -1,0 +1,4 @@
+-e git+https://gitlab.com/apinsard/appi.git@v0.1.2#egg=appi
+mwparserfromhell
+git+https://github.com/gentoo/portage.git@portage-2.3.8
+requests
