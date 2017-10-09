@@ -109,26 +109,6 @@ class Module(EgoModule):
 		parser.add_argument('--kits-only', action='store_true', help="Do not sync meta-repo, only kits.")
 		parser.add_argument('--status', action='store_true', help="")
 
-	def load_metadata(self):
-		self.kit_sha1 = self.load_kit_metadata("sha1")
-		self.kit_info = self.load_kit_metadata("info")
-
-	def load_kit_metadata(self, fn):
-		ksf = os.path.join(self.root, "metadata/kit-%s.json" % fn)
-		if os.path.exists(ksf):
-			with open(ksf) as a:
-				return json.loads(a.read())
-		else:
-			return {}
-
-	def get_selected_kit(self, kit):
-		"""Returns the kit selected in ego.conf (or None), and the default kit"""
-		if "kits" in self.config.settings and kit in self.config.settings["kits"]:
-			branch = self.config.settings["kits"][kit]
-		else:
-			branch = None
-		return (branch, self.kit_info["kit_settings"][kit]["default"])
-
 	def _run_subprocess(self, command):
 		self.debug("Run shell: %s" % command)
 		if isinstance(command, str):
@@ -216,7 +196,6 @@ class Module(EgoModule):
 		return success
 
 	def sync_meta_repo(self, **options):
-		self.load_metadata()
 		pwnam = pwd.getpwnam(self.config.sync_user)
 		uid = pwnam.pw_uid
 		gid = pwnam.pw_gid
@@ -258,7 +237,7 @@ class Module(EgoModule):
 						self.fatal("There was an error syncing meta-repo.")
 				else:
 					repo.shallowClone(self.config.sync_base_repo % "meta_repo", self.config.meta_repo_branch)
-			self.load_metadata()
+			del self._kit_info  # Remove cached kit_info to force reloading
 			fails = []
 			for kt in self.kit_info["kit_order"]:
 				branch = None
@@ -299,9 +278,8 @@ class Module(EgoModule):
 			self.log(" meta-repo does not exist and needs to be cloned.")
 		else:
 			self.log("")
-		self.load_metadata()
 		for kit in self.kit_info["kit_order"]:
-			kit_branch, kit_default_branch = self.get_selected_kit(kit)
+			kit_branch, kit_default_branch = self.get_selected_kit(kit, True)
 			if kit_branch == kit_default_branch or kit_branch is None:
 				self.log("  " + kit.ljust(20) + " " + color.BLUE + kit_default_branch + color.END)
 			else:

@@ -1,4 +1,6 @@
 import argparse
+import json
+from pathlib import Path
 import sys
 
 from ego_helpers import color
@@ -48,6 +50,37 @@ class EgoModule:
 		"""Output error message to stderr and exit. Auto-append newline if missing."""
 		self.error(message)
 		sys.exit(exit_code)
+
+	def load_kit_metadata(self, fn):
+		if not hasattr(self, '_kit_%s' % fn):
+			path = Path(self.config.meta_repo_root) / 'metadata' / ('kit-%s.json' % fn)
+			try:
+				with path.open() as f:
+					return json.loads(f.read())
+			except OSError:
+				return {}
+		return getattr(self, '_kit_%s' % fn)
+
+	@property
+	def kit_info(self):
+		return self.load_kit_metadata('info')
+
+	@property
+	def kit_sha1(self):
+		return self.load_kit_metadata('sha1')
+
+	def get_selected_kit(self, kit, show_default=False):
+		if "kits" in self.config.settings and kit in self.config.settings["kits"]:
+			branch = self.config.settings["kits"][kit]
+		else:
+			branch = None
+		if branch and not show_default:
+			return branch
+		default = self.kit_info["kit_settings"][kit]["default"]
+		if show_default:
+			return (branch, default)
+		else:
+			return default
 
 	def __init__(self, name, install_path, config):
 		self.name = name
