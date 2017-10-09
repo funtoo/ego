@@ -14,9 +14,7 @@ from ego_helpers import *
 
 rows, columns = subprocess.check_output(['stty', 'size']).decode().split()
 term_size = shutil.get_terminal_size((100,20))
-text_width = int(columns) - 1
-if text_width > 140:
-	text_width = 140
+text_width = min(int(columns) - 1, 140)
 
 class TextType(str):
 	pass

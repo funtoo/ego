@@ -1,53 +1,42 @@
 #!/usr/bin/python3
 import json
 import os
+from pathlib import Path
+import pwd
 import re
 import subprocess
 import sys
 
-from ego_helpers import color, get_ego_module
+from ego import EgoModule
+from ego_helpers import color, run_ego_module
 
-def runShell(cmd):
-	print(cmd)
-	return os.system(cmd)
 
-def runShell_so(cmd):
-	print(cmd)
-	return subprocess.getstatusoutput(cmd)
+class GitHelper:
 
-class GitHelper(object):
-
-	def __init__(self, root):
+	def __init__(self, module, root):
+		self.module = module
 		self.root = root
+
+	def run_shell(self, command):
+		return self.module.run_shell(command)
+
+	def run_shell_so(self, command):
+		return self.module.run_shell_so(command)
 
 	def localBranches(self):
 		if os.path.exists(self.root):
-			retval, out = runShell_so("(cd %s && git for-each-ref --format=\"(refname)\" refs/heads)")
+			retval, out = self.run_shell("git -C %s for-each-ref --format=\"(refname)\" refs/heads")
 			if retval == 0:
 				for ref in out.split():
 					yield ref.split("/")[-1]
 
-	@property
-	def currentLocalBranch(self):
-		s, branch = runShell_so("( cd %s && git symbolic-ref --short -q HEAD )" % self.root)
-		if s:
-			return None
-		else:
-			return branch
-
 	def localBranchExists(self, branch):
-		if runShell("( cd %s && git show-ref --verify --quiet refs/heads/%s )" % (self.root, branch)):
-			return False
-		else:
-			return True
+		return not self.run_shell("git -C %s show-ref --verify --quiet refs/heads/%s" % (self.root, branch))
 
 	def isReadOnly(self):
-		from pathlib import Path
 		try:
 			Path(self.root + "/foo").touch()
-		except FileNotFoundError:
-			return True
-		except PermissionError:
+		except (FileNotFoundError, PermissionError):
 			return True
 		else:
 			os.unlink(self.root + "/foo")
@@ -55,35 +44,30 @@ class GitHelper(object):
 
 	def readOnlyCheck(self):
 		if self.isReadOnly():
-			print(color.RED + "Repository is at %s is read-only. Cannot update." % self.root, color.END)
-			sys.exit(1)
+			self.module.fatal("Repository is at %s is read-only. Cannot update." % self.root)
 
 	def fetchRemote(self, branch, remote="origin"):
 		self.readOnlyCheck()
-		runShell("(cd %s && git remote set-branches --add %s %s)" % (self.root, remote, branch))
-		return runShell("(cd %s && git fetch %s refs/heads/%s:refs/remotes/%s/%s)" % (self.root, remote, branch, remote, branch))
+		self.run_shell("git -C %s remote set-branches --add %s %s" % (self.root, remote, branch))
+		return self.run_shell("git -C %s fetch %s refs/heads/%s:refs/remotes/%s/%s" % (self.root, remote, branch, remote, branch))
 
 	def shallowClone(self, url, branch, depth=1):
-		return runShell("(cd %s && git clone -b %s --depth=%s --single-branch %s)" % (os.path.dirname(self.root), branch, depth, url))
-
-	def createNewLocalBranchToTrackRemote(self, branch):
-		self.readOnlyCheck()
-		return runShell("(cd %s && git checkout -b %s --track origin/%s)" % (self.root, branch, branch))
+		return self.run_shell("git -C %s clone -b %s --depth=%s --single-branch %s" % (os.path.dirname(self.root), branch, depth, url))
 
 	def pull(self, options=[]):
 		self.readOnlyCheck()
 		opts = " ".join(options)
-		return runShell("(cd %s && git pull %s)" % (self.root, opts))
+		return self.run_shell("git -C %s pull %s" % (self.root, opts))
 
 	def reset(self, options=[]):
 		self.readOnlyCheck()
 		opts = " ".join(options)
-		return runShell("(cd %s && git reset %s)" % (self.root, opts))
+		return self.run_shell("git -C %s reset %s" % (self.root, opts))
 
 	def clean(self, options=[]):
 		self.readOnlyCheck()
-		opts = " ".join(options) if options else ""
-		return runShell("(cd %s && git clean %s)" % (self.root, opts))
+		opts = " ".join(options)
+		return self.run_shell("git -C %s clean %s" % (self.root, opts))
 
 	def exists(self):
 		return os.path.exists(self.root)
@@ -96,35 +80,34 @@ class GitHelper(object):
 			args = "%s %s" % (origin, branch)
 		else:
 			args = branch
-		out = runShell("(cd %s && git checkout %s)" % (self.root, args))
-		if out == 0:
-			return True
-		else:
-			return False
+		out = self.run_shell("git -C %s checkout %s" % (self.root, args))
+		return out == 0
 
 	@property
 	def commitID(self):
-		retval, out = runShell_so("(cd %s && git rev-parse HEAD)" % self.root)
+		retval, out = self.run_shell_so("git -C %s rev-parse HEAD" % self.root)
 		if retval == 0:
 			return out.strip()
 		else:
 			return None
 
-		print(color.green(config.meta_repo_root)+ ":")
 
+class Module(EgoModule):
 
+	hex_re = re.compile('[0-9a-fA-F]+')
 
+	@property
+	def root(self):
+		if not hasattr(self, '_root'):
+			root = self.config.meta_repo_root
+			if not os.path.exists(os.path.dirname(root)):
+				os.makedirs(os.path.dirname(root))
+			self._root = root
+		return self._root
 
-class MetaRepoSyncHandler(object):
-
-	def __init__(self, config, install_path):
-		self.config = config
-		self.root = config.meta_repo_root
-		if not os.path.exists(os.path.dirname(self.root)):
-			os.makedirs(os.path.dirname(self.root))
-		self.install_path = install_path
-		self.load_metadata()
-		self.hex_re = re.compile('[0-9a-fA-F]+')
+	def add_arguments(self, parser):
+		parser.add_argument('--kits-only', action='store_true', help="Do not sync meta-repo, only kits.")
+		parser.add_argument('--status', action='store_true', help="")
 
 	def load_metadata(self):
 		self.kit_sha1 = self.load_kit_metadata("sha1")
@@ -138,125 +121,61 @@ class MetaRepoSyncHandler(object):
 		else:
 			return {}
 
-	def metaRepoInfo(self):
-		"""
-		This implements 'ego sync status' and is just a starting point. It currently displays the ego.conf-defined
-		or default repo, but not the actual git repo that is selected on disk. So it should be a lot more sophisticated
-		so that users can see when they've updated ego.conf but forgotten to run ego sync to update their meta-repo.
-
-		I would also like to display the time it was last synced and the timestamp of when the tree was updated
-		remotely. 
-		"""
-		if not os.path.exists(self.config.meta_repo_root):
-			print(color.green(self.config.meta_repo_root) + ": meta-repo does not exist and needs to be cloned.")
-		else:
-			print(color.green(self.config.meta_repo_root) + ":")
-		self.load_metadata()
-		for kit in self.kit_info["kit_order"]:
-			kit_branch, kit_default_branch = self.getSelectedKit(kit)
-			if kit_branch == kit_default_branch or kit_branch == None:
-				print("  " + kit.ljust(20) + " " + color.BLUE + kit_default_branch + color.END)
-			else:
-				print("  " + kit.ljust(20) + " " +  color.CYAN + kit_branch + color.END + " (default %s)" % kit_default_branch if kit_default_branch else "(None)")
-
-	def getSelectedKit(self, kit):
-		# returns the kit selected in ego.conf (or None), and the default kit
+	def get_selected_kit(self, kit):
+		"""Returns the kit selected in ego.conf (or None), and the default kit"""
 		if "kits" in self.config.settings and kit in self.config.settings["kits"]:
 			branch = self.config.settings["kits"][kit]
 		else:
 			branch = None
 		return (branch, self.kit_info["kit_settings"][kit]["default"])
 
-	def sync_meta_repo(self, args):
-		import pwd
+	def _run_subprocess(self, command):
+		self.debug("Run shell: %s" % command)
+		if isinstance(command, str):
+			command = command.split()
+		return subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
-		pwnam = pwd.getpwnam(self.config.sync_user)
-		uid = pwnam.pw_uid
-		gid = pwnam.pw_gid
-		if "HOME" in os.environ:
-			# git will look here for various things
-			del os.environ["HOME"]
-		if not os.path.exists(self.root):
-			try:
-				os.mkdir(self.root)
-			except PermissionError:
-				print(
-					color.RED + "You don't have enough privileges. "
-					"You should probably run this command as root. " + color.END)
-				sys.exit(1)
-		stat_info = os.stat(self.root)
-		if stat_info.st_uid != uid and self.config.sync_user != "root":
-			try:
-				runShell("chown -R %s:%s %s" % (uid, gid, self.root))
-			except PermissionError:
-				print(
-					color.RED + "You don't have enough privileges. "
-					"You should probably run this command as root. " + color.END)
-				sys.exit(1)
-		# We need to fork here in order to sync as sync_user and then switch back to root
-		pid = os.fork()
-		if pid == 0:
-			try:
-				os.setgid(gid)
-				os.setuid(uid)
-			except PermissionError:
-				print(
-					color.RED + "You don't have enough privileges. "
-					"You should probably run this command as root. " + color.END)
-				sys.exit(1)
-			if "kits" not in args:
-				repo = GitHelper(self.root)
-				print(color.GREEN + "Syncing meta-repo" + color.END)
-				if repo.isGitRepo():
-					retval = repo.fetchRemote("master")
-					retval = repo.pull(options=["--no-commit", "-f", "--no-recurse-submodules"])
-					if retval != 0:
-						print(color.RED + "There was an error syncing meta-repo.", color.END)
-						sys.exit(1)
-				else:
-					repo.shallowClone(self.config.sync_base_repo % "meta_repo", self.config.meta_repo_branch)
-			self.load_metadata()
-			fails = []
-			for kt in self.kit_info["kit_order"]:
-				branch = None
-				if "kits" in self.config.settings:
-					if kt in self.config.settings["kits"]:
-						branch = self.config.settings["kits"][kt]
-				success = self.sync_kit(kt, branch=branch)
-				if not success:
-					fails.append((kt, branch))
-			if len(fails):
-				for kt, branch in fails:
-					print(color.RED + "There was an error syncing %s." % kt, color.END)
-				sys.exit(1)
-			sys.exit(0)
-		# Forked process terminated here
-		if os.waitpid(pid, 0)[1] > 0:
-			return False
-		print(color.GREEN + "Sync successful and kits in alignment! :)" + color.END)
-		print(color.GREEN + "Updating profiles..." + color.END)
-		try:
-			ego_profile = get_ego_module(self.install_path, "profile")
-			ego_profile.main(self.install_path, self.config, ["update"])
-		except PermissionError:
-			print(color.RED + "Could not update ego profiles automatically due to permissions (code in /root, most likely.)")
-			print("Please run epro update manually as root." + color.END)
-		return True
+	def run_shell(self, command, output=False, allow_failure=True):
+		proc = self._run_subprocess(command)
+		retval = proc.wait()
+
+		out = proc.stdout.read().decode('utf-8')
+		if out:
+			if output:
+				self.log(out)
+			else:
+				self.debug(out)
+		err = proc.stderr.read().decode('utf-8')
+		if err:
+			self.log(err)
+		if retval != 0 and not allow_failure:
+			sys.exit(1)
+		return retval
+
+	def run_shell_so(self, command, allow_failure=True):
+		proc = self._run_subprocess(command)
+		retval = proc.wait()
+		err = proc.stderr.read().decode('utf-8')
+		if err:
+			self.log(err)
+		if retval != 0 and not allow_failure:
+			sys.exit(1)
+		return (retval, proc.stdout.read().decode('utf-8'))
 
 	def sync_kit(self, kit_name, branch=None):
 		if branch is None:
 			# use default
 			branch = self.kit_info["kit_settings"][kit_name]["default"]
 		if branch is None:
-			print(color.RED + "Fatal: branch cannot be None." + color.END)
-			sys.exit(1)
+
+			self.fatal("Fatal: branch cannot be None.")
 		if branch == self.kit_info["kit_settings"][kit_name]["default"]:
-			print(color.PURPLE + "Syncing", kit_name, "branch", branch, color.END)
+			self.log(color.purple("Syncing %s branch %s" % (kit_name, branch)))
 		else:
 			# highlight non-default branches in green for convenience
-			print(color.PURPLE + "Syncing", kit_name, "branch", color.GREEN + branch + color.PURPLE + " (non-default)" + color.END)
+			self.log(color.purple("Syncing %s branch " % kit_name) + color.green(branch) + color.purple(" (non-default)"))
 		kit_path = os.path.join(self.config.kit_root, kit_name)
-		kit = GitHelper(kit_path)
+		kit = GitHelper(self, kit_path)
 		if not kit.isGitRepo():
 			try:
 				os.rmdir(kit.root)
@@ -278,33 +197,121 @@ class MetaRepoSyncHandler(object):
 		success = False
 
 		def sha1_check(sha1, desired_sha1):
-			print(sha1, desired_sha1)
+			self.debug((sha1, desired_sha1))
 			if not self.hex_re.match(sha1):
-				print(color.RED + "Fatal: kit CommitID not a SHA1: %s" % sha1 + color.END)
-				sys.exit(1)
+				self.fatal("Fatal: kit CommitID not a SHA1: %s" % sha1)
 			if not self.hex_re.match(desired_sha1):
-				print(color.RED + "Fatal: kit-sha1.json value not a SHA1: %s" % desired_sha1 + color.END)
-				sys.exit(1)
+				self.fatal("Fatal: kit-sha1.json value not a SHA1: %s" % desired_sha1)
 
 		sha1_check(sha1, desired_sha1)
 
-		if (sha1 == desired_sha1):
-			return True
+		if sha1 == desired_sha1:
+			success = True
 		else:
 			kit.fetchRemote(branch)
 			sha1 = kit.commitID
 			sha1_check(sha1, desired_sha1)
-			if (sha1 != desired_sha1):
+			if sha1 != desired_sha1:
 				success = kit.checkout(desired_sha1)
 		return success
 
+	def sync_meta_repo(self, **options):
+		self.load_metadata()
+		pwnam = pwd.getpwnam(self.config.sync_user)
+		uid = pwnam.pw_uid
+		gid = pwnam.pw_gid
+		if "HOME" in os.environ:
+			# git will look here for various things
+			del os.environ["HOME"]
+		if not os.path.exists(self.root):
+			try:
+				os.mkdir(self.root)
+			except PermissionError:
+				self.fatal(
+					"You don't have enough privileges. You should probably run this command as root."
+				)
+		stat_info = os.stat(self.root)
+		if stat_info.st_uid != uid and self.config.sync_user != "root":
+			try:
+				self.run_shell("chown -R %s:%s %s" % (uid, gid, self.root))
+			except PermissionError:
+				self.fatal(
+					"You don't have enough privileges. You should probably run this command as root."
+				)
+		# We need to fork here in order to sync as sync_user and then switch back to root
+		pid = os.fork()
+		if pid == 0:
+			try:
+				os.setgid(gid)
+				os.setuid(uid)
+			except PermissionError:
+				self.fatal(
+					"You don't have enough privileges. You should probably run this command as root."
+				)
+			if not options['kits_only']:
+				repo = GitHelper(self, self.root)
+				self.log(color.green("Syncing meta-repo"))
+				if repo.isGitRepo():
+					retval = repo.fetchRemote("master")
+					retval = repo.pull(options=["--no-commit", "-f", "--no-recurse-submodules"])
+					if retval != 0:
+						self.fatal("There was an error syncing meta-repo.")
+				else:
+					repo.shallowClone(self.config.sync_base_repo % "meta_repo", self.config.meta_repo_branch)
+			self.load_metadata()
+			fails = []
+			for kt in self.kit_info["kit_order"]:
+				branch = None
+				if "kits" in self.config.settings:
+					if kt in self.config.settings["kits"]:
+						branch = self.config.settings["kits"][kt]
+				success = self.sync_kit(kt, branch=branch)
+				if not success:
+					fails.append((kt, branch))
+			if len(fails):
+				for kt, branch in fails:
+					self.error("There was an error syncing %s." % kt)
+				sys.exit(1)
+			sys.exit(0)
+		# Forked process terminated here
+		if os.waitpid(pid, 0)[1] > 0:
+			return False
+		self.log(color.green("Sync successful and kits in alignment! :)"))
+		self.log(color.green("Updating profiles..."))
+		try:
+			run_ego_module(self.install_path, 'profile', self.config, ['update'])
+		except PermissionError:
+			self.error("Could not update ego profiles automatically due to permissions (code in /root, most likely.)")
+			self.error("Please run epro update manually as root.")
+		return True
 
-def main(install_path, config, args):
+	def meta_repo_info(self, **options):
+		"""
+		This implements 'ego sync status' and is just a starting point. It currently displays the ego.conf-defined
+		or default repo, but not the actual git repo that is selected on disk. So it should be a lot more sophisticated
+		so that users can see when they've updated ego.conf but forgotten to run ego sync to update their meta-repo.
 
-	s = MetaRepoSyncHandler(config, install_path)
-	if len(args) and args[0] == "status":
-		s.metaRepoInfo()
-	else:
-		s.sync_meta_repo(args)
+		I would also like to display the time it was last synced and the timestamp of when the tree was updated
+		remotely.
+		"""
+		self.echo(color.green(self.config.meta_repo_root) + ":")
+		if not os.path.exists(self.config.meta_repo_root):
+			self.log(" meta-repo does not exist and needs to be cloned.")
+		else:
+			self.log("")
+		self.load_metadata()
+		for kit in self.kit_info["kit_order"]:
+			kit_branch, kit_default_branch = self.get_selected_kit(kit)
+			if kit_branch == kit_default_branch or kit_branch is None:
+				self.log("  " + kit.ljust(20) + " " + color.BLUE + kit_default_branch + color.END)
+			else:
+				self.log("  " + kit.ljust(20) + " " + color.CYAN + kit_branch + color.END + " (default %s)" % (
+					kit_default_branch if kit_default_branch else "(None)"))
+
+	def handle(self, **options):
+		if options['status']:
+			self.meta_repo_info(**options)
+		else:
+			self.sync_meta_repo(**options)
 
 # vim: ts=4 sw=4 noet

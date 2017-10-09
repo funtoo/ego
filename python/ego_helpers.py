@@ -27,14 +27,17 @@ def get_ego_module(install_path, modname):
 def run_ego_module(install_path, modname, config, args):
 	mod = get_ego_module(install_path, modname)
 	if mod:
-		mod.main(install_path, config, args)
+		ego_module = mod.Module(modname, install_path, config)
+		ego_module(*args)
 	else:
 		print(color.RED + "Error: ego module \"%s\" not found." % modname + color.END)
 		sys.exit(1)
 
-class EgoConfig(object):
 
-	def __init__(self, root, settings):
+class EgoConfig:
+
+	def __init__(self, root, settings, version):
+		self.ego_version = version
 		self.ego_dir = root
 		self.ego_mods_dir = "%s/modules" % self.ego_dir
 		self.ego_mods_info_dir = "%s/modules-info" % self.ego_dir
@@ -48,7 +51,7 @@ class EgoConfig(object):
 		for mod in self.ego_mods:
 			inf_path = self.ego_mods_info_dir + "/" + mod + ".json"
 			if os.path.exists(inf_path):
-				with open(inf_path,"r") as inf:
+				with open(inf_path, "r") as inf:
 					self.ego_mods_info[mod] = json.loads(inf.read())
 			else:
 				self.ego_mods_info[mod] = {}
