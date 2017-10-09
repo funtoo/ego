@@ -121,28 +121,6 @@ class Module(EgoModule):
 		else:
 			return {}
 
-	def meta_repo_info(self):
-		"""
-		This implements 'ego sync status' and is just a starting point. It currently displays the ego.conf-defined
-		or default repo, but not the actual git repo that is selected on disk. So it should be a lot more sophisticated
-		so that users can see when they've updated ego.conf but forgotten to run ego sync to update their meta-repo.
-
-		I would also like to display the time it was last synced and the timestamp of when the tree was updated
-		remotely.
-		"""
-		if not os.path.exists(self.config.meta_repo_root):
-			print(color.green(self.config.meta_repo_root) + ": meta-repo does not exist and needs to be cloned.")
-		else:
-			print(color.green(self.config.meta_repo_root) + ":")
-		self.load_metadata()
-		for kit in self.kit_info["kit_order"]:
-			kit_branch, kit_default_branch = self.getSelectedKit(kit)
-			if kit_branch == kit_default_branch or kit_branch == None:
-				print("  " + kit.ljust(20) + " " + color.BLUE + kit_default_branch + color.END)
-			else:
-				print("  " + kit.ljust(20) + " " +  color.CYAN + kit_branch + color.END + " (default %s)" % kit_default_branch if kit_default_branch else "(None)")
-
-
 	def get_selected_kit(self, kit):
 		"""Returns the kit selected in ego.conf (or None), and the default kit"""
 		if "kits" in self.config.settings and kit in self.config.settings["kits"]:
@@ -328,7 +306,6 @@ class Module(EgoModule):
 				self.log("  " + kit.ljust(20) + " " + color.BLUE + kit_default_branch + color.END)
 			else:
 				self.log("  " + kit.ljust(20) + " " + color.CYAN + kit_branch + color.END + " (default %s)" % (
-					kit_default_branch if kit_default_branch else "(None)"))
 
 	def handle(self, **options):
 		if options['status']:
