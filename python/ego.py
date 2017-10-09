@@ -1,8 +1,6 @@
 import argparse
 import sys
 
-import appi
-
 from ego_helpers import color
 
 __all__ = ['EgoModule']
@@ -83,6 +81,8 @@ class EgoModule:
 
 	@staticmethod
 	def atom_argument(strict=True):
+		import appi  # Import appi here to avoid hard dependency of all modules to appi
+
 		def atom_type(value):
 			try:
 				return appi.QueryAtom(value, strict)
