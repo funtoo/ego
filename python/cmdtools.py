@@ -145,7 +145,7 @@ def run(command, quiet=True):
 	tl = TaskList()
 	tl.append(Task(command))
 	kwargs = {}
-	if quiet == True:
+	if quiet:
 		kwargs = { "stdout" : OutputMode.NONE, "stderr" : OutputMode.NONE }
 	tr = TaskRunner(tl, **kwargs)
 	tr.run()

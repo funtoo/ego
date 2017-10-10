@@ -13,8 +13,7 @@ class GitHelper(object):
 
 	def localBranches(self):
 		if os.path.exists(self.root):
-			t1 = Task()
-			retval, out = run_statusoutput("git -C %s for-each-ref --format=\"(refname)\" refs/heads")
+			retval, out = run_statusoutput("git -C %s for-each-ref --format=\"(refname)\" refs/heads" % self.root)
 			if retval == 0:
 				for ref in out.split():
 					yield ref.split("/")[-1]
@@ -43,17 +42,20 @@ class GitHelper(object):
 	def shallowClone(self, url, branch, depth=1):
 		return run("git -C %s clone -b %s --depth=%s --single-branch %s" % (os.path.dirname(self.root), branch, depth, url), quiet=self.quiet)
 
-	def pull(self, options=[]):
+	def pull(self, options=None):
+		options = options or []
 		self.readOnlyCheck()
 		opts = " ".join(options)
 		return run("git -C %s pull %s" % (self.root, opts), quiet=self.quiet)
 
-	def reset(self, options=[]):
+	def reset(self, options=None):
+		options = options or []
 		self.readOnlyCheck()
 		opts = " ".join(options)
 		return run("git -C %s reset %s" % (self.root, opts), quiet=self.quiet)
 
-	def clean(self, options=[]):
+	def clean(self, options=None):
+		options = options or []
 		self.readOnlyCheck()
 		opts = " ".join(options)
 		return run("git -C %s clean %s" % (self.root, opts), quiet=self.quiet)
