@@ -1,96 +1,12 @@
 #!/usr/bin/python3
-import json
+
 import os
-from pathlib import Path
 import pwd
 import re
-import subprocess
 import sys
-
 from ego import EgoModule
 from ego_helpers import color, run_ego_module
-
-
-class GitHelper:
-
-	def __init__(self, module, root):
-		self.module = module
-		self.root = root
-
-	def run_shell(self, command):
-		return self.module.run_shell(command)
-
-	def run_shell_so(self, command):
-		return self.module.run_shell_so(command)
-
-	def localBranches(self):
-		if os.path.exists(self.root):
-			retval, out = self.run_shell("git -C %s for-each-ref --format=\"(refname)\" refs/heads")
-			if retval == 0:
-				for ref in out.split():
-					yield ref.split("/")[-1]
-
-	def localBranchExists(self, branch):
-		return not self.run_shell("git -C %s show-ref --verify --quiet refs/heads/%s" % (self.root, branch))
-
-	def isReadOnly(self):
-		try:
-			Path(self.root + "/foo").touch()
-		except (FileNotFoundError, PermissionError):
-			return True
-		else:
-			os.unlink(self.root + "/foo")
-			return False
-
-	def readOnlyCheck(self):
-		if self.isReadOnly():
-			self.module.fatal("Repository is at %s is read-only. Cannot update." % self.root)
-
-	def fetchRemote(self, branch, remote="origin"):
-		self.readOnlyCheck()
-		self.run_shell("git -C %s remote set-branches --add %s %s" % (self.root, remote, branch))
-		return self.run_shell("git -C %s fetch %s refs/heads/%s:refs/remotes/%s/%s" % (self.root, remote, branch, remote, branch))
-
-	def shallowClone(self, url, branch, depth=1):
-		return self.run_shell("git -C %s clone -b %s --depth=%s --single-branch %s" % (os.path.dirname(self.root), branch, depth, url))
-
-	def pull(self, options=[]):
-		self.readOnlyCheck()
-		opts = " ".join(options)
-		return self.run_shell("git -C %s pull %s" % (self.root, opts))
-
-	def reset(self, options=[]):
-		self.readOnlyCheck()
-		opts = " ".join(options)
-		return self.run_shell("git -C %s reset %s" % (self.root, opts))
-
-	def clean(self, options=[]):
-		self.readOnlyCheck()
-		opts = " ".join(options)
-		return self.run_shell("git -C %s clean %s" % (self.root, opts))
-
-	def exists(self):
-		return os.path.exists(self.root)
-
-	def isGitRepo(self):
-		return os.path.exists(os.path.join(self.root, ".git"))
-
-	def checkout(self, branch="master", origin=None):
-		if origin is not None:
-			args = "%s %s" % (origin, branch)
-		else:
-			args = branch
-		out = self.run_shell("git -C %s checkout %s" % (self.root, args))
-		return out == 0
-
-	@property
-	def commitID(self):
-		retval, out = self.run_shell_so("git -C %s rev-parse HEAD" % self.root)
-		if retval == 0:
-			return out.strip()
-		else:
-			return None
-
+from git_helper import GitHelper
 
 class Module(EgoModule):
 
@@ -108,39 +24,6 @@ class Module(EgoModule):
 	def add_arguments(self, parser):
 		parser.add_argument('--kits-only', action='store_true', help="Do not sync meta-repo, only kits.")
 		parser.add_argument('--status', action='store_true', help="Display selected kit branches.")
-
-	def _run_subprocess(self, command):
-		self.debug("Run shell: %s" % command)
-		if isinstance(command, str):
-			command = command.split()
-		return subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-
-	def run_shell(self, command, output=False, allow_failure=True):
-		proc = self._run_subprocess(command)
-		retval = proc.wait()
-
-		out = proc.stdout.read().decode('utf-8')
-		if out:
-			if output:
-				self.log(out)
-			else:
-				self.debug(out)
-		err = proc.stderr.read().decode('utf-8')
-		if err:
-			self.log(err)
-		if retval != 0 and not allow_failure:
-			sys.exit(1)
-		return retval
-
-	def run_shell_so(self, command, allow_failure=True):
-		proc = self._run_subprocess(command)
-		retval = proc.wait()
-		err = proc.stderr.read().decode('utf-8')
-		if err:
-			self.log(err)
-		if retval != 0 and not allow_failure:
-			sys.exit(1)
-		return (retval, proc.stdout.read().decode('utf-8'))
 
 	def sync_kit(self, kit_name, branch=None):
 		if branch is None:

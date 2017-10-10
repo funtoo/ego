@@ -1,9 +1,6 @@
 #!/usr/bin/python3
 
-import sys
-import configparser
 import requests
-from datetime import date
 
 # MediaWiki API Mark 3
 #
