@@ -95,7 +95,7 @@ class Module(EgoModule):
 		stat_info = os.stat(self.root)
 		if stat_info.st_uid != uid and self.config.sync_user != "root":
 			try:
-				self.run("chown -R %s:%s %s" % (uid, gid, self.root), quiet=True)
+				run("chown -R %s:%s %s" % (uid, gid, self.root), quiet=True)
 			except PermissionError:
 				self.fatal(
 					"You don't have enough privileges. You should probably run this command as root."
