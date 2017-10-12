@@ -3,7 +3,7 @@ import json
 from pathlib import Path
 import sys
 
-from ego_helpers import color
+from ego_helpers import Color
 
 __all__ = ['EgoModule']
 
@@ -39,12 +39,12 @@ class EgoModule:
 	def warning(self, message):
 		"""Output warning message to stdout. Auto-append newline if missing."""
 		if self.verbosity > -1:
-			self._output(color.yellow(str(message)))
+			self._output(Color.yellow(str(message)))
 
 	def error(self, message):
 		"""Output error message to stderr. Auto-append newline if missing."""
 		if self.verbosity > -1:
-			self._output(color.red(str(message)), err=True)
+			self._output(Color.red(str(message)), err=True)
 
 	def fatal(self, message, exit_code=1):
 		"""Output error message to stderr and exit. Auto-append newline if missing."""

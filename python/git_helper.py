@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 
 import os
-from cmdtools import *
+from cmdtools import run_statusoutput, run
 from pathlib import Path
 
 class GitHelper(object):

@@ -5,7 +5,7 @@ import pwd
 import re
 import sys
 from ego import EgoModule
-from ego_helpers import color, run_ego_module
+from ego_helpers import Color, run_ego_module
 from git_helper import GitHelper
 
 class Module(EgoModule):
@@ -33,10 +33,10 @@ class Module(EgoModule):
 
 			self.fatal("Fatal: branch cannot be None.")
 		if branch == self.kit_info["kit_settings"][kit_name]["default"]:
-			self.log(color.purple("Syncing %s branch %s" % (kit_name, branch)))
+			self.log(Color.purple("Syncing %s branch %s" % (kit_name, branch)))
 		else:
 			# highlight non-default branches in green for convenience
-			self.log(color.purple("Syncing %s branch " % kit_name) + color.green(branch) + color.purple(" (non-default)"))
+			self.log(Color.purple("Syncing %s branch " % kit_name) + Color.green(branch) + Color.purple(" (non-default)"))
 		kit_path = os.path.join(self.config.kit_root, kit_name)
 		kit = GitHelper(self, kit_path)
 		if not kit.isGitRepo():
@@ -112,7 +112,7 @@ class Module(EgoModule):
 				)
 			if not options['kits_only']:
 				repo = GitHelper(self, self.root)
-				self.log(color.green("Syncing meta-repo"))
+				self.log(Color.green("Syncing meta-repo"))
 				if repo.isGitRepo():
 					retval = repo.fetchRemote("master")
 					retval = repo.pull(options=["--no-commit", "-f", "--no-recurse-submodules"])
@@ -137,8 +137,8 @@ class Module(EgoModule):
 		# Forked process terminated here
 		if os.waitpid(pid, 0)[1] > 0:
 			return False
-		self.log(color.green("Sync successful and kits in alignment! :)"))
-		self.log(color.green("Updating profiles..."))
+		self.log(Color.green("Sync successful and kits in alignment! :)"))
+		self.log(Color.green("Updating profiles..."))
 		try:
 			run_ego_module(self.install_path, 'profile', self.config, ['update'])
 		except PermissionError:
@@ -155,7 +155,7 @@ class Module(EgoModule):
 		I would also like to display the time it was last synced and the timestamp of when the tree was updated
 		remotely.
 		"""
-		self.echo(color.green(self.config.meta_repo_root) + ":")
+		self.echo(Color.green(self.config.meta_repo_root) + ":")
 		if not os.path.exists(self.config.meta_repo_root):
 			self.log(" meta-repo does not exist and needs to be cloned.")
 		else:
@@ -163,9 +163,9 @@ class Module(EgoModule):
 		for kit in self.kit_info["kit_order"]:
 			kit_branch, kit_default_branch = self.get_selected_kit(kit, True)
 			if kit_branch == kit_default_branch or kit_branch is None:
-				self.log("  " + kit.ljust(20) + " " + color.BLUE + kit_default_branch + color.END)
+				self.log("  " + kit.ljust(20) + " " + Color.BLUE + kit_default_branch + Color.END)
 			else:
-				self.log("  " + kit.ljust(20) + " " + color.CYAN + kit_branch + color.END + " (default %s)" % (
+				self.log("  " + kit.ljust(20) + " " + Color.CYAN + kit_branch + Color.END + " (default %s)" % (
 					kit_default_branch if kit_default_branch else "(None)"))
 
 	def handle(self, **options):

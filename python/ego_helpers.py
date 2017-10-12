@@ -30,13 +30,16 @@ def run_ego_module(install_path, modname, config, args):
 		ego_module = mod.Module(modname, install_path, config)
 		ego_module(*args)
 	else:
-		print(color.RED + "Error: ego module \"%s\" not found." % modname + color.END)
+		print(Color.RED + "Error: ego module \"%s\" not found." % modname + Color.END)
 		sys.exit(1)
 
 
 class EgoConfig:
 
 	def __init__(self, root, settings, version):
+
+		# TODO: I'd like to add a verbosity level that can be defined in ego.conf or specified on the command-line.
+
 		self.ego_version = version
 		self.ego_dir = root
 		self.ego_mods_dir = "%s/modules" % self.ego_dir
@@ -85,7 +88,7 @@ class EgoConfig:
 class ColorType(str):
 	pass
 
-class color(object):
+class Color(object):
 	PURPLE = ColorType('\033[95m')
 	CYAN = ColorType('\033[96m')
 	DARKCYAN = ColorType('\033[36m')
@@ -161,7 +164,7 @@ class color(object):
 		return self + self.default(' ' * (width - len(self)))
 
 def header(info):
-	print("\n=== "+color.BOLD+color.GREEN+info+color.END+": ===\n")
+	print("\n=== " + Color.BOLD + Color.GREEN + info + Color.END + ": ===\n")
 
 class Table:
 
@@ -178,7 +181,7 @@ class Table:
 	def append(self, *cells):
 		if self.lpad or self.rpad:
 			cells = tuple(
-				color.default(' ' * self.lpad) + c + (' ' * self.rpad)
+				Color.default(' ' * self.lpad) + c + (' ' * self.rpad)
 				for c in cells
 			)
 		self.cols_width = [

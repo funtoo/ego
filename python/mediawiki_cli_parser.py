@@ -11,6 +11,7 @@ import html
 import subprocess
 from tabulate_color import tabulate
 from ego_helpers import *
+import re
 
 rows, columns = subprocess.check_output(['stty', 'size']).decode().split()
 term_size = shutil.get_terminal_size((100,20))
@@ -87,11 +88,13 @@ def file_render(console_lines):
 		del console_lines[-1]
 
 	for line in console_lines:
-		outstr += "  " + color.CYAN + line + "\n"
+		outstr += "  " + Color.CYAN + line + "\n"
 	return outstr 
 
-def console_render(console_lines):
+console_re = re.compile("##!?([ibcgry]|bl)##")
 
+def console_render(console_lines):
+	global console_re
 	global text_width
 
 	# This function accepts a list of lines from a console tag or template and
@@ -106,34 +109,101 @@ def console_render(console_lines):
 		del console_lines[-1]
 
 	outstr = "\n"
-	bg = color.DARKBLUEBG
+	output_lines = []
+	bg = Color.DARKBLUEBG
 
 	colorswap = { 
-		"##i##": color.YELLOW,
-		"##b##": color.BOLD,
-		"##c##": color.CYAN,
-		"##g##": color.GREEN,
-		"##!c##": color.END + bg,
-		"##!g##": color.END + bg,
-		"##!b##": color.END + bg,
+		"##i##": Color.YELLOW,
+		"##b##": Color.BOLD,
+		"##c##": Color.CYAN,
+		"##g##": Color.GREEN,
+		"##bl##": Color.BLUE,
+		"##r##": Color.RED,
+		"##y##": Color.YELLOW,
+		"##!c##": Color.END,
+		"##!g##": Color.END,
+		"##!b##": Color.END,
+		"##!bl##": Color.END,
+		"##!r##": Color.END,
+		"##!y##": Color.END,
 	}
+
+	lines_with_colors = []
+
 	for line in console_lines:
 		line = html.unescape(line)
-		real_length = len(line)
-		line = color.GREEN + bg + line
-		for key, esc_val in colorswap.items():
-			try:
-				while True:
-					line.index(key)
-					line = line.replace(key, esc_val, 1)
-					real_length -= len(key) 
-			except ValueError:
-				pass
-		line += bg
-		if real_length < text_width:
-			line += (text_width - real_length) * " "
-		line += color.END
-		outstr += line + "\n"
+		line_with_colors = []
+
+		# use regex to find colors in each line, and create a list of text snippets and colors:
+
+		while True:
+			match = console_re.search(line)
+			if not match:
+				# add remaining part
+				line_with_colors += [ line ]
+				break
+			line_with_colors += [ line[0:match.start()] ] +  [ colorswap[match.group()] ]
+			line = line[match.end():]
+
+		line_len = 0
+		line_pos = 0
+		# colors for the beginning of lines:
+		line_header = [ bg, Color.GREEN ]
+		# line_set_wrapped is one or more lines created from the original line.
+
+		line_set_wrapped = [ [] + line_header ]
+		# we keep track of the last color applied, because we want to apply in case of line wraps
+		last_color = None
+
+		while line_pos < len(line_with_colors):
+
+			# let's look for literal text that is longer than text_width, and convert it into multiple lines:
+
+			item = line_with_colors[line_pos]
+			if isinstance(item, ColorType):
+				# colors don't have a length; append and continue
+				line_set_wrapped[-1].append(item)
+				if item != Color.END:
+					# preserve color for word wrap
+					last_color = item
+				else:
+					# re-activate background color after turning any other active colors off:
+					line_set_wrapped[-1].append(bg)
+					last_color = None
+			else:
+				while len(item):
+					# this will split lines:
+					chars_to_be_added_to_this_line = text_width - line_len
+					string_to_be_added = item[0:chars_to_be_added_to_this_line]
+					chars_actually_added = len(string_to_be_added)
+					line_len += chars_actually_added
+					# add what we can, remove what we added
+					line_set_wrapped[-1].append(item[0:chars_actually_added])
+					item = item[chars_actually_added:]
+					if chars_actually_added == chars_to_be_added_to_this_line:
+						# if we actually got to end of line, so create a new one:
+						line_set_wrapped.append([] + line_header )
+						if last_color:
+							line_set_wrapped[-1].append(last_color)
+						line_len = 0
+
+			line_pos += 1
+
+		# We have finished wrapping lines, but potentially our last line does not extend to the very end
+		# of the console. Let's extend it so we get a nice background color going consistently to the right:
+
+		if line_len < text_width:
+			line_set_wrapped[-1].append(" " * ( text_width - line_len))
+
+		output_lines += line_set_wrapped
+
+	for line in output_lines:
+		# these guys should already be appropriately wrapped
+		for linepart in line:
+				outstr += linepart
+		outstr += "\n"
+	if len(outstr) and outstr[-1] != Color.END:
+		outstr += Color.END
 	return outstr
 
 def text_tokenize(node):
@@ -301,7 +371,7 @@ class TextAccumulator(object):
 				if len(item) + asciipos > wrap:
 					if len(self.colors):
 						# end colors at end of line
-						outstr += color.END
+						outstr += Color.END
 					asciipos = len(item)
 					outstr += "\n" 
 					for c in self.colors:
@@ -328,7 +398,7 @@ class TextAccumulator(object):
 			elif isinstance(item, WikiTextNewLine):
 				pass
 			elif isinstance(item, ColorType):
-				if item == color.END:
+				if item == Color.END:
 					self.colors = set()
 				else:
 					self.colors.add(item)
@@ -396,7 +466,7 @@ def parse(nodes, wrap=False, article_title=None):
 		if node == None:
 			break
 		if isinstance(node, ColorType):
-			if node == color.AUTOFLUSH:
+			if node == Color.AUTOFLUSH:
 				# flush toilet
 				yield accum_text.flush()
 			else:
@@ -416,27 +486,27 @@ def parse(nodes, wrap=False, article_title=None):
 			yield accum_text.flush()
 			title = str(node.title).strip()
 			if node.level == 1:
-				yield color.DARKCYAN + len(title) * "=" + color.END + "\n"
-				yield color.CYAN + title + color.END + "\n"
-				yield color.DARKCYAN + len(title) * "=" + color.END + "\n"
+				yield Color.DARKCYAN + len(title) * "=" + Color.END + "\n"
+				yield Color.CYAN + title + Color.END + "\n"
+				yield Color.DARKCYAN + len(title) * "=" + Color.END + "\n"
 			else:
-				yield "\n" + color.CYAN + title + color.END + "\n"
+				yield "\n" + Color.CYAN + title + Color.END + "\n"
 		elif isinstance(node, WikiTextSegment):
 			accum_text.append(node)
 		elif type(node) == mwparserfromhell.nodes.text.Text:
 			accum_text.append(text_tokenize(node))
 		elif type(node) == mwparserfromhell.nodes.wikilink.Wikilink:
 			if node.title.startswith("File:"):
-				nodes = [ color.RED, text_tokenize("Image - Click to view: "), color.END, mwparserfromhell.nodes.external_link.ExternalLink("http://www.funtoo.org/%s" % node.title) ] + nodes
+				nodes = [ Color.RED, text_tokenize("Image - Click to view: "), Color.END, mwparserfromhell.nodes.external_link.ExternalLink("http://www.funtoo.org/%s" % node.title) ] + nodes
 			elif node.text:
-				nodes = [ color.UNDERLINE, color.CYAN ] + list(getMainNodes(str(node.text).strip())) + [ color.END ] + nodes
+				nodes = [ Color.UNDERLINE, Color.CYAN ] + list(getMainNodes(str(node.text).strip())) + [ Color.END ] + nodes
 			else:
-				nodes = [ color.UNDERLINE, color.CYAN ] + list(getMainNodes(str(node.title).strip())) + [ color.END ] + nodes
+				nodes = [ Color.UNDERLINE, Color.CYAN ] + list(getMainNodes(str(node.title).strip())) + [ Color.END ] + nodes
 		elif type(node) == mwparserfromhell.nodes.external_link.ExternalLink:
 			if node.title:
-				tx = [ color.UNDERLINE, text_tokenize(str(node.title).strip()), color.END, WikiTextSpace(), WikiTextWord("("), color.CYAN, WikiTextWord(node.url), color.END, WikiTextWord(")") ]
+				tx = [ Color.UNDERLINE, text_tokenize(str(node.title).strip()), Color.END, WikiTextSpace(), WikiTextWord("("), Color.CYAN, WikiTextWord(node.url), Color.END, WikiTextWord(")") ]
 			else:
-				tx = [ color.CYAN, text_tokenize(str(node.url)), color.END]
+				tx = [ Color.CYAN, text_tokenize(str(node.url)), Color.END]
 			accum_text.append(tx)
 		elif type(node) == mwparserfromhell.nodes.tag.Tag:
 			if node.tag in ignore_tags:
@@ -452,38 +522,38 @@ def parse(nodes, wrap=False, article_title=None):
 			elif node.tag == 'td':
 				nodes = [ TableDataStart() ] + list(getMainNodes(str(node.contents).strip())) + [ TableDataEnd() ] + nodes
 			elif node.tag == 'dt':
-				accum_text.append([ OutputPadding(), color.RED ])
+				accum_text.append([ OutputPadding(), Color.RED ])
 			elif node.tag == 'dd':
-				accum_text.append([ color.END ])
+				accum_text.append([ Color.END ])
 			elif node.tag == 'span':
-				nodes = [ color.GREEN ] + list(getMainNodes(str(node.contents))) + [ color.END ] + nodes
+				nodes = [ Color.GREEN ] + list(getMainNodes(str(node.contents))) + [ Color.END ] + nodes
 			elif node.tag == 'th':
 				nodes = [ TableHeaderStart() ] + list(getMainNodes(str(node.contents).strip())) + [ TableHeaderEnd() ] + nodes
 			elif node.tag in [ 'b' ]:
-				nodes = [ color.BOLD ] + list(getMainNodes(str(node.contents))) + [ color.END ] + nodes
+				nodes = [ Color.BOLD ] + list(getMainNodes(str(node.contents))) + [ Color.END ] + nodes
 			elif node.tag in [ 'code', 'tt', 'source' ]:
-				nodes = [ color.GREEN ] + list(getMainNodes(str(node.contents))) + [ color.END ] + nodes
+				nodes = [ Color.GREEN ] + list(getMainNodes(str(node.contents))) + [ Color.END ] + nodes
 			elif node.tag == 'i':
-				accum_text.append([ color.UNDERLINE ])
-				nodes = list(getMainNodes(str(node.contents))) + [ color.END ] + nodes
+				accum_text.append([ Color.UNDERLINE ])
+				nodes = list(getMainNodes(str(node.contents))) + [ Color.END ] + nodes
 			elif node.tag in [ 'console', 'pre', 'syntaxhighlight' ]:
 				yield accum_text.flush()
 				yield console_render(node.contents.split("\n"))
 			elif node.tag == 'blockquote':
 				# could be rendered better
 				yield accum_text.flush()
-				accum_text.append(color.BOLD)
-				nodes = list(getMainNodes(str(node.contents).strip())) + [ color.END ] + nodes
+				accum_text.append(Color.BOLD)
+				nodes = list(getMainNodes(str(node.contents).strip())) + [ Color.END ] + nodes
 			elif node.tag == "br":
 				yield accum_text.flush()
 			elif node.tag == 'li':
 				# flush old block, and start a new one:
 				yield accum_text.flush()
 				accum_text.padding = False
-				accum_text.append([color.BOLD, WikiTextSpace(), WikiTextWord("*"), color.END])
+				accum_text.append([Color.BOLD, WikiTextSpace(), WikiTextWord("*"), Color.END])
 			else:
 				yield accum_text.flush()
-				accum_text.append([ color.RED, WikiTextWord("[TAG"), WikiTextWord(node.tag if node.tag else "None"), WikiTextWord(":"), WikiTextSpace(), text_tokenize(node.contents) if node.contents else WikiTextWord("No-Contents"), color.END, WikiTextWord("]") ])
+				accum_text.append([ Color.RED, WikiTextWord("[TAG"), WikiTextWord(node.tag if node.tag else "None"), WikiTextWord(":"), WikiTextSpace(), text_tokenize(node.contents) if node.contents else WikiTextWord("No-Contents"), Color.END, WikiTextWord("]") ])
 		elif type(node) == mwparserfromhell.nodes.template.Template:
 			tmp_name = node.name.lower().strip()
 			if tmp_name in ignore_templates:
@@ -497,10 +567,10 @@ def parse(nodes, wrap=False, article_title=None):
 
 				for p in [ "Prev in Series", "Next in Series" ]:
 					if p in params:
-						nodes = [ color.AUTOFLUSH, color.RED, text_tokenize(p.split()[0] + " Article in Series: "), color.END, mwparserfromhell.nodes.wikilink.Wikilink(params[p]), color.AUTOFLUSH] + nodes
+						nodes = [ Color.AUTOFLUSH, Color.RED, text_tokenize(p.split()[0] + " Article in Series: "), Color.END, mwparserfromhell.nodes.wikilink.Wikilink(params[p]), Color.AUTOFLUSH] + nodes
 
 				if "Summary" in params:
-					nodes = [ color.GREEN, text_tokenize(params["Summary"]), color.END ] + nodes
+					nodes = [ Color.GREEN, text_tokenize(params["Summary"]), Color.END ] + nodes
 				art_t = article_title
 				if "Subtitle" in params:
 					art_t += " - " + params["Subtitle"]
@@ -532,10 +602,10 @@ def parse(nodes, wrap=False, article_title=None):
 				yield accum_text.flush()
 				yield file_render(str(node.get("body").value).split("\n"))
 			elif tmp_name == "c":
-				nodes = [ color.GREEN ] + list(getMainNodes(str(node.params[0]))) + [ color.END ] + nodes
+				nodes = [ Color.GREEN ] + list(getMainNodes(str(node.params[0]))) + [ Color.END ] + nodes
 			elif tmp_name == "f":
-				accum_text.append([ color.CYAN ])
-				nodes = list(getMainNodes(str(node.params[0]))) + [ color.END ] + nodes
+				accum_text.append([ Color.CYAN ])
+				nodes = list(getMainNodes(str(node.params[0]))) + [ Color.END ] + nodes
 			elif tmp_name in [ "announce", "note", "fancyimportant", "fancynote", "important", "warning", "tip" ]:
 				if tmp_name.startswith("fancy"):
 					tmp_name = tmp_name[5:]
@@ -544,17 +614,17 @@ def parse(nodes, wrap=False, article_title=None):
 				if note_text.startswith("1=\n"):
 					note_text = note_text[3:]
 				# First we output the part of the template that we know how to output properly:
-				accum_text.append([ color.BOLD,  WikiTextWord(tmp_name.upper() + ":") , WikiTextSpace(), color.END ])
+				accum_text.append([ Color.BOLD,  WikiTextWord(tmp_name.upper() + ":") , WikiTextSpace(), Color.END ])
 				# we push the contents of the note to the front of the stack for parsing, so these things will get parsed
 				# for the next loop iterations, before continuing with the remaining nodes of text for the rest of the 
 				# document:
 				a = list(getMainNodes(note_text))
-				nodes = list(getMainNodes(note_text)) + [ color.AUTOFLUSH ] + nodes
+				nodes = list(getMainNodes(note_text)) + [ Color.AUTOFLUSH ] + nodes
 			elif tmp_name in [ "package" ]:
-				accum_text.append([ WikiTextWord("wiki"), WikiTextSpace(), WikiTextWord("page"), WikiTextSpace(), WikiTextWord("for"), WikiTextSpace(), WikiTextWord("the"), WikiTextSpace(), color.RED, WikiTextWord(node.params[0]), color.END ])
+				accum_text.append([ WikiTextWord("wiki"), WikiTextSpace(), WikiTextWord("page"), WikiTextSpace(), WikiTextWord("for"), WikiTextSpace(), WikiTextWord("the"), WikiTextSpace(), Color.RED, WikiTextWord(node.params[0]), Color.END ])
 			else:
 				yield accum_text.flush()
-				accum_text.append([ color.RED, WikiTextWord("[TEMPLATE"), WikiTextWord(tmp_name), color.END, WikiTextWord("]") ])
+				accum_text.append([ Color.RED, WikiTextWord("[TEMPLATE"), WikiTextWord(tmp_name), Color.END, WikiTextWord("]") ])
 		prev_node = node
 	yield accum_text.flush()
 

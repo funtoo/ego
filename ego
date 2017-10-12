@@ -31,7 +31,7 @@ else:
 	install_path = "/usr/share/ego"
 sys.path.insert(0, install_path + "/python")
 
-from ego_helpers import EgoConfig, color, header, run_ego_module
+from ego_helpers import EgoConfig, Color, header, run_ego_module
 
 ego_config = EgoConfig(install_path, settings, VERSION)
 
@@ -46,7 +46,7 @@ if __name__ == "__main__":
 				args = sys.argv[1:]
 				break
 		if not action:
-			print(color.RED + "Unrecognized shortcut %s. Type ego help for more info." % exec_name + color.END)
+			print(Color.RED + "Unrecognized shortcut %s. Type ego help for more info." % exec_name + Color.END)
 			sys.exit(1)
 	else:
 		if len(sys.argv) == 1 or (len(sys.argv) == 2 and sys.argv[1] in ["info", "help"]):
@@ -57,8 +57,8 @@ if __name__ == "__main__":
 				if "description" in info:
 					desc = info["description"]
 				if "shortcut" in info:
-					desc += " (%s%s%s)" % (color.BOLD, info["shortcut"], color.END)
-				print("%s%15s%s - %s" % (color.CYAN, mod, color.END, desc))
+					desc += " (%s%s%s)" % (Color.BOLD, info["shortcut"], Color.END)
+				print("%s%15s%s - %s" % (Color.CYAN, mod, Color.END, desc))
 			print()
 		elif len(sys.argv) == 3 and sys.argv[2] in ["info", "help"]:
 			mod = sys.argv[1]
@@ -85,7 +85,7 @@ if __name__ == "__main__":
 			action = sys.argv[1]
 			args = sys.argv[2:]
 		else:
-			print(color.RED + "Please specify an action. Type ego help for more info." + color.END)
+			print(Color.RED + "Please specify an action. Type ego help for more info." + Color.END)
 			sys.exit(1)
 	if action:
 		run_ego_module(install_path, action, ego_config, args)

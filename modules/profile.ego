@@ -9,7 +9,7 @@ if os.path.exists("/usr/share/portage/pym"):
 import portage
 
 from ego import EgoModule
-from ego_helpers import color, get_ego_module
+from ego_helpers import Color, get_ego_module
 
 
 # ProfileLister will allow us to see what profile settings -- flavors, subarches, mix-ins, builds --
@@ -336,21 +336,21 @@ class Module(EgoModule):
 		mixins_parser.set_defaults(handler=self.handle_mix_ins_action)
 
 	def header(self, info):
-		self.log("\n=== " + color.BOLD + color.GREEN + info + color.END + ": ===\n")
+		self.log("\n=== " + Color.BOLD + Color.GREEN + info + Color.END + ": ===\n")
 
 	def python_info(self):
 		self.header("Python kit")
 		self.log("%s%12s%s: %s%s%s" % (
-			color.BOLD, "branch", color.END, color.CYAN, self.get_selected_kit("python-kit"), color.END))
+			Color.BOLD, "branch", Color.END, Color.CYAN, self.get_selected_kit("python-kit"), Color.END))
 
 	def short_list(self, ps, key_order):
 		self.header("Enabled Profiles")
 		for key in key_order:
 			if key not in ps.descendents or len(ps.descendents[key]) == 0:
-				self.log("%s%12s%s: (not set)" % (color.BOLD, key, color.END))
+				self.log("%s%12s%s: (not set)" % (Color.BOLD, key, Color.END))
 			else:
 				for item in ps.descendents[key]:
-					self.log("%s%12s%s: %s%s%s" % (color.BOLD, key, color.END, color.CYAN, item.shortname, color.END))
+					self.log("%s%12s%s: %s%s%s" % (Color.BOLD, key, Color.END, Color.CYAN, item.shortname, Color.END))
 		self.log("")
 
 	def short_JSON(self, ps, key_order):
@@ -406,7 +406,7 @@ class Module(EgoModule):
 						# de-pluralize
 						if iccl == "mix-ins":
 							iccl = "mix-in"
-						self.log("      %s%26s%s (from %s %s)" % (color.CYAN, i.shortname, color.END, i.child.shortname, iccl))
+						self.log("      %s%26s%s (from %s %s)" % (Color.CYAN, i.shortname, Color.END, i.child.shortname, iccl))
 		self.log("")
 
 	def handle_update_action(self, **options):
@@ -464,14 +464,14 @@ class Module(EgoModule):
 					self.echo(" " * lpos)
 				if x in active_keys:
 					# make it stand out if it explicitly enabled:
-					outx = color.BOLD + color.CYAN + x + "*" + color.END
+					outx = Color.BOLD + Color.CYAN + x + "*" + Color.END
 					if key in ["arch", "build"]:
 						# parens to mark as read-only -- USE style. Not really read-only but should
 						# not generally be changed by user.
 						outx = "(" + outx + ")"
 				elif key in self.all_enabled and x in self.all_enabled[key]:
 					# highlight if enabled through inheritance:
-					outx = color.DARKCYAN + x + color.END
+					outx = Color.DARKCYAN + x + Color.END
 				else:
 					outx = x
 				count += 1

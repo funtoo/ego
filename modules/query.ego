@@ -8,7 +8,7 @@ from xml.etree import ElementTree
 import appi
 
 from ego import EgoModule
-from ego_helpers import color, Table
+from ego_helpers import Color, Table
 
 
 class Module(EgoModule):
@@ -68,13 +68,13 @@ class Module(EgoModule):
 				branch = self.get_selected_kit(repo.name)
 			except KeyError:
 				branch = None
-			repo = color.blue(repo.name)
+			repo = Color.blue(repo.name)
 			if branch:
-				repo = (repo + '/') + color.green(branch)
-			version = color.cyan(ebuild.version)
+				repo = (repo + '/') + Color.green(branch)
+			version = Color.cyan(ebuild.version)
 			if ebuild.is_installed():
-				version = color.bold('* ') + color.bold(version)
-			table.append(version, color.yellow(slot), repo)
+				version = Color.bold('* ') + Color.bold(version)
+			table.append(version, Color.yellow(slot), repo)
 
 		self.echo(table)
 
@@ -122,12 +122,12 @@ class Module(EgoModule):
 				if requests.get(gentoo_url).status_code == 404:
 					gentoo_url = ''
 				else:
-					gentoo_url = "\t{}\n".format(color.cyan(gentoo_url))
+					gentoo_url = "\t{}\n".format(Color.cyan(gentoo_url))
 				sys.stdout.write(
 					"{cat}/{pkg}::{kit} comes from {repo}\n\t{url}\n{gentoo_url}".format(
 						cat=cat, pkg=pkg, kit=kit,
-						repo=color.green(repository),
-						url=color.blue(url or "Unknown repository URL"),
+						repo=Color.green(repository),
+						url=Color.blue(url or "Unknown repository URL"),
 						gentoo_url=gentoo_url,
 					)
 				)
@@ -152,10 +152,10 @@ class Module(EgoModule):
 				date_created = datetime.strptime(
 					fields['created'], '%Y-%m-%dT%H:%M:%S.%f%z').date()
 				table.append(
-					color.red(issue['key']),
-					color.cyan(str(date_created)),
-					color.purple(fields['status']['name']),
-					color.yellow(fields['summary'])
+					Color.red(issue['key']),
+					Color.cyan(str(date_created)),
+					Color.purple(fields['status']['name']),
+					Color.yellow(fields['summary'])
 				)
 
 		sys.stdout.write(str(table))
