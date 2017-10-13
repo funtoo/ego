@@ -362,7 +362,6 @@ class TextAccumulator(object):
 				self.txlist = item + self.txlist
 				continue
 			elif isinstance(item, OutputPadding):
-				outstr += '\n\n'
 				asciipos = 0
 				count = 0
 			elif isinstance(item, WikiTextWord):
