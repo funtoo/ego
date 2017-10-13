@@ -119,13 +119,7 @@ def console_render(console_lines):
 		"##g##": Color.GREEN,
 		"##bl##": Color.BLUE,
 		"##r##": Color.RED,
-		"##y##": Color.YELLOW,
-		"##!c##": Color.END,
-		"##!g##": Color.END,
-		"##!b##": Color.END,
-		"##!bl##": Color.END,
-		"##!r##": Color.END,
-		"##!y##": Color.END,
+		"##y##": Color.YELLOW
 	}
 
 	lines_with_colors = []
@@ -142,7 +136,11 @@ def console_render(console_lines):
 				# add remaining part
 				line_with_colors += [ line ]
 				break
-			line_with_colors += [ line[0:match.start()] ] +  [ colorswap[match.group()] ]
+			try:
+				color = [ colorswap[match.group()] ]
+			except KeyError:
+				color = [ Color.END, bg ]
+			line_with_colors += [ line[0:match.start()] ] +  color
 			line = line[match.end():]
 
 		line_len = 0
