@@ -1,0 +1,167 @@
+.\" Man page generated from reStructuredText.
+.
+.TH EGO PROFILE 1 "" "2.1.0" "Funtoo Linux Core System"
+.SH NAME
+ego profile \- Funtoo Linux Ego Profile Module
+.
+.nr rst2man-indent-level 0
+.
+.de1 rstReportMargin
+\\$1 \\n[an-margin]
+level \\n[rst2man-indent-level]
+level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
+-
+\\n[rst2man-indent0]
+\\n[rst2man-indent1]
+\\n[rst2man-indent2]
+..
+.de1 INDENT
+.\" .rstReportMargin pre:
+. RS \\$1
+. nr rst2man-indent\\n[rst2man-indent-level] \\n[an-margin]
+. nr rst2man-indent-level +1
+.\" .rstReportMargin post:
+..
+.de UNINDENT
+. RE
+.\" indent \\n[an-margin]
+.\" old: \\n[rst2man-indent\\n[rst2man-indent-level]]
+.nr rst2man-indent-level -1
+.\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
+.in \\n[rst2man-indent\\n[rst2man-indent-level]]u
+..
+.SH SYNOPSIS
+.sp
+The \fBego profile\fP or \fBepro\fP command is the official way to manage Funtoo Linux profiles.
+.sp
+\fBego profile [command]\fP
+.sp
+\fBepro [command]\fP
+.sp
+\fBepro show\fP
+.sp
+\fBepro list\fP
+.sp
+\fBepro list [flavor|mix\-ins|subarch|build]\fP
+.sp
+\fBepro flavor +flavor1 \-flavor2..\fP
+.sp
+\fBepro mix\-in[s] +mix\-in1 \-mix\-in2...\fP
+.SH HISTORY
+.sp
+Historically, users have had to add a large number of settings to \fB/etc/make.conf\fP to customize their Gentoo or Funtoo
+Linux system, which made setup of the operating system more difficult than it should be. In Gentoo Linux, it is possible
+to only define one system profile. Think of a system profile as the default settings that Portage uses for building
+everything on your system. Rather than a single profile, Funtoo Linux uses multiple sub\-profiles, and moves many types
+of settings that are normally stored in \fB/etc/make.conf\fP into the profile system.
+.SH PROFILE TYPES
+.sp
+The following profile types are available in Funtoo Linux:
+.INDENT 0.0
+.TP
+.B \fBarch\fP
+Typically x86\-32bit or x86\-64bit, this defines the processor type and support of your system. This is defined when
+your stage was built and should not be changed.
+.TP
+.B \fBbuild\fP
+Defines whether your system is a current, stable or experimental build. current systems will have newer packages
+unmasked than stable systems. This is defined when your stage is built and is typically not changed. Note that
+currently, only \fBfuntoo\-current\fP is being used.
+.TP
+.B \fBsubarch\fP
+Defines CPU optimizations for your system. The subarch is set at the time the stage3 is built, but can be changed
+later to better settings if necessary. Be sure to pick a setting that is compatible with your CPU.
+.TP
+.B \fBflavor\fP
+Defines the general type of system, such as server or desktop, and will set default USE flags appropriate for your
+needs.
+.TP
+.B \fBmix\-ins\fP
+Defines various optional settings that you may be interested in enabling.
+.UNINDENT
+.sp
+Note that flavors can (and often do) inherit settings from other flavors and mix\-ins. Mix\-ins can also inherit settings
+from other mix\-ins. For example, the \fBX\fP mix\-in is inherited by \fBgnome\fP\&. The \fBepro\fP tool will show both as being
+enabled so there are no surprises.
+.SH USING EPRO
+.sp
+\fBepro show\fP will display the current profile settings on your system:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+# epro show
+
+=== Enabled Profiles: ===
+       arch: x86\-64bit
+      build: current
+    subarch: intel64\-westmere
+     flavor: desktop
+    mix\-ins: gnome
+
+
+=== Python kit: ===
+     branch: 3.4\-prime
+
+=== All inherited flavors from desktop flavor: ===
+                    workstation (from desktop flavor)
+                           core (from workstation flavor)
+                        minimal (from core flavor)
+
+=== All inherited mix\-ins from desktop flavor: ===
+                              X (from workstation flavor)
+                          audio (from workstation flavor)
+                            dvd (from workstation flavor)
+                          media (from workstation flavor)
+     mediadevice\-audio\-consumer (from media mix\-in)
+               mediadevice\-base (from mediadevice\-audio\-consumer mix\-in)
+     mediadevice\-video\-consumer (from media mix\-in)
+               mediadevice\-base (from mediadevice\-video\-consumer mix\-in)
+       mediaformat\-audio\-common (from media mix\-in)
+         mediaformat\-gfx\-common (from media mix\-in)
+       mediaformat\-video\-common (from media mix\-in)
+                 console\-extras (from workstation flavor)
+                          print (from desktop flavor)
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+To view all available sub\-profile settings, use \fBepro list\fP\&. Enabled profiles will be highlighted in cyan. Directly
+enabled profiles will be in bold and have an asterisk \fB*\fP appended. Sub\-profiles enabled via inheritance will be
+highlighted.
+.SH USAGE EXAMPLES
+.INDENT 0.0
+.TP
+.B \fBepro mix\-ins +gnome +kde\fP
+Add the \fBkde\fP and \fBgnome\fP mix\-ins.
+.TP
+.B \fBepro mix\-ins \-gnome\fP
+Remove the \fBgnome\fP mix\-in.
+.TP
+.B \fBepro arch x86\-64bit\fP
+Change the arch profile to \fBx86\-64bit\fP\&. You typically would not do this.
+.TP
+.B \fBepro subarch generic_64\fP
+Enable the \fBgeneric_64\fP subarch and associated compiler settings.
+.TP
+.B \fBepro flavor desktop\fP
+Change the system flavor to \fBdesktop\fP
+.TP
+.B \fBepro show\-json\fP
+Output profile settings in standard JSON format, suitable for embedding.
+.TP
+.B \fBepro get flavor\fP
+Show current setting for flavor in plain\-text format, suitable for scripting.
+.UNINDENT
+.SH ADDITIONAL DOCUMENTATION
+.sp
+Please see \fI\%http://www.funtoo.org/Funtoo_Profiles\fP (\fBedoc "Funtoo Profiles" | less\fP) for more detailed documentation,
+including a list of all flavors, mix\-ins, detailed documentation on Funtoo Linux media mix\-ins, how profile settings are
+stored in Funtoo Linux, as well as information about the history of the profile system, originally envisioned by Daniel
+Robbins and brought to life by Seemant Kulleen.
+.SH AUTHOR
+Daniel Robbins <drobbins@funtoo.org>
+.\" Generated by docutils manpage writer.
+.
