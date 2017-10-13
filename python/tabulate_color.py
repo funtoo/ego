@@ -718,7 +718,6 @@ def _align_header(header, alignment, width, visible_width, is_multiline=False):
         return "\n".join(padded_lines)
     # else: not multiline
     ninvisible = max(0, len(header) - visible_width)
-    width += ninvisible
     if alignment == "left":
         return _padright(width, header)
     elif alignment == "center":
