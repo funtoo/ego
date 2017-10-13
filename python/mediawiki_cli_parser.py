@@ -204,35 +204,48 @@ def console_render(console_lines):
 		outstr += Color.END
 	return outstr
 
-def text_tokenize(node):
+def text_tokenize(node, prev_node=None):
 
 	global ignore_tags, ignore_templates
 
 	tx_out = WikiTextSegment()
 	pos = 0
-	was_space = False
+	if isinstance(prev_node, WikiTextSpace ):
+		was_space = True
+	else:
+		was_space = False
+	if isinstance(prev_node, WikiTextNewLine) or isinstance(prev_node, WikiTextNewBlock):
+		was_newline = True
+	else:
+		was_newline = False
+
+	was_newline = False
 	while pos < len(node):
 		if node[pos:pos+2] == "\n\n":
-			if not was_space:
+			if not was_newline:
 				tx_out += [ WikiTextNewBlock() ]
 			pos += 2
-			was_space = True
+			was_newline = True
+			was_space = False
 		elif node[pos:pos+1] == "\n":
-			if not was_space:
+			if not was_newline:
 				tx_out += [ WikiTextNewLine() ]
 			pos += 1
-			was_space = True
+			was_newline = True
+			was_space = False
 		elif node[pos:pos+1] == " ":
 			if not was_space:
 				tx_out += [ WikiTextSpace() ]
 			pos += 1
 			was_space = True
+			was_newline = False
 		else:
 			word_start = pos
 			while pos < len(node) and node[pos] not in [ " ", "\n" ]:
 				pos += 1
 			tx_out += [ WikiTextWord(node[word_start:pos]) ]
 			was_space = False
+			was_newline = False
 	return tx_out
 
 def getMainNodes(block_text):
@@ -251,8 +264,8 @@ def getMainNodes(block_text):
 		wikicode = mwparserfromhell.parse(str(block_text))
 	else:
 		wikicode = block_text
-	
 	# look at our top-level nodes we have to handle
+	prev_node = None
 	for n in wikicode.nodes:
 		if type(n) in ignore_nodes:
 			continue
@@ -267,9 +280,10 @@ def getMainNodes(block_text):
 			for bad_word in ignore_magic_words:
 				n = n.replace(bad_word, "")
 			n = mwparserfromhell.nodes.text.Text(n)
-			yield text_tokenize(n)
+			yield text_tokenize(n, prev_node)
 		else:
 			yield n
+		prev_node = n
 
 class TextAccumulator(object):
 
@@ -340,22 +354,26 @@ class TextAccumulator(object):
 			wrap = round(( self.wrap -1 ) / 2)
 		else:
 			wrap = self.wrap
+		#print(self.txlist)
 
+		# Ingore initial NewBlocks, NewLines and Space in a block:
 		while len(self.txlist) > 1 and (
 				isinstance(self.txlist[0], WikiTextNewBlock) or
 				isinstance(self.txlist[0], WikiTextNewLine) or
 				isinstance(self.txlist[0], WikiTextSpace)
 			):
 			self.txlist.pop(0)
-		
+
+		# Ignoring trailing newline will mess up lists.
 		while len(self.txlist) and (
 				isinstance(self.txlist[-1], WikiTextNewBlock) or
-				isinstance(self.txlist[-1], WikiTextNewLine) or
 				isinstance(self.txlist[-1], WikiTextSpace)
 			):
 			self.txlist.pop()
 		item = None
 		count = 0
+		# count of last item
+		last_count = len(self.txlist) - 1
 		while len(self.txlist):
 			item = self.txlist.pop(0)
 			if isinstance(item, WikiTextSegment) or type(item) == list:
@@ -379,21 +397,30 @@ class TextAccumulator(object):
 					outstr += item
 					asciipos += len(item)
 			elif isinstance(item, WikiTextSpace) or isinstance(item, WikiTextNewLine):
-				if isinstance(prev_item, WikiTextNewBlock):
-					outstr += '\n\n'
-					asciipos =0
-					count = 0
-				elif isinstance(prev_item, WikiTextNewLine) or isinstance(prev_item, WikiTextSpace):
+				#if isinstance(prev_item, WikiTextNewBlock):
+				#	outstr += '\n\n'
+				#	asciipos =0
+				#	count = 0
+				if isinstance(prev_item, WikiTextNewLine):
+					# This is duplicate-skip logic.
 					continue
 				if count == 0:
+					# Skip initial newline
 					continue
 				if asciipos == 0:
+					# Skip newline if we are already at beginning of line
 					continue
 				elif asciipos < wrap:
-					outstr += " "
-					asciipos += 1
+					if isinstance(item, WikiTextSpace):
+						outstr += " "
+						asciipos += 1
+					else:
+						outstr += "\n"
+						asciipos = 0
 			elif isinstance(item, WikiTextNewLine):
-				pass
+				#pass HACK
+				outstr += '\n'
+				asciipos = 0
 			elif isinstance(item, ColorType):
 				if item == Color.END:
 					self.colors = set()
@@ -401,14 +428,12 @@ class TextAccumulator(object):
 					self.colors.add(item)
 				outstr += item
 			elif isinstance(item, WikiTextNewBlock):
-				#if not len(self.txlist):
-				#	# last item, so handle it
-				#	outstr += '\n\n'
-				#	asciipos = 0
-				#	count = 0
-				#else:
-				#	# handled by wikitextword condition
-				pass
+				if count != 0 and count != last_count:
+					# not at beginning or end, but in the middle
+						outstr += '\n\n'
+						asciipos = 0
+						count = 0
+
 			prev_item = item
 			count += 1
 
@@ -420,6 +445,7 @@ class TextAccumulator(object):
 
 		if self.output_redirect == "table" and len(self.table_object) and len(self.table_object[-1]):
 			foo = self.table_object[-1][-1] + outstr
+			#print("foo is", repr(foo))
 			self.table_object[-1][-1] = foo
 			outstr = ""
 		elif self.output_redirect == "header" and len(self.header_object):
@@ -458,6 +484,13 @@ def parse(nodes, wrap=False, article_title=None):
 
 	nodes = list(nodes)
 
+	if len(nodes) == 1 and isinstance(nodes[0], WikiTextNewBlock):
+		# skip empty new blocks to deal with extra spacing in source wikitext
+		yield ""
+
+	prev_node = None
+	#for node in nodes:
+	#		print(node, type(node), node.tag if hasattr(node,"tag") else "")
 	while len(nodes):
 		node = nodes.pop(0)
 		if node == None:
@@ -491,7 +524,7 @@ def parse(nodes, wrap=False, article_title=None):
 		elif isinstance(node, WikiTextSegment):
 			accum_text.append(node)
 		elif type(node) == mwparserfromhell.nodes.text.Text:
-			accum_text.append(text_tokenize(node))
+			accum_text.append(text_tokenize(node, prev_node))
 		elif type(node) == mwparserfromhell.nodes.wikilink.Wikilink:
 			if node.title.startswith("File:"):
 				nodes = [ Color.RED, text_tokenize("Image - Click to view: "), Color.END, mwparserfromhell.nodes.external_link.ExternalLink("http://www.funtoo.org/%s" % node.title) ] + nodes
@@ -501,9 +534,10 @@ def parse(nodes, wrap=False, article_title=None):
 				nodes = [ Color.UNDERLINE, Color.CYAN ] + list(getMainNodes(str(node.title).strip())) + [ Color.END ] + nodes
 		elif type(node) == mwparserfromhell.nodes.external_link.ExternalLink:
 			if node.title:
-				tx = [ Color.UNDERLINE, text_tokenize(str(node.title).strip()), Color.END, WikiTextSpace(), WikiTextWord("("), Color.CYAN, WikiTextWord(node.url), Color.END, WikiTextWord(")") ]
+				tx = [ Color.UNDERLINE, text_tokenize(str(node.title).strip(), prev_node), Color.END, WikiTextSpace(),
+				       WikiTextWord("("), Color.CYAN, WikiTextWord(node.url), Color.END, WikiTextWord(")") ]
 			else:
-				tx = [ Color.CYAN, text_tokenize(str(node.url)), Color.END]
+				tx = [ Color.CYAN, text_tokenize(str(node.url), prev_node), Color.END]
 			accum_text.append(tx)
 		elif type(node) == mwparserfromhell.nodes.tag.Tag:
 			if node.tag in ignore_tags:
@@ -515,7 +549,7 @@ def parse(nodes, wrap=False, article_title=None):
 				# just render the contents of the div
 				nodes = list(getMainNodes(str(node.contents))) + nodes
 			elif node.tag == 'nowiki':
-				nodes = text_tokenize(node.contents) + nodes
+				nodes = text_tokenize(node.contents, prev_node) + nodes
 			elif node.tag == 'td':
 				nodes = [ TableDataStart() ] + list(getMainNodes(str(node.contents).strip())) + [ TableDataEnd() ] + nodes
 			elif node.tag == 'dt':
@@ -547,7 +581,7 @@ def parse(nodes, wrap=False, article_title=None):
 				# flush old block, and start a new one:
 				yield accum_text.flush()
 				accum_text.padding = False
-				accum_text.append([Color.BOLD, WikiTextSpace(), WikiTextWord("*"), Color.END])
+				accum_text.append([Color.BOLD, WikiTextSpace(), WikiTextWord("*"), Color.END, WikiTextSpace()])
 			else:
 				yield accum_text.flush()
 				accum_text.append([ Color.RED, WikiTextWord("[TAG"), WikiTextWord(node.tag if node.tag else "None"), WikiTextWord(":"), WikiTextSpace(), text_tokenize(node.contents) if node.contents else WikiTextWord("No-Contents"), Color.END, WikiTextWord("]") ])
