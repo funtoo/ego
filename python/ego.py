@@ -12,6 +12,16 @@ class EgoModule:
 
 	verbosity = 1
 
+	# I think it is time to add a "news" or "issues" functionality to Ego Modules, which would allow an ego
+	# module to register information that would be presented to the user, even at a later invocation of ego.
+	# I plan to use this to implement the ability to have "post-kit-change" actions, which can be performed
+	# potentially automatically or manually, after a user has changed a kit. And potentially we need pre-
+	# change actions too.
+
+	# I would also like to add a mechanism to 'remember' warnings, etc so they could be repeated at the end
+	# of ego, to remind users. For example, I could use this to remind a user that they are referencing a
+	# kit that doesn't exist in ego.conf, and that they should fix it, cleanly and at the end of ego output.
+
 	def _output(self, message, err=False):
 		message = str(message)
 		if not message.endswith('\n'):
