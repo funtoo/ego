@@ -7,6 +7,7 @@ import sys
 from ego import EgoModule
 from ego_helpers import Color, run_ego_module
 from git_helper import GitHelper
+from cmdtools import run
 
 class Module(EgoModule):
 
@@ -30,7 +31,6 @@ class Module(EgoModule):
 			# use default
 			branch = self.kit_info["kit_settings"][kit_name]["default"]
 		if branch is None:
-
 			self.fatal("Fatal: branch cannot be None.")
 		if branch == self.kit_info["kit_settings"][kit_name]["default"]:
 			self.log(Color.purple("Syncing %s branch %s" % (kit_name, branch)))
@@ -126,6 +126,16 @@ class Module(EgoModule):
 				if "kits" in self.config.settings:
 					if kt in self.config.settings["kits"]:
 						branch = self.config.settings["kits"][kt]
+
+				# Let's now check to make sure that the kit specified in settings is a valid kit, still present in
+				# metadata. If not, we should inform the user and fall back to the default kit.
+
+				if branch != None:
+					if branch not in self.kit_sha1[kt]:
+						# We are not recording a sha1 -- this is not an active kit
+						self.warning("Kit %s branch %s specified in ego.conf is not currently active; using default kit instead." % (kt, branch))
+						branch = None
+
 				success = self.sync_kit(kt, branch=branch)
 				if not success:
 					fails.append((kt, branch))
