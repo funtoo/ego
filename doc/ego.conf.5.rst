@@ -29,7 +29,8 @@ Sections are delimited with the literal format ``[SECTIONNAME]``. Currently, the
 Global Section
 ==============
 
-The *global* section supports the following configuration variables: *install_path*, *kits_path*, *meta_repo_path*, *sync_user*.
+The *global* section supports the following configuration variables: *install_path*, *kits_path*, *meta_repo_path*,
+*sync_user*.
 
 **install_path**
 
