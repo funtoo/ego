@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 
+from configparser import InterpolationError
 import os
 import json
 import glob
@@ -36,6 +37,19 @@ def run_ego_module(install_path, modname, config, args):
 
 class EgoConfig:
 
+	def get_setting(self, section, key, default=None):
+		if section in self.settings and key in self.settings[section]:
+			try:
+				return self.settings[section][key]
+			except InterpolationError:
+				sys.stderr.write(
+					"There is an error in your ego.conf at section '%s', key '%s'.\n" % (section, key)
+				)
+				sys.exit(1)
+
+		else:
+			return default
+
 	def __init__(self, root, settings, version):
 
 		# TODO: I'd like to add a verbosity level that can be defined in ego.conf or specified on the command-line.
@@ -46,8 +60,6 @@ class EgoConfig:
 		self.ego_mods_info_dir = "%s/modules-info" % self.ego_dir
 		self.ego_mods = []
 		self.ego_mods_info = {}
-		self.sync_base_url = "https://github.com/funtoo/%s"
-		self.meta_repo_branch = "master"
 		if os.path.isdir(self.ego_mods_dir):
 			for match in glob.glob(self.ego_mods_dir + "/*.ego"):
 				self.ego_mods.append(match.split("/")[-1][:-4])
@@ -60,26 +72,15 @@ class EgoConfig:
 				self.ego_mods_info[mod] = {}
 		self.settings = settings
 
-		self.meta_repo_root = "/var/git/meta-repo"
-		if "global" in self.settings and "meta_repo_path" in self.settings["global"]:
-			self.meta_repo_root = self.settings["global"]["meta_repo_path"]
-
-		if "global" in self.settings and "sync_base_url" in self.settings["global"]:
-			self.sync_base_url = self.settings["global"]["sync_base_url"]
-		if "global" in self.settings and "meta_repo_branch" in self.settings["global"]:
-			self.meta_repo_branch = self.settings["global"]["meta_repo_branch"]
-		kit_path = "kits"
-		if "global" in self.settings and "kits_path" in self.settings["global"]:
-			kit_path = self.settings["global"]["kits_path"]
+		self.meta_repo_root = self.get_setting("global", "meta_repo_path", "/var/git/meta-repo")
+		self.sync_base_url = self.get_setting("global", "sync_base_url", "https://github.com/funtoo/{repo}")
+		self.meta_repo_branch = self.get_setting("global", "meta_repo_branch", "master")
+		kit_path = self.get_setting("global", "kits_path", "kits")
 		if kit_path.startswith("/"):
 			self.kit_root = kit_path
 		else:
 			self.kit_root = os.path.join(self.meta_repo_root, kit_path)
-
-		if "global" in self.settings and "sync_user" in self.settings["global"]:
-			self.sync_user = self.settings["global"]["sync_user"]
-		else:
-			self.sync_user = "portage"
+		self.sync_user = self.get_setting("global", "sync_user", "portage")
 
 	def available_modules(self):
 		for x in self.ego_mods:

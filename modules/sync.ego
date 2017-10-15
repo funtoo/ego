@@ -45,7 +45,9 @@ class Module(EgoModule):
 			except OSError:
 				pass
 		if not kit.exists():
-			kit.shallowClone(self.config.sync_base_repo % kit_name, branch)
+			retval = kit.shallowClone(self.config.sync_base_url.format(repo=kit_name), branch)
+			if retval != 0:
+				self.fatal("Could not clone kit '%s' into '%s'." % (kit_name, kit_path))
 
 		if not kit.localBranchExists(branch):
 			kit.fetchRemote(branch)
@@ -119,7 +121,10 @@ class Module(EgoModule):
 					if retval != 0:
 						self.fatal("There was an error syncing meta-repo.")
 				else:
-					repo.shallowClone(self.config.sync_base_repo % "meta_repo", self.config.meta_repo_branch)
+					retval = repo.shallowClone(
+						self.config.sync_base_url.format(repo="meta-repo"), self.config.meta_repo_branch)
+					if retval != 0:
+						self.fatal("Could not clone meta-repo into '%s'." % (self.root,))
 			fails = []
 			for kt in self.kit_info["kit_order"]:
 				branch = None
