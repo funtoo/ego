@@ -175,13 +175,29 @@ class Module(EgoModule):
 			self.log(" meta-repo does not exist and needs to be cloned.")
 		else:
 			self.log("")
+		print("  " + Color.UNDERLINE + "kit".ljust(20), "branch".ljust(40), "stability".ljust(9) + Color.END)
 		for kit in self.kit_info["kit_order"]:
 			kit_branch, kit_default_branch = self.get_selected_kit(kit, True)
-			if kit_branch == kit_default_branch or kit_branch is None:
-				self.log("  " + kit.ljust(20) + " " + Color.BLUE + kit_default_branch + Color.END)
+			if kit_branch == None:
+				kit_branch = kit_default_branch
+			if 'stability' in self.kit_info["kit_settings"][kit] and kit_branch in \
+					self.kit_info['kit_settings'][kit]['stability']:
+				kit_stability = self.kit_info["kit_settings"][kit]['stability'][kit_branch]
+				if kit_stability == "prime":
+					kit_stability = Color.green("prime")
+				elif kit_stability == "near-prime":
+					kit_stability = Color.blue("near-prime")
+				elif kit_stability == "beta":
+					kit_stability = Color.yellow("beta")
+				elif kit_stability in [ "alpha", "dev", "current" ]:
+					kit_stability = Color.red(kit_stability)
 			else:
-				self.log("  " + kit.ljust(20) + " " + Color.CYAN + kit_branch + Color.END + " (default %s)" % (
-					kit_default_branch if kit_default_branch else "(None)"))
+				kit_stability = ""
+			if kit_branch == kit_default_branch:
+				print("  " + kit.ljust(20), Color.BLUE + kit_default_branch.ljust(40), str(kit_stability).ljust(10) + Color.END)
+			else:
+				kb_out = kit_branch + " (default %s)" % (kit_default_branch if kit_default_branch else "(None)")
+				print("  " + kit.ljust(20), Color.CYAN + kb_out.ljust(40), str(kit_stability).ljust(10) + Color.END)
 
 	def handle(self, **options):
 		if options['status']:
