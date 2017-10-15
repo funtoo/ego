@@ -9,7 +9,7 @@
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="module" module-name="2017" />
     <orderEntry type="module" module-name="portage" />
-    <orderEntry type="module" module-name="merge-scripts" />
+    <orderEntry type="module" module-name="DDOD-ops" />
   </component>
   <component name="TestRunnerService">
     <option name="PROJECT_TEST_RUNNER" value="Unittests" />

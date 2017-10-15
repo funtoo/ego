@@ -5,9 +5,10 @@ import pwd
 import re
 import sys
 from ego import EgoModule
-from ego_helpers import Color, run_ego_module
+from ego_helpers import Color, run_ego_module, ago
 from git_helper import GitHelper
 from cmdtools import run
+from datetime import datetime
 
 class Module(EgoModule):
 
@@ -170,11 +171,13 @@ class Module(EgoModule):
 		I would also like to display the time it was last synced and the timestamp of when the tree was updated
 		remotely.
 		"""
-		self.echo(Color.green(self.config.meta_repo_root) + ":")
+
 		if not os.path.exists(self.config.meta_repo_root):
-			self.log(" meta-repo does not exist and needs to be cloned.")
-		else:
-			self.log("")
+			print("meta-repo does not exist and needs to be cloned.")
+			return
+		repo = GitHelper(self, self.root)
+		sync_ago_string = ago(datetime.now() - repo.last_sync())
+		print(Color.green(self.config.meta_repo_root) + " (updated %s):" % sync_ago_string)
 		print("  " + Color.UNDERLINE + "kit".ljust(20), "branch".ljust(20), "default".ljust(20), "stability".ljust(9) + Color.END)
 		for kit in self.kit_info["kit_order"]:
 			kit_branch, kit_default_branch = self.get_selected_kit(kit, True)

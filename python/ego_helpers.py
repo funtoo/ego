@@ -6,11 +6,42 @@ import json
 import glob
 import importlib.machinery
 import sys
+from datetime import datetime
 
 # Ego Helpers module.
 #
 # Copyright 2017 Daniel Robbins and Funtoo Solutions, Inc.
 # See LICENSE.txt for terms of distribution. 
+
+def ago(diff):
+
+	"Return a English string specifying how long ago something happened for a timedelta."
+
+	out = ""
+	if diff.days == 1:
+		out += "1 day"
+	elif diff.days:
+		out += "%s days" % diff.days
+	if diff.seconds / 3600 >= 1:
+		if len(out):
+			out += " "
+		if diff.seconds / 3600 == 1:
+			out += "1 hour"
+		else:
+			out += "%.0f hours" % (diff.seconds / 3600)
+	leftovers = diff.seconds % 3600
+	if leftovers > 60:
+		if len(out):
+			out += " "
+		if leftovers < 2:
+			out += "1 minute"
+		else:
+			out += "%.0f minutes" % (leftovers / 60)
+	if out != "":
+		out += " ago"
+	else:
+		out = "just now"
+	return out
 
 def get_install_path(settings):
 	if "global" in settings and "install_path" in settings["global"]:

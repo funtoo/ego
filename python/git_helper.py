@@ -3,6 +3,7 @@
 import os
 from cmdtools import run_statusoutput, run
 from pathlib import Path
+from datetime import datetime
 
 class GitHelper(object):
 
@@ -73,6 +74,10 @@ class GitHelper(object):
 			args = branch
 		retval = run("git -C %s checkout %s" % (self.root, args), quiet=self.quiet)
 		return retval == 0
+
+	def last_sync(self):
+		check_f = self.root + "/.git/FETCH_HEAD"
+		return datetime.fromtimestamp(os.path.getmtime(check_f))
 
 	@property
 	def commitID(self):
