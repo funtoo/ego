@@ -29,7 +29,8 @@ Sections are delimited with the literal format ``[SECTIONNAME]``. Currently, the
 Global Section
 ==============
 
-The *global* section supports the following configuration variables: *install_path*, *kits_path*, *meta_repo_path*, *sync_user*.
+The *global* section supports the following configuration variables: *install_path*, *kits_path*, *meta_repo_path*,
+*sync_user*.
 
 **install_path**
 
@@ -55,9 +56,9 @@ will end up owning the meta-repo files. The default value for *sync_user* is ``p
 **sync_base_url**
 
 This setting defines the base URL to use for cloning of kits as well as meta-repo. Default value is
-``https://github.com/funtoo/{repo}``. The ``{repo}`` value is replaced with the name of the kit or with the literal value
-``meta-repo``. Note that this setting only takes effect upon first clone, and if changed, you should remove meta-repo
-and kits and perform an initial ``ego sync`` to reinitialize the repositories.
+``https://github.com/funtoo/{repo}``. The ``{repo}`` value is replaced with the name of the kit or with the literal
+value ``meta-repo``. Note that this setting only takes effect upon first clone, and if changed, you should remove
+meta-repo and kits and perform an initial ``ego sync`` to reinitialize the repositories.
 
 **meta_repo_branch**
 
