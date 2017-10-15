@@ -40,7 +40,7 @@ class GitHelper(object):
 		return run("git -C %s fetch %s refs/heads/%s:refs/remotes/%s/%s" % (self.root, remote, branch, remote, branch), quiet=self.quiet)
 
 	def shallowClone(self, url, branch, depth=1):
-		return run("git -C %s clone -b %s --depth=%s --single-branch %s" % (os.path.dirname(self.root), branch, depth, url), quiet=self.quiet)
+		return run("git clone -b %s --depth=%s --single-branch %s %s" % (branch, depth, url, self.root), quiet=self.quiet)
 
 	def pull(self, options=None):
 		options = options or []
