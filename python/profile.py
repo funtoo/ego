@@ -146,7 +146,7 @@ class ProfileSpecifier(object):
 				colsplit = self.specifier.split(":")
 				if len(colsplit) == 2 and colsplit[0] in self.tree.repomap:
 					# "gentoo:foo" format - relative to a specified repo:
-					self._resolved_path = os.path.join(self.tree.repomap[colsplit[0]], colsplit[1])
+					self._resolved_path = os.path.join(self.tree.repomap[colsplit[0]], "profiles", colsplit[1])
 				else:
 					if self.specifier.startswith("/"):
 						# absolute path
@@ -172,8 +172,9 @@ class ProfileSpecifier(object):
 		"""
 		try:
 			kind = self.resolved_path.split("/")[-2:-1][0]
-			if kind in ProfileType.__members__:
-				return ProfileType.__members__[kind]
+			for ptype in list(ProfileType):
+				if kind == ptype.value:
+					return ptype
 		except IndexError:
 			pass
 		return None
@@ -198,12 +199,12 @@ class ProfileTree(object):
 	original ``ProfileSpecifier`` key.
 	"""
 
-	def __init__(self, catalog, master_repo_name, repomap):
+	def __init__(self, catalog, master_repo_name, repomap, root_parent_dir=None):
 
 		self.catalog = catalog
 		self.master_repo_name = master_repo_name
 		self.repomap = repomap
-		self.root_parent_dir = '/etc/portage/make.profile'
+		self.root_parent_dir = root_parent_dir if root_parent_dir is not None else '/etc/portage/make.profile'
 		self.profile_path_map = {}
 
 		# profile_path_map: Map the absolute path of profile directory to an OrderedDict containing ProfileSpecifiers
@@ -226,10 +227,29 @@ class ProfileTree(object):
 		self.profile_path_map[res_path] = new_children
 		return new_children
 
+	def get_children(self, specifier=None, child_types=None):
+		child_dict = self.profile_path_map[specifier.resolved_path if specifier else self.root_parent_dir]
+		for child_path, child_target_dict in child_dict.items():
+			if child_types == None:
+				yield child_path
+			elif child_path.classify() in child_types:
+				yield child_path
+
+	def recursively_get_children(self, specifier=None, child_types=None, child_dict=None):
+		child_dict = child_dict if child_dict != None else self.profile_path_map[specifier.resolved_path if specifier else self.root_parent_dir]
+		out = []
+		for child_path, child_target_dict in child_dict.items():
+			if child_types == None:
+				out.append(child_path)
+			elif child_path.classify() in child_types:
+				out.append(child_path)
+			out += self.recursively_get_children(child_path, child_types, child_dict=child_target_dict)
+		return out
+
 	def _read_parent(self, parent_dir):
 		fn = os.path.join(parent_dir, "parent")
 		if not os.path.exists(fn):
-			raise StopIteration
+			return
 		with open(fn, 'r') as f:
 			for line in f.readlines():
 				if len(line) and line[0] == "#":
@@ -248,6 +268,7 @@ if __name__ == "__main__":
 	# constructor is completely decoupled from the core-kit repo. In theory, it could live anywhere.
 
 	pt = ProfileTree(ProfileCatalog("/var/git/meta-repo/kits/core-kit/profiles"), "core-kit", { "core-kit" : "/var/git/meta-repo/kits/core-kit"})
-	pt.spiff()
+	#pt.spiff()
+	print(list(pt.get_children(child_types=[ProfileType.FLAVOR])))
 
 # vim: ts=4 noet sw=4
