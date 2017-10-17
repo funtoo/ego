@@ -1,0 +1,44 @@
+solid portage # emerge -av openssl
+
+ * IMPORTANT: 3 news items need reading for repository 'gentoo'.
+ * Use eselect news to read news items.
+
+
+These are the packages that would be merged, in order:
+
+Calculating dependencies... done!
+[ebuild  NS    ] dev-libs/openssl-0.9.8z_p8:0.9.8 [1.0.1o:0] USE="zlib -bindist -gmp -kerberos {-test}" ABI_X86="(64) -32 (-x32)" CPU_FLAGS_X86="(sse2)" 3,730 kB
+
+Total: 1 package (1 in new slot), Size of downloads: 3,730 kB
+
+WARNING: One or more updates have been skipped due to a dependency conflict:
+
+dev-libs/openssl:0
+
+  (dev-libs/openssl-1.0.2k::gentoo, ebuild scheduled for merge) conflicts with
+    >=dev-libs/openssl-0.9.6d:0[bindist] required by (net-misc/openssh-6.8_p1-r3::gentoo, installed)
+
+
+!!! The following installed packages are masked:
+- sys-devel/gcc-4.8.5::gentoo (masked by: package.mask)
+/usr/portage/profiles/package.mask/00-gentoo:
+# Michał Górny <mgorny@gentoo.org>, Andreas K. Hüttel <dilfridge@gentoo.org>,
+# Matthias Maier <tamiko@gentoo.org> (21 May 2017)
+# These old versions of toolchain packages (binutils, gcc, glibc) are no
+# longer officially supported and are not suitable for general use. Using
+# these packages can result in build failures (and possible breakage) for
+# many packages, and may leave your system vulnerable to known security
+# exploits.
+#
+# If you still use one of these old toolchain packages, please upgrade (and
+# in case of gcc switch the compiler) ASAP. If you need them for a specific
+# (isolated) use case, feel free to unmask them on your system.
+
+- sys-libs/glibc-2.20-r1::gentoo (masked by: package.mask)
+For more information, see the MASKED PACKAGES section in the emerge
+man page or refer to the Gentoo Handbook.
+
+
+Would you like to merge these packages? [Yes/No] n
+
+Quitting.
