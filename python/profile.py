@@ -188,7 +188,7 @@ class ProfileTree(object):
 
 	The 'tree' of the ``ProfileTree`` begins with a root, which for Funtoo is going to be
 	``/etc/portage/make.profile/parents``. This parents file will point to other profiles, which we will consider
-	children. These child profiles may have their own children, etc. This heirarchy defines what profiles are enabled,
+	children. These child profiles may have their own children, etc. This hierarchy defines what profiles are enabled,
 	and also defines the order in which various profile settings are interpreted.
 
 	The profile hierarchy is stored in ``self.profile_heir``. It is generated as follows. The contents of
@@ -204,17 +204,26 @@ class ProfileTree(object):
 		self.master_repo_name = master_repo_name
 		self.repomap = repomap
 		self.root_parent_dir = '/etc/portage/make.profile'
+		self.profile_path_map = {}
+
+		# profile_path_map: Map the absolute path of profile directory to an OrderedDict containing ProfileSpecifiers
+		# for each line in the parent file of the directory it references.
+
 		self.profile_hier = self._recurse()
 
 	def _recurse(self, parent=None, profile_path=None):
 
-		# TODO: prevent infinite recursion.
+		res_path = profile_path.resolved_path if profile_path is not None else self.root_parent_dir
+
+		if res_path in self.profile_path_map:
+			# we've already scanned this profile. Nice side-effect of preventing infinite loops.
+			return self.profile_path_map[res_path]
 
 		new_children = OrderedDict()
-		res_path = profile_path.resolved_path if profile_path is not None else self.root_parent_dir
 		for specifier in self._read_parent(res_path):
 			spec_obj = ProfileSpecifier(self, res_path, specifier)
 			new_children[spec_obj] = self._recurse(new_children, spec_obj)
+		self.profile_path_map[res_path] = new_children
 		return new_children
 
 	def _read_parent(self, parent_dir):
