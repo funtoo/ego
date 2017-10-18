@@ -14,7 +14,7 @@ import configparser
 import os
 import sys
 
-VERSION = "2.1.1"
+VERSION = "2.2.0"
 
 settings = configparser.ConfigParser()
 try:
