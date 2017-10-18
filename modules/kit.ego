@@ -24,6 +24,8 @@ class Module(EgoModule):
 		subparsers = parser.add_subparsers(title='actions', dest='action')
 		status_parser = subparsers.add_parser('status', help="Show current kit settings.")
 		status_parser.set_defaults(handler=self.meta_repo_info)
+		show_parser = subparsers.add_parser('show', help="Alias for the status command.")
+		show_parser.set_defaults(handler=self.meta_repo_info)
 		list_parser = subparsers.add_parser('list', help="List all available kits.")
 		list_parser.set_defaults(handler=self.kits_list)
 
