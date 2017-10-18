@@ -5,10 +5,9 @@ import pwd
 import re
 import sys
 from ego import EgoModule
-from ego_helpers import Color, run_ego_module, ago
+from ego_helpers import Color, run_ego_module
 from git_helper import GitHelper
 from cmdtools import run
-from datetime import datetime
 
 class Module(EgoModule):
 
@@ -25,7 +24,6 @@ class Module(EgoModule):
 
 	def add_arguments(self, parser):
 		parser.add_argument('--kits-only', action='store_true', help="Do not sync meta-repo, only kits.")
-		parser.add_argument('--status', action='store_true', help="Display selected kit branches.")
 
 	def sync_kit(self, kit_name, branch=None):
 		if branch is None:
@@ -162,50 +160,7 @@ class Module(EgoModule):
 			self.error("Please run epro update manually as root.")
 		return True
 
-	def meta_repo_info(self, **options):
-		"""
-		This implements 'ego sync status' and is just a starting point. It currently displays the ego.conf-defined
-		or default repo, but not the actual git repo that is selected on disk. So it should be a lot more sophisticated
-		so that users can see when they've updated ego.conf but forgotten to run ego sync to update their meta-repo.
-
-		I would also like to display the time it was last synced and the timestamp of when the tree was updated
-		remotely.
-		"""
-
-		if not os.path.exists(self.config.meta_repo_root):
-			print("meta-repo does not exist and needs to be cloned.")
-			return
-		repo = GitHelper(self, self.root)
-		sync_ago_string = ago(datetime.now() - repo.last_sync())
-		print(Color.green(self.config.meta_repo_root) + " (updated %s):" % sync_ago_string)
-		print("  " + Color.UNDERLINE + "kit".ljust(20), "branch".ljust(20), "default".ljust(20), "stability".ljust(9) + Color.END)
-		for kit in self.kit_info["kit_order"]:
-			kit_branch, kit_default_branch = self.get_selected_kit(kit, True)
-			if kit_branch == None:
-				kit_branch = kit_default_branch
-			if 'stability' in self.kit_info["kit_settings"][kit] and kit_branch in \
-					self.kit_info['kit_settings'][kit]['stability']:
-				kit_stability = self.kit_info["kit_settings"][kit]['stability'][kit_branch]
-				if kit_stability == "prime":
-					kit_stability = Color.green("prime")
-				elif kit_stability == "near-prime":
-					kit_stability = Color.blue("near-prime")
-				elif kit_stability == "beta":
-					kit_stability = Color.yellow("beta")
-				elif kit_stability in [ "alpha", "dev", "current" ]:
-					kit_stability = Color.red(kit_stability)
-			else:
-				kit_stability = ""
-			if kit_branch == kit_default_branch:
-				print("  " + kit.ljust(20), Color.BLUE + kit_default_branch.ljust(20), "(same)".ljust(20), str(kit_stability).ljust(10) + Color.END)
-			else:
-				kb_out = kit_default_branch if kit_default_branch else "(None)"
-				print("  " + kit.ljust(20), Color.CYAN + kit_branch.ljust(20), kb_out.ljust(20), str(kit_stability).ljust(10) + Color.END)
-
 	def handle(self, **options):
-		if options['status']:
-			self.meta_repo_info(**options)
-		else:
-			self.sync_meta_repo(**options)
+		self.sync_meta_repo(**options)
 
 # vim: ts=4 sw=4 noet

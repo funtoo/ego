@@ -1,5 +1,6 @@
 import argparse
 import json
+from collections import OrderedDict
 from pathlib import Path
 import sys
 
@@ -66,7 +67,7 @@ class EgoModule:
 			path = Path(self.config.meta_repo_root) / 'metadata' / ('kit-%s.json' % fn)
 			try:
 				with path.open() as f:
-					return json.loads(f.read())
+					return json.loads(f.read(), object_pairs_hook=OrderedDict)
 			except OSError:
 				return {}
 		return getattr(self, '_kit_%s' % fn)
@@ -92,11 +93,16 @@ class EgoModule:
 		else:
 			return default
 
+	def setup(self):
+		# Easy method for modules to perform constructor-related things.
+		pass
+
 	def __init__(self, name, install_path, config):
 		self.name = name
 		self.install_path = install_path
 		self.config = config
 		self.info = config.ego_mods_info[name]
+		self.setup()
 
 	def __call__(self, *args):
 		parser = argparse.ArgumentParser('ego ' + self.name, description=self.info['description'])
