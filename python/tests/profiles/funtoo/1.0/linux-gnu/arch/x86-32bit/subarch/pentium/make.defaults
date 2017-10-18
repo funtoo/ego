@@ -1,0 +1,5 @@
+CFLAGS="-O2 -fomit-frame-pointer -march=pentium -pipe"
+CXXFLAGS="${CFLAGS}"
+FFLAGS="${CFLAGS}"
+FCFLAGS="${CFLAGS}"
+
