@@ -51,9 +51,9 @@ class Module(EgoModule):
 					firstline = False
 				else:
 					kit_out = ""
-				if branch == kit_default_branch:
-					is_active = Color.green("active")
-					branch_out = Color.green(branch)
+				if branch == kit_branch:
+					is_active = Color.blue("active")
+					branch_out = Color.blue(branch)
 				else:
 					is_active = ""
 					branch_out = branch

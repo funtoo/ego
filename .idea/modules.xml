@@ -4,7 +4,6 @@
     <modules>
       <module fileurl="file://$USER_HOME$/funtoo-overlay/funtoo/scripts/2017/.idea/2017.iml" filepath="$USER_HOME$/funtoo-overlay/funtoo/scripts/2017/.idea/2017.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/ego.iml" filepath="$PROJECT_DIR$/.idea/ego.iml" />
-      <module fileurl="file://$PROJECT_DIR$/../merge-scripts/.idea/merge-scripts.iml" filepath="$PROJECT_DIR$/../merge-scripts/.idea/merge-scripts.iml" />
       <module fileurl="file:///usr/lib/python3.4/site-packages/portage/.idea/portage.iml" filepath="/usr/lib/python3.4/site-packages/portage/.idea/portage.iml" />
     </modules>
   </component>
