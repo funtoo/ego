@@ -259,7 +259,7 @@ class ProfileSetting:
 						# convert "gentoo" references to "core-kit"
 						self.descendents[key][0].parent_line = "core-kit:" + self.descendents[key][0].parent_line.split(":")[1]
 					out += self.descendents[key][0].parent_line + "\n"
-		python_kit_branch = self.ego_module.get_selected_kit("python-kit")
+		python_kit_branch = self.ego_module.get_configured_kit("python-kit")
 		for kit in os.listdir(self.config.kit_root):
 			python_path = os.path.join(self.config.kit_root, kit, "profiles/funtoo/kits/python-kit/", python_kit_branch)
 			if os.path.exists(python_path):
@@ -341,7 +341,7 @@ class Module(EgoModule):
 	def python_info(self):
 		self.header("Python kit")
 		self.log("%s%12s%s: %s%s%s" % (
-			Color.BOLD, "branch", Color.END, Color.CYAN, self.get_selected_kit("python-kit"), Color.END))
+			Color.BOLD, "branch", Color.END, Color.CYAN, self.get_configured_kit("python-kit"), Color.END))
 
 	def short_list(self, ps, key_order):
 		self.header("Enabled Profiles")

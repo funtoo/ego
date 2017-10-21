@@ -1,10 +1,11 @@
 #!/usr/bin/python3
 
-import os
+import os, sys
 from datetime import datetime
 from ego import EgoModule
 from ego_helpers import Color, ago
 from git_helper import GitHelper
+from mediawiki_cli_parser import wikitext_parse
 
 class Module(EgoModule):
 
@@ -40,7 +41,7 @@ class Module(EgoModule):
 			if kit not in kit_sha1:
 				continue
 
-			kit_branch, kit_default_branch = self.get_selected_kit(kit, True)
+			kit_branch, kit_default_branch = self.get_configured_kit(kit, True)
 
 			if kit_branch == None:
 				kit_branch = kit_default_branch
@@ -52,12 +53,16 @@ class Module(EgoModule):
 				else:
 					kit_out = ""
 				if branch == kit_branch:
+					if branch == kit_default_branch:
+						branch_out = Color.blue(branch)
+					else:
+						branch_out = Color.cyan(branch)
 					is_active = Color.blue("active")
-					branch_out = Color.blue(branch)
 				else:
 					is_active = ""
 					branch_out = branch
 				print("  " + str(kit_out.ljust(20)), is_active.ljust(15), branch_out.ljust(15), self._get_branch_stability_string(kit, branch).ljust(15))
+		self._output_footer()
 
 	def _output_header(self):
 		if not os.path.exists(self.config.meta_repo_root):
@@ -68,6 +73,12 @@ class Module(EgoModule):
 		print(Color.green(self.config.meta_repo_root) + " (updated %s):" % sync_ago_string)
 		print()
 		return True
+
+	def _output_footer(self):
+		wikitext = """Active branches displayed above reflect the settings specified in {{c|/etc/ego.conf}}. After making changes to
+{{c|ego.conf}}, be sure to run {{c|ego sync}} in order to synchronize kit git repositories to their specified branches."""
+		wikitext_parse(wikitext, sys.stdout, indent="  ")
+		sys.stdout.write("\n")
 
 	def _get_branch_stability_string(self, kit, kit_branch):
 		kit_stability = self.kit_info["kit_settings"][kit]['stability'][kit_branch]
@@ -92,7 +103,7 @@ class Module(EgoModule):
 			return
 		print("  " + Color.UNDERLINE + "kit".ljust(20), "active branch".ljust(20), "default".ljust(20), "stability".ljust(9) + Color.END)
 		for kit in self.kit_info["kit_order"]:
-			kit_branch, kit_default_branch = self.get_selected_kit(kit, True)
+			kit_branch, kit_default_branch = self.get_configured_kit(kit, True)
 			if kit_branch == None:
 				kit_branch = kit_default_branch
 			if 'stability' in self.kit_info["kit_settings"][kit] and kit_branch in \
@@ -106,6 +117,7 @@ class Module(EgoModule):
 				kb_out = kit_default_branch if kit_default_branch else "(None)"
 				print("  " + kit.ljust(20), Color.CYAN + kit_branch.ljust(20), kb_out.ljust(20),
 				      str(kit_stability).ljust(10) + Color.END)
+		self._output_footer()
 
 	def handle(self, **options):
 		handler = options.pop('handler', self.meta_repo_info)

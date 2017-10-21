@@ -287,9 +287,10 @@ def getMainNodes(block_text):
 
 class TextAccumulator(object):
 
-	def __init__(self,wrap):
+	def __init__(self,wrap, indent=""):
 		self.txlist = []
-		self.wrap = wrap
+		self.wrap = wrap - len(indent)
+		self.indent = indent
 		self.padding = True
 		self.table_object = []
 		self.output_redirect = False
@@ -308,7 +309,11 @@ class TextAccumulator(object):
 		return len(self.txlist) == 0
 
 	def tableEnd(self):
-		table_out = "\n" + tabulate(self.table_object, tablefmt="fancy_grid", headers=self.header_object if len(self.header_object) else ()) + "\n"
+		table_out = "\n" + self.indent + \
+		            tabulate(self.table_object,
+		                     tablefmt="fancy_grid",
+		                     headers=self.header_object if len(self.header_object) else ()) + \
+		            "\n" + self.indent
 		self.output_redirect = False
 		self.table_object = []
 		self.header_object = []
@@ -356,7 +361,7 @@ class TextAccumulator(object):
 			wrap = self.wrap
 		#print(self.txlist)
 
-		# Ingore initial NewBlocks, NewLines and Space in a block:
+		# Ignore initial NewBlocks, NewLines and Space in a block:
 		while len(self.txlist) > 1 and (
 				isinstance(self.txlist[0], WikiTextNewBlock) or
 				isinstance(self.txlist[0], WikiTextNewLine) or
@@ -388,7 +393,7 @@ class TextAccumulator(object):
 						# end colors at end of line
 						outstr += Color.END
 					asciipos = len(item)
-					outstr += "\n" 
+					outstr += "\n" + self.indent
 					for c in self.colors:
 						# restart colors on new line
 						outstr += c
@@ -415,11 +420,10 @@ class TextAccumulator(object):
 						outstr += " "
 						asciipos += 1
 					else:
-						outstr += "\n"
+						outstr += "\n" + self.indent
 						asciipos = 0
 			elif isinstance(item, WikiTextNewLine):
-				#pass HACK
-				outstr += '\n'
+				outstr += '\n' + self.indent
 				asciipos = 0
 			elif isinstance(item, ColorType):
 				if item == Color.END:
@@ -430,7 +434,7 @@ class TextAccumulator(object):
 			elif isinstance(item, WikiTextNewBlock):
 				if count != 0 and count != last_count:
 					# not at beginning or end, but in the middle
-						outstr += '\n\n'
+						outstr += '\n\n' + self.indent
 						asciipos = 0
 						count = 0
 
@@ -439,7 +443,7 @@ class TextAccumulator(object):
 
 		if isinstance(item, WikiTextNewBlock):
 			# first, last item? was new block, respect it (for lists)
-			outstr += "\n\n"
+			outstr += "\n\n" + self.indent
 			asciipos = 0
 			count = 0
 
@@ -454,13 +458,13 @@ class TextAccumulator(object):
 		else:
 			if outstr:
 				if not outstr.endswith('\n'):
-					outstr += '\n'
+					outstr += '\n' + self.indent
 				if self.padding:
-					outstr = '\n' + outstr
+					outstr = '\n' + self.indent + outstr
 		self.padding = True
 		return outstr
 
-def parse(nodes, wrap=False, article_title=None):
+def parse(nodes, wrap=False, indent="", article_title=None):
 
 	global ignore_tags, ignore_templates
 
@@ -477,7 +481,7 @@ def parse(nodes, wrap=False, article_title=None):
 	# The blocks of text returned to the caller are ready to be displayed on the console -- simply call
 	# sys.stdout.write() with each result to see the rendered wikitext.
 
-	accum_text = TextAccumulator(wrap=wrap)
+	accum_text = TextAccumulator(wrap=wrap, indent=indent)
 
 	# Accum_text is used to collect text output for the current block that will be eventually yielded to
 	# the caller.
@@ -658,5 +662,9 @@ def parse(nodes, wrap=False, article_title=None):
 				accum_text.append([ Color.RED, WikiTextWord("[TEMPLATE"), WikiTextWord(tmp_name), Color.END, WikiTextWord("]") ])
 		prev_node = node
 	yield accum_text.flush()
+
+def wikitext_parse(wikitext, out, indent=""):
+	for block in parse(getMainNodes(wikitext), indent=indent, wrap=text_width, article_title=None):
+		out.write(block)
 
 # vim: ts=4 sw=4 noet

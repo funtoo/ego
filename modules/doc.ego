@@ -3,7 +3,7 @@ import sys
 
 from ego import EgoModule
 import mediawiki_api
-from mediawiki_cli_parser import parse, getMainNodes, text_width
+from mediawiki_cli_parser import wikitext_parse
 
 
 class Module(EgoModule):
@@ -18,8 +18,7 @@ class Module(EgoModule):
 		).format(**options))
 		try:
 			wikitext_page = miwiki.getPage(options['wiki_page'])
-			for block in parse(getMainNodes(wikitext_page), wrap=text_width, article_title=options['wiki_page']):
-				self.echo(block)
+			wikitext_parse(wikitext_page, sys.stdout)
 		except BrokenPipeError:
 			# this gets rid of ugly broken pipe message from python:
 			sys.stderr.close()

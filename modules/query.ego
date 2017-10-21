@@ -65,7 +65,7 @@ class Module(EgoModule):
 				slot = ''
 			repo = ebuild.repository
 			try:
-				branch = self.get_selected_kit(repo.name)
+				branch = self.get_configured_kit(repo.name)
 			except KeyError:
 				branch = None
 			repo = Color.blue(repo.name)
@@ -112,7 +112,7 @@ class Module(EgoModule):
 				base_url = repo_urls.get(repository, '')
 				if '{branch}' in base_url:
 					repo = appi.conf.Repository[kit]
-					branch = self.get_selected_kit(repo.name)
+					branch = self.get_configured_kit(repo.name)
 				else:
 					branch = None
 				url = base_url.format(kit=kit, branch=branch, cat=cat, pkg=pkg)

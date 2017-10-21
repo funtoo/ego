@@ -80,7 +80,7 @@ class EgoModule:
 	def kit_sha1(self):
 		return self.load_kit_metadata('sha1')
 
-	def get_selected_kit(self, kit, show_default=False):
+	def get_configured_kit(self, kit, show_default=False):
 		if "kits" in self.config.settings and kit in self.config.settings["kits"]:
 			branch = self.config.settings["kits"][kit]
 		else:
