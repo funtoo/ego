@@ -2,7 +2,7 @@
 
 import sys
 import unittest
-sys.path.append("..")
+sys.path.insert(0, "..")
 from profile import *
 import os
 
