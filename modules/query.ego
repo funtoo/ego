@@ -143,7 +143,7 @@ class Module(EgoModule):
 		for search in searches:
 			r = requests.post(
 				'https://bugs.funtoo.org/rest/api/2/search', data=json.dumps({
-					'jql': r'summary ~ "\"{}\"" ORDER BY created DESC'.format(search),
+					'jql': r'CatPkg ~ "\"{0}\"" OR summary ~ "\"{0}\"" ORDER BY created DESC'.format(search),
 				}),
 				headers={'Content-Type': 'application/json'})
 			result = r.json()
