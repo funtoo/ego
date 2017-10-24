@@ -29,6 +29,9 @@ query
 doc
   Ego Wiki Documentation module. (shortcut: *edoc*) See ego-doc(1).
 
+kit
+  Ego kit module. see ego-kit(1).
+
 You can invoke the relevant module by using the calling convention ``ego module [arg1...]``. For example, to view the
 Funtoo Linux Installation Guide, type ``ego doc Install | less``. Alternatively, you can use the module shortcut if
 one exists, such as ``edoc install | less``.
