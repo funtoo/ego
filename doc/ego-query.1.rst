@@ -72,7 +72,7 @@ For each version, it also shows its slot and repository (along with git branch i
 Installed versions are in bold and marked with a star.
 
 
-QUERY_ORIGIN
+QUERY ORIGIN
 ============
 
 The ``origin`` (shortcut: ``o``) command will tell you where a given package comes from and give
