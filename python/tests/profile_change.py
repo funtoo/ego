@@ -3,7 +3,7 @@
 import sys
 import unittest
 sys.path.insert(0, "..")
-from profile import *
+from profile import ProfileCatalog, ProfileTree, ProfileType, ProfileSpecifier
 import os
 
 class ProfileTest(unittest.TestCase):
@@ -19,16 +19,16 @@ class ProfileTest(unittest.TestCase):
 		self.pc = ProfileCatalog(os.path.normpath(os.path.join(filedir, "profiles")))
 		self.pt = ProfileTree(self.pc, "core-kit", { "core-kit" :filedir}, root_parent_dir="profiles")
 
-	def test_basic(self):
+	def test_change_flavor(self):
 		# can we grab the flavor? and is it the correct one?
 		flav_list = list(self.pt.get_children(child_types=[ProfileType.FLAVOR]))
 		self.assertEqual(len(flav_list), 1)
-		self.assertEqual(flav_list[0].specifier, 'core-kit:funtoo/1.0/linux-gnu/flavor/desktop')
-
-	def test_basic_recurse(self):
-		# can we recursively grab all mix-ins inherited in the profile?
-		mixin_list = list(self.pt.recursively_get_children(child_types=[ProfileType.MIX_IN]))
-		self.assertEqual(len(mixin_list), 14)
+		self.assertEqual(flav_list[0].spec_str, 'core-kit:funtoo/1.0/linux-gnu/flavor/desktop')
+		self.pt.replace_entry(ProfileType.FLAVOR, 'core-kit:funtoo/1.0/linux-gnu/flavor/core')
+		flav_list = list(self.pt.get_children(child_types=[ProfileType.FLAVOR]))
+		self.assertEqual(len(flav_list), 1)
+		self.assertEqual(flav_list[0].spec_str, 'core-kit:funtoo/1.0/linux-gnu/flavor/core')
 
 if __name__ == "__main__":
 	unittest.main()
+

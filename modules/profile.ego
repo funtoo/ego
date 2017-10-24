@@ -9,7 +9,7 @@ if os.path.exists("/usr/share/portage/pym"):
 import portage
 
 from ego import EgoModule
-from ego_helpers import Color, get_ego_module
+from ego_helpers import Color
 
 
 # ProfileLister will allow us to see what profile settings -- flavors, subarches, mix-ins, builds --

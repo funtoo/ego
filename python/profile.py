@@ -15,12 +15,68 @@ from enum import Enum
 import errno
 from collections import OrderedDict
 
-class ProfileType(Enum):
-	ARCH = "arch"
-	BUILD = "build"
-	SUBARCH = "subarch"
-	FLAVOR = "flavor"
-	MIX_IN = "mix-ins"
+class ProfileName(Enum):
+
+	"""
+	The ``ProfileName`` and ``ProfileType`` implementation give us the following enumerations that can be compared
+	against one another::
+
+	  ProfileType.ARCH < ProfileType.BUILD < ProfileType.ARCH < ProfileType.SUBARCH < ProfileType.MIX_IN
+
+	The order of comparison is reflective of the order that these profile types appear in within
+	``/etc/portage/make.profile/parent``.
+
+	The ProfileType enumerations also have string values that can be accessed with the ``str()`` method, and can also
+	be compared against other string using equality comparison::
+
+	  assertEqual(ProfileType.MIX_IN == "mix_ins")
+
+	"""
+	def __new__(cls, intval, strval):
+		value = len(cls.__members__) + 1
+		obj = object.__new__(cls)
+		obj._value_ = value
+		obj._intval = intval
+		obj._strval = strval
+		return obj
+
+	def __ge__(self, other):
+		if self.__class__ is other.__class__:
+			return self._intval >= other._intval
+		return NotImplemented
+
+	def __gt__(self, other):
+		if self.__class__ is other.__class__:
+			return self._intval > other._intval
+		return NotImplemented
+
+	def __le__(self, other):
+		if self.__class__ is other.__class__:
+			return self._intval <= other._intval
+		return NotImplemented
+
+	def __lt__(self, other):
+		if self.__class__ is other.__class__:
+			return self._intval < other._intval
+		return NotImplemented
+
+	def __eq__(self, other):
+		if self.__class__ is other.__class__:
+			return self._intval == other._intval
+		elif isinstance(other, str):
+			return self._strval == other
+		return NotImplemented
+
+	def __str__(self):
+		return self._strval
+
+class ProfileType(ProfileName):
+	ARCH = (1,"arch")
+	BUILD = (2,"build")
+	SUBARCH = (3,"subarch")
+	FLAVOR = (4,"flavor")
+	MIX_IN = (5,"mix-ins")
+	OTHER = (99, "other")
 
 class ProfileCatalog:
 
@@ -36,7 +92,7 @@ class ProfileCatalog:
 	argument to the ``self.list() method. When specified, this string will be used to augment the list of mix-ins with
 	subarch mix-ins, and provide a list of subarches. Note that without specifying ``arch``, it is impossible for
 	``ProfileCatalog`` to know where to look for subarch profiles.
-	
+
 	"""
 
 	def __init__(self, profile_root):
@@ -51,7 +107,7 @@ class ProfileCatalog:
 			if not isinstance(self.json_info[k], list):
 				# move everything inside a list if it isn't.
 				self.json_info[k] = [self.json_info[k]]
-		for pt in [ ProfileType.MIX_IN, ProfileType.SUBARCH ]:
+		for pt in [ str(ProfileType.MIX_IN), str(ProfileType.SUBARCH) ]:
 			if pt not in self.json_info:
 				self.json_info[pt] = []
 		self.arch = None
@@ -116,48 +172,53 @@ class ProfileSpecifier(object):
 
 	"""
 
-	def __init__(self, tree, cwd, specifier):
+	def __init__(self, tree, cwd, spec_str):
 		"""
 		:param tree: A ``ProfileTree`` object.
 		:param cwd:  The current working directory of the ``parent`` file that the specifier came from.
-		:param specifier: A single line from a ``parent`` file specifying another profile.
+		:param spec_str: A single line from a ``parent`` file specifying another profile.
 		"""
 
 		self.tree = tree
 		self.cwd = cwd
-		self.specifier = specifier
+		self.spec_str = spec_str
 		self._resolved_path = None
+		self._profile_type = None
 
 	def __str__(self):
-		return self.specifier
+		return self.spec_str
 
 	def __repr__(self):
-		return "<ProfileSpecifier: %s>" % self.specifier
+		return "<ProfileSpecifier: %s>" % self.spec_str
 
 	@property
 	def resolved_path(self):
 
 		if self._resolved_path is None:
 
-			if self.specifier[0] == ":":
+			if self.spec_str[0] == ":":
 				# ":base" format -- relative to root of profile directory:
-				self._resolved_path = os.path.join(self.tree.catalog.profile_root, self.specifier[1:])
+				self._resolved_path = os.path.join(self.tree.catalog.profile_root, self.spec_str[1:])
 			else:
-				colsplit = self.specifier.split(":")
+				colsplit = self.spec_str.split(":")
 				if len(colsplit) == 2 and colsplit[0] in self.tree.repomap:
 					# "gentoo:foo" format - relative to a specified repo:
 					self._resolved_path = os.path.join(self.tree.repomap[colsplit[0]], "profiles", colsplit[1])
 				else:
-					if self.specifier.startswith("/"):
+					if self.spec_str.startswith("/"):
 						# absolute path
-						self._resolved_path = self.specifier
+						self._resolved_path = self.spec_str
 					else:
 						# relative path format - relative to current location.
-						self._resolved_path = os.path.join(self.cwd, self.specifier)
+						self._resolved_path = os.path.join(self.cwd, self.spec_str)
 
 			self._resolved_path = os.path.normpath(self._resolved_path)
 
 		return self._resolved_path
+
+	@property
+	def name(self):
+		return self.resolved_path.split('/')[-1]
 
 	def classify(self):
 
@@ -170,14 +231,18 @@ class ProfileSpecifier(object):
 		:return: A ProfileType Enum telling us the type of profile, or None if not recognized as any particular kind.
 
 		"""
+
+		if self._profile_type is not None:
+			return self._profile_type
 		try:
 			kind = self.resolved_path.split("/")[-2:-1][0]
 			for ptype in list(ProfileType):
-				if kind == ptype.value:
+				if kind == str(ptype):
+					self._profile_type = ptype
 					return ptype
 		except IndexError:
 			pass
-		return None
+		return ProfileType.OTHER
 
 class ProfileTree(object):
 
@@ -205,24 +270,101 @@ class ProfileTree(object):
 		self.master_repo_name = master_repo_name
 		self.repomap = repomap
 		self.root_parent_dir = root_parent_dir if root_parent_dir is not None else '/etc/portage/make.profile'
+		self.reload()
+
+	def reload(self, parent_lines = None):
 		self.profile_path_map = {}
 
 		# profile_path_map: Map the absolute path of profile directory to an OrderedDict containing ProfileSpecifiers
 		# for each line in the parent file of the directory it references.
 
-		self.profile_hier = self._recurse()
+		self.profile_hier = self._recurse(parent_lines=parent_lines)
 
-	def _recurse(self, parent=None, profile_path=None):
+	def write(self):
+		with open(os.path.join(self.root_parent_dir, "parent"), "w") as outfile:
+			for specifier, odict in self.profile_hier.items():
+				outfile.write(str(specifier) + '\n')
+
+	def remove_line(self, spec_str):
+		"""
+		Remove a specified profile line.
+		:param spec_str: The literal profile line string to remove.
+		:return: None
+		"""
+		new_lines = [ spec_obj.spec_str for spec_obj in self.profile_heir.keys() if spec_obj.spec_str != spec_str]
+		self.reload(new_lines)
+
+	def remove_name(self, profile_type, name):
+		"""
+		Remove a profile entry of a particular profile type and name.
+		:param profile_type: The ``ProfileType`` Enum to match.
+		:param name: The directory name of the profile to match (for example, 'workstation', 'gnome', etc.)
+		:return: None
+		"""
+		new_lines = [ spec_obj.spec_str for spec_obj in self.profile_hier.keys()
+		              if not ((spec_obj.profile_type == spec_obj.classify()) and (spec_obj.name == name))]
+		self.reload(new_lines)
+
+	def append_mixin(self, spec_str):
+		"""
+
+		The ``append_mixin()`` method will append a new mix-in line to the master parents file in- memory, preserving
+		'proper' order, which in our case means appending after the last mix-in that appears in the file (we simply
+		append a line at the end.)
+
+		:param specifier: The profile specification string that points to the mix-in to be added.
+		:return: None
+		"""
+
+		new_lines = [ spec_obj.spec_str for spec_obj in self.profile_hier.keys() ]
+		new_lines.append(spec_str)
+
+		self.reload(new_lines)
+
+	def replace_entry(self, profile_type, spec_str):
+		"""
+		The ``replace_entry()`` method will replace the first found ProfileSpecifier of type ``profile_type`` with the
+		new ProfileSpecifier ``spec_obj``. Use this to change flavors, subarches, etc. (single-use profiles.)
+
+		:param profile_type: The ``ProfileType`` Enum specifying the profile type.
+		:param spec_obj: The ``ProfileSpecifier`` of the new profile line.
+		:return: None
+		"""
+		new_lines = []
+
+		for key_spec, odict in self.profile_hier.items():
+			if key_spec.classify() == profile_type:
+				new_lines.append(spec_str)
+			else:
+				new_lines.append(key_spec.spec_str)
+
+		self.reload(new_lines)
+
+	def _recurse(self, parent=None, profile_path=None, parent_lines=None):
+
+		"""
+		Called by the ``reload()`` method (which is called by the constructor too), this method recurses over the
+		master parent file and loads a hierarchy of profile settings. Alternatively, one can specify profile lines
+		using the ``parent_lines`` variable, in which case, these values are used instead (the ``parent_lines``
+		approach is used to *change* the master profile by specifying slightly different lines than are actually
+		in the parent file.
+
+		:param parent: an OrderedDict created by a prior ``_recurse()`` call, or None if we are starting recursion.
+		:param profile_path: A specified profile path to use, or ``/etc/portage/make.profile`` if None.
+		:param parent_lines: If None, use the file on disk; otherwise, use the specified lines instead.
+		:return: An ``OrderedDict`` of ``ProfileSpecifier`` / ``OrderedDict`` pairs.
+		"""
 
 		res_path = profile_path.resolved_path if profile_path is not None else self.root_parent_dir
-
 		if res_path in self.profile_path_map:
 			# we've already scanned this profile. Nice side-effect of preventing infinite loops.
 			return self.profile_path_map[res_path]
 
 		new_children = OrderedDict()
-		for specifier in self._read_parent(res_path):
-			spec_obj = ProfileSpecifier(self, res_path, specifier)
+		if parent_lines == None:
+			parent_lines = self._read_parent(res_path)
+		for spec_str in parent_lines:
+			spec_obj = ProfileSpecifier(self, res_path, spec_str)
 			new_children[spec_obj] = self._recurse(new_children, spec_obj)
 		self.profile_path_map[res_path] = new_children
 		return new_children
@@ -231,8 +373,10 @@ class ProfileTree(object):
 		child_dict = self.profile_path_map[specifier.resolved_path if specifier else self.root_parent_dir]
 		for child_path, child_target_dict in child_dict.items():
 			if child_types == None:
+				# None means "yield all"
 				yield child_path
 			elif child_path.classify() in child_types:
+				# Otherwise, a list and we match all specified types:
 				yield child_path
 
 	def recursively_get_children(self, specifier=None, child_types=None, child_dict=None):
