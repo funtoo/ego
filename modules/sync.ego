@@ -104,6 +104,7 @@ class Module(EgoModule):
 		# We need to fork here in order to sync as sync_user and then switch back to root
 		pid = os.fork()
 		if pid == 0:
+			os.chdir('/tmp')  # Make sure we are not in /root or other user-forbidden directory
 			try:
 				os.setgid(gid)
 				os.setuid(uid)
