@@ -15,8 +15,8 @@ from enum import Enum
 import errno
 from collections import OrderedDict
 
-class ProfileName(Enum):
 
+class ProfileName(Enum):
 	"""
 	The ``ProfileName`` and ``ProfileType`` implementation give us the following enumerations that can be compared
 	against one another::
@@ -32,6 +32,7 @@ class ProfileName(Enum):
 	  assertEqual(ProfileType.MIX_IN == "mix_ins")
 
 	"""
+
 	def __new__(cls, intval, strval):
 		value = len(cls.__members__) + 1
 		obj = object.__new__(cls)
@@ -70,16 +71,17 @@ class ProfileName(Enum):
 	def __str__(self):
 		return self._strval
 
+
 class ProfileType(ProfileName):
-	ARCH = (1,"arch")
-	BUILD = (2,"build")
-	SUBARCH = (3,"subarch")
-	FLAVOR = (4,"flavor")
-	MIX_IN = (5,"mix-ins")
+	ARCH = (1, "arch")
+	BUILD = (2, "build")
+	SUBARCH = (3, "subarch")
+	FLAVOR = (4, "flavor")
+	MIX_IN = (5, "mix-ins")
 	OTHER = (99, "other")
 
-class ProfileCatalog:
 
+class ProfileCatalog:
 	"""
 
 	``ProfileCatalog`` will allow us to see what profile settings -- flavors, subarches, mix-ins, builds -- are
@@ -107,26 +109,26 @@ class ProfileCatalog:
 			if not isinstance(self.json_info[k], list):
 				# move everything inside a list if it isn't.
 				self.json_info[k] = [self.json_info[k]]
-		for pt in [ str(ProfileType.MIX_IN), str(ProfileType.SUBARCH) ]:
+		for pt in [str(ProfileType.MIX_IN), str(ProfileType.SUBARCH)]:
 			if pt not in self.json_info:
 				self.json_info[pt] = []
 		self.arch = None
-		
+
 	# keys() returns a list of types of sub-profiles that are defined on this system.
 
 	def set_arch(self, arch=None):
-		"Allows the arch to be set once, rather than passed as an argument to self.list."
+		"""Allows the arch to be set once, rather than passed as an argument to self.list."""
 		self.arch = arch
 
 	def __getitem__(self, key, arch=None):
 		return self.list(key, arch)
 
 	def list(self, key, arch=None):
-		
+
 		"""
 		Yields available profiles of a particular ProfileType.
 
-		:param key: A string specifying the ProfileType to list.
+		:param key: A ProfileType specifying the ProfileType to list.
 		:param arch: An arch must be specified in order to also list ``subarch`` and arch-specific mix-ins.
 		:return: generator
 		"""
@@ -134,13 +136,13 @@ class ProfileCatalog:
 		if not arch and self.arch:
 			arch = self.arch
 
-		dirlist = [] # directories relative to self.repodir we will scan in phase 2 for list of this profile type
+		dirlist = []
 
 		if arch is not None:
 			if key == ProfileType.SUBARCH:
-				dirlist = [ self.json_info[ProfileType.ARCH] + "/" + arch + "/subarch" ]
+				dirlist = [self.json_info[ProfileType.ARCH] + "/" + arch + "/subarch"]
 			elif key == ProfileType.MIX_IN:
-				dirlist = [ self.json_info[ProfileType.MIX_IN] + "/" + arch + "/mix-ins" ]
+				dirlist = [self.json_info[ProfileType.MIX_IN] + "/" + arch + "/mix-ins"]
 
 		if key in self.json_info:
 			dirlist += self.json_info[key]
@@ -156,8 +158,8 @@ class ProfileCatalog:
 					raise
 				continue
 
-class ProfileSpecifier(object):
 
+class ProfileSpecifier(object):
 	""" ``ProfileSpecifier`` is an object used by ``ProfileTree`` to model the profile hierarchy. Each
 	``ProfileSpecifier`` takes a specifier that is in one of the following formats::
 
@@ -169,6 +171,9 @@ class ProfileSpecifier(object):
 
 	``[relative_path]``
 	  A relative path specification that is interpreted relative to the current directory.
+
+	  For the sake of completeness and usefulness, and not because it is really officially 'allowed' in Portage,
+	  absolute paths (those starting with ``/``) are supported too.
 
 	"""
 
@@ -244,8 +249,8 @@ class ProfileSpecifier(object):
 			pass
 		return ProfileType.OTHER
 
-class ProfileTree(object):
 
+class ProfileTree(object):
 	"""
 	The ```ProfileTree`` has the ability to look at the master profile settings, as well as the repositories, and
 	process the inheritance patterns defined in ``parent`` files. This allows ``ProfileTree`` to determine what
@@ -272,7 +277,7 @@ class ProfileTree(object):
 		self.root_parent_dir = root_parent_dir if root_parent_dir is not None else '/etc/portage/make.profile'
 		self.reload()
 
-	def reload(self, parent_lines = None):
+	def reload(self, parent_lines=None):
 		self.profile_path_map = {}
 
 		# profile_path_map: Map the absolute path of profile directory to an OrderedDict containing ProfileSpecifiers
@@ -291,7 +296,10 @@ class ProfileTree(object):
 		:param spec_str: The literal profile line string to remove.
 		:return: None
 		"""
-		new_lines = [ spec_obj.spec_str for spec_obj in self.profile_heir.keys() if spec_obj.spec_str != spec_str]
+		new_lines = []
+		for spec_obj in self.profile_hier.keys():
+			if spec_obj.spec_str != spec_str:
+				new_lines.append(spec_obj.spec_str)
 		self.reload(new_lines)
 
 	def remove_name(self, profile_type, name):
@@ -301,8 +309,7 @@ class ProfileTree(object):
 		:param name: The directory name of the profile to match (for example, 'workstation', 'gnome', etc.)
 		:return: None
 		"""
-		new_lines = [ spec_obj.spec_str for spec_obj in self.profile_hier.keys()
-		              if not ((spec_obj.profile_type == spec_obj.classify()) and (spec_obj.name == name))]
+		new_lines = [spec_obj.spec_str for spec_obj in self.profile_hier.keys() if not ((profile_type == spec_obj.classify()) and (spec_obj.name == name))]
 		self.reload(new_lines)
 
 	def append_mixin(self, spec_str):
@@ -312,24 +319,26 @@ class ProfileTree(object):
 		'proper' order, which in our case means appending after the last mix-in that appears in the file (we simply
 		append a line at the end.)
 
-		:param specifier: The profile specification string that points to the mix-in to be added.
+		:param spec_str: The profile specification string that points to the mix-in to be added.
 		:return: None
 		"""
 
-		new_lines = [ spec_obj.spec_str for spec_obj in self.profile_hier.keys() ]
+		new_lines = [spec_obj.spec_str for spec_obj in self.profile_hier.keys()]
 		new_lines.append(spec_str)
 
 		self.reload(new_lines)
 
 	def replace_entry(self, profile_type, spec_str):
+
 		"""
 		The ``replace_entry()`` method will replace the first found ProfileSpecifier of type ``profile_type`` with the
 		new ProfileSpecifier ``spec_obj``. Use this to change flavors, subarches, etc. (single-use profiles.)
 
 		:param profile_type: The ``ProfileType`` Enum specifying the profile type.
-		:param spec_obj: The ``ProfileSpecifier`` of the new profile line.
+		:param spec_str: The literal profile line (string) to be used to replace the existing one.
 		:return: None
 		"""
+
 		new_lines = []
 
 		for key_spec, odict in self.profile_hier.items():
@@ -340,18 +349,19 @@ class ProfileTree(object):
 
 		self.reload(new_lines)
 
-	def _recurse(self, parent=None, profile_path=None, parent_lines=None):
+	def _recurse(self, profile_path=None, parent_lines=None, _parent=None):
 
 		"""
-		Called by the ``reload()`` method (which is called by the constructor too), this method recurses over the
-		master parent file and loads a hierarchy of profile settings. Alternatively, one can specify profile lines
-		using the ``parent_lines`` variable, in which case, these values are used instead (the ``parent_lines``
-		approach is used to *change* the master profile by specifying slightly different lines than are actually
-		in the parent file.
+		Called by the ``reload()`` method (which is called by the constructor too), this method recurses over the master
+		parent file and loads a hierarchy of profile settings. Alternatively, one can specify profile lines using the
+		``parent_lines`` variable, in which case, these values are used instead (the ``parent_lines`` approach is used
+		by other methods to  *change* the master profile by specifying slightly different lines than are actually in the
+		parent file.)
 
-		:param parent: an OrderedDict created by a prior ``_recurse()`` call, or None if we are starting recursion.
+
 		:param profile_path: A specified profile path to use, or ``/etc/portage/make.profile`` if None.
 		:param parent_lines: If None, use the file on disk; otherwise, use the specified lines instead.
+		:param _parent: an OrderedDict created by a prior ``_recurse()`` call, or None if we are starting recursion.
 		:return: An ``OrderedDict`` of ``ProfileSpecifier`` / ``OrderedDict`` pairs.
 		"""
 
@@ -361,33 +371,55 @@ class ProfileTree(object):
 			return self.profile_path_map[res_path]
 
 		new_children = OrderedDict()
-		if parent_lines == None:
+		if parent_lines is None:
 			parent_lines = self._read_parent(res_path)
 		for spec_str in parent_lines:
 			spec_obj = ProfileSpecifier(self, res_path, spec_str)
-			new_children[spec_obj] = self._recurse(new_children, spec_obj)
+			new_children[spec_obj] = self._recurse(spec_obj, _parent=new_children)
 		self.profile_path_map[res_path] = new_children
 		return new_children
 
-	def get_children(self, specifier=None, child_types=None):
+	def get_children(self, child_types=None, specifier=None):
+
+		"""
+		This method will return all immediate children of a particular profile type or types.
+
+		:param specifier: ``ProfileSpecifier`` in hierarchy to look, or root of hierarchy if None
+		:param child_types: a list of ``ProfileType``s to collect in a list. If ``None``, collect all.
+		:return:  A list of ``ProfileSpecifier``s matching the criteria.
+		"""
+
 		child_dict = self.profile_path_map[specifier.resolved_path if specifier else self.root_parent_dir]
 		for child_path, child_target_dict in child_dict.items():
-			if child_types == None:
+			if child_types is None:
 				# None means "yield all"
 				yield child_path
 			elif child_path.classify() in child_types:
 				# Otherwise, a list and we match all specified types:
 				yield child_path
 
-	def recursively_get_children(self, specifier=None, child_types=None, child_dict=None):
-		child_dict = child_dict if child_dict != None else self.profile_path_map[specifier.resolved_path if specifier else self.root_parent_dir]
+	def recursively_get_children(self, child_types=None, specifier=None, _child_dict=None):
+
+		"""
+		This method will recursively scan the profile hierarchy for all enabled profiles of a particular type or types.
+		A list of ``ProfileSpecifier`` objects will be returned.
+
+		:param child_types: A list of ``ProfileType``s to scan for, or ``None`` to return all types.
+		:param specifier: Start at the specified ``ProfileSpecifier`` in the hierarchy, or at top if ``None``.
+		:param _child_dict: Used for recursion calls only.
+		:return: A list of ``ProfileSpecifier`` objects matching the criteria.
+
+		"""
+
+		_child_dict = _child_dict if _child_dict is not None else self.profile_path_map[
+			specifier.resolved_path if specifier else self.root_parent_dir]
 		out = []
-		for child_path, child_target_dict in child_dict.items():
-			if child_types == None:
+		for child_path, child_target_dict in _child_dict.items():
+			if child_types is None:
 				out.append(child_path)
 			elif child_path.classify() in child_types:
 				out.append(child_path)
-			out += self.recursively_get_children(child_path, child_types, child_dict=child_target_dict)
+			out += self.recursively_get_children(child_types, child_path, _child_dict=child_target_dict)
 		return out
 
 	def _read_parent(self, parent_dir):
@@ -401,18 +433,18 @@ class ProfileTree(object):
 				yield line.strip()
 
 	def spiff(self):
-		"A quick example that will output the contents of /etc/portage/make.profile/parent"
+		"""A quick example that will output the contents of /etc/portage/make.profile/parent"""
 		for spec in self.profile_hier:
 			print(repr(spec))
 			print(str(spec))
 
-if __name__ == "__main__":
 
+if __name__ == "__main__":
 	# A quick example to parse profiles in core-kit. Note how the profiles tree specified in the ProfileCatalog()
 	# constructor is completely decoupled from the core-kit repo. In theory, it could live anywhere.
 
-	pt = ProfileTree(ProfileCatalog("/var/git/meta-repo/kits/core-kit/profiles"), "core-kit", { "core-kit" : "/var/git/meta-repo/kits/core-kit"})
-	#pt.spiff()
+	pt = ProfileTree(ProfileCatalog("/var/git/meta-repo/kits/core-kit/profiles"), "core-kit", {"core-kit": "/var/git/meta-repo/kits/core-kit"})
+	# pt.spiff()
 	print(list(pt.get_children(child_types=[ProfileType.FLAVOR])))
 
 # vim: ts=4 noet sw=4

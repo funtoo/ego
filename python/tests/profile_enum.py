@@ -8,8 +8,6 @@ import os
 
 class ProfileEnumTest(unittest.TestCase):
 
-
-
 	def test_compare(self):
 		self.assertGreater(ProfileType.BUILD, ProfileType.ARCH)
 		self.assertGreater(ProfileType.SUBARCH, ProfileType.BUILD)
