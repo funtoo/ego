@@ -13,7 +13,7 @@ import json
 import os
 from enum import Enum
 import errno
-from collections import OrderedDict
+from collections import OrderedDict, defaultdict
 
 
 class ProfileName(Enum):
@@ -71,6 +71,9 @@ class ProfileName(Enum):
 	def __str__(self):
 		return self._strval
 
+	def __hash__(self):
+		return self._intval
+
 
 class ProfileType(ProfileName):
 	ARCH = (1, "arch")
@@ -100,18 +103,11 @@ class ProfileCatalog:
 	def __init__(self, profile_root):
 		self.profile_root = profile_root
 		self.egodescfile = self.profile_root + "/profiles.ego.desc"
-
+		self.directory_map = defaultdict(dict)
 		self.json_info = {}
 		if os.path.exists(self.egodescfile):
 			with open(self.egodescfile, "r") as ed:
 				self.json_info = json.loads(ed.read())
-		for k in self.json_info:
-			if not isinstance(self.json_info[k], list):
-				# move everything inside a list if it isn't.
-				self.json_info[k] = [self.json_info[k]]
-		for pt in [str(ProfileType.MIX_IN), str(ProfileType.SUBARCH)]:
-			if pt not in self.json_info:
-				self.json_info[pt] = []
 		self.arch = None
 
 	# keys() returns a list of types of sub-profiles that are defined on this system.
@@ -122,6 +118,15 @@ class ProfileCatalog:
 
 	def __getitem__(self, key, arch=None):
 		return self.list(key, arch)
+
+	def find_path(self, profile_type, name):
+		"""
+		Returns relative path of a particular profile that we have already found via a list() call.
+
+		:param name:
+		:return:
+		"""
+		return self.directory_map[profile_type][name]
 
 	def list(self, key, arch=None):
 
@@ -139,19 +144,21 @@ class ProfileCatalog:
 		dirlist = []
 
 		if arch is not None:
-			if key == ProfileType.SUBARCH:
-				dirlist = [self.json_info[ProfileType.ARCH] + "/" + arch + "/subarch"]
-			elif key == ProfileType.MIX_IN:
-				dirlist = [self.json_info[ProfileType.MIX_IN] + "/" + arch + "/mix-ins"]
 
-		if key in self.json_info:
-			dirlist += self.json_info[key]
+			if key == ProfileType.SUBARCH:
+				dirlist = [self.json_info[str(ProfileType.ARCH)] + "/" + arch + "/subarch"]
+			elif key == ProfileType.MIX_IN:
+				dirlist = [self.json_info[str(ProfileType.MIX_IN)] + "/" + arch + "/mix-ins"]
+
+		if str(key) in self.json_info:
+			dirlist += [self.json_info[str(key)]]
 
 		for dir in dirlist:
 			p = self.profile_root + "/" + dir
 			try:
 				for profile_root in os.listdir(p):
 					if os.path.isdir(p + "/" + profile_root):
+						self.directory_map[key][profile_root] = dir + "/" + profile_root
 						yield profile_root
 			except OSError as e:
 				if e.errno not in (errno.ENOTDIR, errno.ENOENT, errno.ESTALE):
@@ -394,6 +401,9 @@ class ProfileTree(object):
 			if child_types is None:
 				# None means "yield all"
 				yield child_path
+			elif isinstance(child_types, ProfileType):
+				if child_path.classify() == child_types:
+					yield child_path
 			elif child_path.classify() in child_types:
 				# Otherwise, a list and we match all specified types:
 				yield child_path
@@ -404,19 +414,21 @@ class ProfileTree(object):
 		This method will recursively scan the profile hierarchy for all enabled profiles of a particular type or types.
 		A list of ``ProfileSpecifier`` objects will be returned.
 
-		:param child_types: A list of ``ProfileType``s to scan for, or ``None`` to return all types.
+		:param child_types: A list of ``ProfileType``s to scan for, or ``None`` to return all types. Or just a single ``ProfileType``.
 		:param specifier: Start at the specified ``ProfileSpecifier`` in the hierarchy, or at top if ``None``.
 		:param _child_dict: Used for recursion calls only.
 		:return: A list of ``ProfileSpecifier`` objects matching the criteria.
 
 		"""
-
 		_child_dict = _child_dict if _child_dict is not None else self.profile_path_map[
 			specifier.resolved_path if specifier else self.root_parent_dir]
 		out = []
 		for child_path, child_target_dict in _child_dict.items():
 			if child_types is None:
 				out.append(child_path)
+			elif isinstance(child_types, ProfileType):
+				if child_path.classify() == child_types:
+					out.append(child_path)
 			elif child_path.classify() in child_types:
 				out.append(child_path)
 			out += self.recursively_get_children(child_types, child_path, _child_dict=child_target_dict)

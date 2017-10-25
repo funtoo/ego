@@ -10,7 +10,7 @@ import portage
 
 from ego import EgoModule
 from ego_helpers import Color
-
+from ego_profile import ProfileCatalog, ProfileType, ProfileTree
 
 # ProfileLister will allow us to see what profile settings -- flavors, subarches, mix-ins, builds --
 # are available. It is initialized by specifying a repository directory, a path to an ego.desc file
@@ -343,14 +343,15 @@ class Module(EgoModule):
 		self.log("%s%12s%s: %s%s%s" % (
 			Color.BOLD, "branch", Color.END, Color.CYAN, self.get_configured_kit("python-kit"), Color.END))
 
-	def short_list(self, ps, key_order):
+	def short_list(self):
 		self.header("Enabled Profiles")
-		for key in key_order:
-			if key not in ps.descendents or len(ps.descendents[key]) == 0:
+		for key in [ ProfileType.ARCH, ProfileType.BUILD, ProfileType.SUBARCH, ProfileType.FLAVOR, ProfileType.MIX_IN ]:
+			all_enabled = list(self.tree.get_children(key))
+			if len(all_enabled) == 0:
 				self.log("%s%12s%s: (not set)" % (Color.BOLD, key, Color.END))
 			else:
-				for item in ps.descendents[key]:
-					self.log("%s%12s%s: %s%s%s" % (Color.BOLD, key, Color.END, Color.CYAN, item.shortname, Color.END))
+				for item in all_enabled:
+					self.log("%s%12s%s: %s%s%s" % (Color.BOLD, key, Color.END, Color.CYAN, item.name, Color.END))
 		self.log("")
 
 	def short_JSON(self, ps, key_order):
@@ -377,7 +378,7 @@ class Module(EgoModule):
 			return ProfileLister(self.repodir, self.egodescfile, valid_profiles=self.valid_profiles)
 
 	def handle_show_action(self, **options):
-		self.short_list(self.ps, self.key_order)
+		self.short_list()
 		self.python_info()
 		inherited_things = []
 		if "flavor" in self.ps.descendents and len(self.ps.descendents["flavor"]):
@@ -506,12 +507,12 @@ class Module(EgoModule):
 				parent_line='%s:%s/%s' % (self.reponame, action_path, newset), child=self.ps,
 			)
 		]
-		self.short_list(self.ps, self.key_order)
+		self.short_list()
 		self.log(">>> Set %s to %s." % (action, newset))
 
 	def handle_mix_ins_action(self, **options):
 		mixins = options['mixins']
-		pl = self.get_profile_lister()
+
 		adds = set()
 		subs = set()
 		for mixin in mixins:
@@ -521,51 +522,42 @@ class Module(EgoModule):
 				adds.add(mixin[1:])
 			else:
 				adds.add(mixin)
-		valids = pl.list("mix-ins")
+
+		arch = list(self.tree.get_children([ProfileType.ARCH]))[0].name
+		valids = list(self.catalog.list(ProfileType.MIX_IN, arch=arch))
+
 		for mixin in adds.union(subs):
 			if mixin not in valids:
 				self.fatal("Error: %s is not a valid mix-in." % mixin)
-		p = 0
+
 		# remove "-" arguments.
 		removed = set()
-		if "mix-ins" in self.ps.descendents:
-			while p < len(self.ps.descendents["mix-ins"]):
-				sn = self.ps.descendents["mix-ins"][p].shortname
-				if sn in subs:
-					del self.ps.descendents["mix-ins"][p]
-					removed.add(sn)
-					self.writeout = True
-					continue
-				p += 1
-		# get currently active mix-ins:
-		active = []
-		if "mix-ins" in self.ps.descendents:
-			active = [x.shortname for x in self.ps.descendents["mix-ins"]]
-		notadded = set()
+		not_added = set()
 		added = set()
-		for new_shortname in adds:
-			if new_shortname in active:
-				notadded.add(new_shortname)
-				continue
-			mixin_path = pl.find("mix-ins", new_shortname)
-			new_ps = ProfileSetting(
-				config=self.config, ego_module=self, repomap=self.ps.repomap, name=new_shortname, cl="mix-ins",
-				all_enabled=self.all_enabled, parent_line=self.reponame + ":" + mixin_path + "/" + new_shortname,
-				child=self.ps,
-			)
-			if "mix-ins" not in self.ps.descendents:
-				self.ps.descendents["mix-ins"] = []
-			self.ps.descendents["mix-ins"].append(new_ps)
-			added.add(new_shortname)
+
+		# for mix_in in enabled-mix-ins:
+
+		enabled_mix_ins = list(self.tree.get_children([ProfileType.MIX_IN]))
+		for mix_in in enabled_mix_ins:
+			if mix_in.name in subs:
+				removed.add(mix_in.name)
+				self.tree.remove_name(ProfileType.MIX_IN, mix_in.name)
+				self.writeout = True
+
+		available_mix_in_shortnames = set(self.catalog.list(ProfileType.MIX_IN, arch=arch))
+		not_added = adds - available_mix_in_shortnames
+
+		for shortname in adds & available_mix_in_shortnames:
+			self.tree.append_mixin("gentoo:" + self.catalog.find_path(ProfileType.MIX_IN, shortname))
 			self.writeout = True
 
 		# Do all output here -- our shortList() will reflect the mix-in changes made above. Then put informational messages
 		# underneath for readability:
 
-		self.short_list(self.ps, self.key_order)
+		self.short_list()
 		for mixin in subs.difference(removed):
 			self.warning("Mix-in %s not found, not removing." % mixin)
-		for mixin in notadded:
+		for mixin in not_added:
 			self.warning("Mix-in %s already active, not adding." % mixin)
 		for mixin in removed:
 			self.log(">>> Removed %s mix-in." % mixin)
@@ -595,6 +587,11 @@ class Module(EgoModule):
 				self.reponame = rnf.read().strip()
 		else:
 			self.fatal("Unable to find the repository name in %s - exiting." % reponamefile)
+
+
+		self.catalog = ProfileCatalog(portdir + "/profiles")
+		self.tree = ProfileTree(self.catalog, "core-kit", { "core-kit" : portdir})
+
 
 		# connect to ego sync module:
 
