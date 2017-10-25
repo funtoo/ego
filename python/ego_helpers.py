@@ -62,7 +62,11 @@ def run_ego_module(install_path, modname, config, args, VERSION):
 		print(Color.RED + "Error: ego module \"%s\" not found." % modname + Color.END)
 		sys.exit(1)
 
-
+def depluralize(str):
+	if str[-1] == "s":
+		return str[:-1]
+	else:
+		return str
 
 class ColorType(str):
 	pass

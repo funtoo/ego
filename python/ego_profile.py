@@ -276,6 +276,7 @@ class ProfileSpecifier(object):
 
 
 class ProfileTree(object):
+
 	"""
 	The ```ProfileTree`` has the ability to look at the master profile settings, as well as the repositories, and
 	process the inheritance patterns defined in ``parent`` files. This allows ``ProfileTree`` to determine what
@@ -300,6 +301,8 @@ class ProfileTree(object):
 		self.master_repo_name = master_repo_name
 		self.repomap = repomap
 		self.root_parent_dir = root_parent_dir if root_parent_dir is not None else '/etc/portage/make.profile'
+		self.parent_map = defaultdict(None)
+		# put variable definitions above this line ^^
 		self.reload()
 
 	def get_arch(self):
@@ -380,6 +383,14 @@ class ProfileTree(object):
 
 		self.reload(new_lines)
 
+	def get_parent(self, spec_obj):
+		"""
+		Given a profile specifier, this method returns the parent of this profile specifier, or ``None`` if no parent.
+		:param spec_obj: Profile specifier object.
+		:return: Parent, or ``None``.
+		"""
+		return self.parent_map[spec_obj]
+
 	def _recurse(self, profile_path=None, parent_lines=None, _parent=None):
 
 		"""
@@ -392,7 +403,7 @@ class ProfileTree(object):
 
 		:param profile_path: A specified profile path to use, or ``/etc/portage/make.profile`` if None.
 		:param parent_lines: If None, use the file on disk; otherwise, use the specified lines instead.
-		:param _parent: an OrderedDict created by a prior ``_recurse()`` call, or None if we are starting recursion.
+		:param _parent: a ProfileSpecifier created by a prior ``_recurse()`` call, or None if we are starting recursion.
 		:return: An ``OrderedDict`` of ``ProfileSpecifier`` / ``OrderedDict`` pairs.
 		"""
 
@@ -406,7 +417,8 @@ class ProfileTree(object):
 			parent_lines = self._read_parent(res_path)
 		for spec_str in parent_lines:
 			spec_obj = ProfileSpecifier(self, res_path, spec_str)
-			new_children[spec_obj] = self._recurse(spec_obj, _parent=new_children)
+			self.parent_map[spec_obj] = _parent
+			new_children[spec_obj] = self._recurse(spec_obj, _parent=spec_obj)
 		self.profile_path_map[res_path] = new_children
 		return new_children
 
