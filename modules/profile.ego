@@ -4,275 +4,11 @@ import json
 import os
 import sys
 
-if os.path.exists("/usr/share/portage/pym"):
-	sys.path.insert(0, "/usr/share/portage/pym")
 import portage
 
 from ego import EgoModule
 from ego_helpers import Color
-from ego_profile import ProfileCatalog, ProfileType, ProfileTree
-
-# ProfileLister will allow us to see what profile settings -- flavors, subarches, mix-ins, builds --
-# are available. It is initialized by specifying a repository directory, a path to an ego.desc file
-# in the repository (which is JSON that in turn contains paths to where to find each type of sub-
-# profile, such as mix-ins being in "funtoo/1.0/linux-gnu/mix-ins", for example, and a system arch,
-# which typically comes from the ProfileSetting object.
-
-# ProfileLister dynamically calculates the path of the subarches, as archpath + "/" + arch +
-# "subarch".
-
-class ProfileLister:
-
-	def __init__(self, repodir, p, valid_profiles=None, arch=None):
-		self.repodir = repodir
-		self.valid_profiles = valid_profiles
-		# info is a dict: key is a profile type, like "flavor", and value is a sub-path to its location,
-		# relative to repodir.
-		self.info = {}
-		self.arch = arch
-		if os.path.exists(p):
-			with open(p, "r") as ed:
-				self.info = json.loads(ed.read())
-		for k in self.info:
-			if not isinstance(self.info[k], list):
-				# move everything inside a list. We can have multiple mix-in directories now (subarch mix-ins, etc.)
-				self.info[k] = [self.info[k]]
-		if "mix-ins" not in self.info:
-			self.info["mix-ins"] = []
-		# The subarch entry is dynamically generated based on the system's arch. We assume we only have one arch set:
-		if arch is not None and "arch" in self.info:
-			self.info["subarch"] = [self.info["arch"][0] + "/" + self.arch + "/subarch"]
-			# We now have subarch mix-ins! Specific to subarches. :)
-			self.info["mix-ins"].append(self.info["arch"][0] + "/" + self.arch + "/mix-ins")
-
-	# keys() returns a list of types of sub-profiles that are defined on this system.
-
-	def keys(self):
-		return [k for k in self.valid_profiles if k in self.info]
-
-	# __getitem__ allows dict-style access to the location(s) for each profile. A list is returned, of
-	# paths relative to repodir. Since Funtoo supports multiple locations for each type of profile, the
-	# find() method can be used to find the actual location of a specific sub-profile.
-
-	def __getitem__(self, key):
-		return self.info.get(key)
-
-	# list() will return a list of all available sub-profiles of a particular type.
-
-	def list(self, key):
-		things = []
-		for item in self[key]:
-			p = self.repodir + "/" + item
-			if os.path.exists(p):
-				for thing in os.listdir(p):
-					if os.path.isdir(p + "/" + thing):
-						things.append(thing)
-		return things
-
-	# find() will find the location of a particular sub-profile named 'val' of type 'key'. An
-	# absolute path is returned, or None if not found.
-
-	def find(self, key, val):
-		if key not in self.info:
-			return None
-		for path in self.info[key]:
-			if os.path.exists(os.path.join(self.repodir, path, val)):
-				return path
-		return None
-
-
-# ProfileSetting will recurse into the system's profile settings and determine heirarchical relationships
-# of the profile, and create a tree of ProfileSetting objects (linked via self.child, self.descendents).
-
-# We use this for seeing everything that gets enabled from a particular flavor or mix-in. When a user updates
-# a profile setting, we tweak the top object's decendents info. Then the write() method will write out the
-# updated information.
-class ProfileSetting:
-
-	def __init__(self, config=None, ego_module=None, repomap=None, name=None, reponame=None, all_enabled=None,
-				valid_profiles=None, cl=None, path=None, child=None, parent_line=None, top=None):
-		global upgrade_to_core_kit
-		self.ego_module = ego_module
-		self._reponame = reponame
-		self.valid_profiles = valid_profiles
-		self.all_enabled = all_enabled
-		self.config = config
-		if repomap is None:
-			repomap = {}
-		if top is None:
-			top = {"mix-ins": None, "flavor": None}
-
-		# For user-specified settings (changing flavors, etc.) -- we use self.name, and self.cl (for type)
-
-		self.name = name
-		self.cl = cl
-
-		# Child maps to the direct child of this profile entry -- this means the one that referenced
-		# this one in the parent file.
-
-		self.child = child
-
-		# Parent_line contains line from the parent file that refers to this profile entry.
-
-		self.parent_line = parent_line
-
-		# for top-level (user-selected) flavors and mix-ins, self.inherited will hold a list of
-		# child flavors and mix-ins inherited via parent.
-
-		self.inherited = {"mix-ins": [], "flavor": []}
-
-		# Reposmap is a dict that maps a repository name, such as "gentoo" to the associated
-		# profile directory path (i.e. "/usr/portage/profiles")
-
-		self.repomap = repomap
-
-		# Descendents contains a dict, which is populated with keys such as "flavor", "mix-ins", etc.
-		# The values are a list of all direct descendents of that type.
-
-		self.descendents = {}
-
-		# Top is used for updating self.inherited properly. It tracks the top-most flavor or mix-in,
-		# which is the user-selected one. Top-most flavor is self.top["flavor"], etc.
-
-		# If we are a mix-in or flavor, we get added to self.top["flavor"] and self.top["mix-ins"]
-		# inherited[self.cl] list.
-
-		self.top = top
-		self.path = path
-
-		if cl is None:
-			self.cl = self.classify()
-		else:
-			self.cl = cl
-
-		if self.cl in all_enabled:
-			all_enabled[self.cl].add(self.shortname)
-
-		self.parentfile = None
-
-		if reponame == "core-kit" and self.reponame and self.reponame == "gentoo":
-			upgrade_to_core_kit = True
-
-		if path is not None:
-
-			# If we are creating a fake ProfileSetting to change a flavor, etc, then path will be None.
-			# If we are reading in an existing ProfileSetting, we do a lot of processing, including
-			# figuring out what kind of profile setting we are, recursing on any parents, etc.
-
-			parentfile = path + "/parent"
-			self.lines = []
-			if os.path.exists(parentfile):
-				self.parentfile = parentfile
-				a = open(parentfile, "r")
-				for l in a.readlines():
-					self.lines.append(l.strip())
-				a.close()
-			self.parents = []
-			self.path = path
-
-			if self.cl in ["flavor", "mix-ins"]:
-				for ty in ["flavor", "mix-ins"]:
-					if self.top[ty] is not None:
-						self.top[ty].inherited[self.cl].append(self)
-			self._process()
-
-	@property
-	def reponame(self):
-		if self.parent_line is None:
-			return None
-		sp = self.parent_line.split(":")
-		if len(sp) == 2:
-			return sp[0]
-		else:
-			return None
-
-	def _nextTop(self):
-		# This function returns a dict of top values to be used by _process()
-		out = {}
-		for k in ["mix-ins", "flavor"]:
-			if self.top[k]:
-				out[k] = self.top[k]
-			elif self.cl == k:
-				out[k] = self
-			else:
-				out[k] = None
-		return out
-
-	@property
-	def shortname(self):
-		if self.name:
-			return self.name
-		return self.path.split("/")[-1]
-
-	def _process(self):
-		for l in self.lines:
-			l = l.split("#")[0]
-			if len(l) == 0:
-				continue
-			colsplit = l.split(":")
-			if l[0] == ":":
-				# ":base" format
-				ps = ProfileSetting(
-					repomap=self.repomap, ego_module=self, config=self.config, valid_profiles=self.valid_profiles,
-					all_enabled=self.all_enabled, reponame=self._reponame,
-					path=os.path.join(self.repomap[self._reponame], l[1:]), child=self, parent_line=l, top=self._nextTop(),
-				)
-			elif len(colsplit) == 2 and colsplit[0] in self.repomap:
-				# "gentoo:foo" format
-				ps = ProfileSetting(
-					repomap=self.repomap, ego_module=self, config=self.config, valid_profiles=self.valid_profiles,
-					all_enabled=self.all_enabled, reponame=self._reponame,
-					path=os.path.join(self.repomap[colsplit[0]], colsplit[1]), child=self, parent_line=l, top=self._nextTop(),
-				)
-			else:
-				# "../../foo/bar" format
-				ps = ProfileSetting(
-					repomap=self.repomap, ego_module=self, config=self.config, valid_profiles=self.valid_profiles,
-					all_enabled=self.all_enabled, reponame=self._reponame, path=os.path.normpath(os.path.join(self.path, l)),
-					child=self, parent_line=l, top=self._nextTop(),
-				)
-			self.parents.append(ps)
-			if ps.cl not in self.descendents:
-				self.descendents[ps.cl] = []
-			self.descendents[ps.cl].append(ps)
-
-	def classify(self):
-		ps = self.path.split("/")
-		pstag = ps[-2:-1][0]
-		if pstag in self.valid_profiles:
-			return pstag
-		else:
-			return "misc"
-
-	def _genProfileString(self, key_order, valid_multi_profiles):
-		out = ""
-		for key in key_order:
-			if key in self.descendents and len(self.descendents[key]):
-				if key in valid_multi_profiles:
-					for item in self.descendents[key]:
-						if item.parent_line.startswith("gentoo:"):
-							out += "core-kit:" + item.parent_line[7:] + "\n"
-						else:
-							out += item.parent_line + "\n"
-				else:
-					if self._reponame == "core-kit" and self.descendents[key][0].reponame == "gentoo":
-						# convert "gentoo" references to "core-kit"
-						self.descendents[key][0].parent_line = "core-kit:" + self.descendents[key][0].parent_line.split(":")[1]
-					out += self.descendents[key][0].parent_line + "\n"
-		python_kit_branch = self.ego_module.get_configured_kit("python-kit")
-		for kit in os.listdir(self.config.kit_root):
-			python_path = os.path.join(self.config.kit_root, kit, "profiles/funtoo/kits/python-kit/", python_kit_branch)
-			if os.path.exists(python_path):
-				out += "%s:funtoo/kits/python-kit/" % kit + python_kit_branch + "\n"
-		return out
-
-	def write(self, key_order, valid_multi_profiles):
-		if not self.parentfile:
-			return
-		out = self._genProfileString(key_order, valid_multi_profiles)
-		with open(self.parentfile, "w") as f:
-			f.write(out)
-
+from ego_profile import getProfileCatalogAndTree, ProfileType
 
 class MultiChoicesAction(argparse.Action):
 
@@ -287,19 +23,13 @@ class MultiChoicesAction(argparse.Action):
 					value, ', '.join([repr(c) for c in self.multi_choices])))
 		setattr(namespace, self.dest, values)
 
-
 class Module(EgoModule):
 
-	# Somewhat self-explanatory, these list profiles that can be specified (up to once), ones that can
-	# be specified up to multiple times, all types of profiles, and all types of actions that this
-	# module can perform.
-	key_order = ["arch", "build", "subarch", "flavor", "mix-ins"]
-	required_profiles = ["arch", "build", "flavor"]
-	valid_single_profiles = ["flavor", "build", "arch", "subarch"]
-	valid_multi_profiles = ["mix-ins"]
-	valid_profiles = valid_single_profiles + valid_multi_profiles
-
 	def add_arguments(self, parser):
+
+		# specify "mix-in" as alternate spelling for "mix-ins":
+
+		valid_profile_types = [ str(x) for x in ProfileType.valid() ]
 		subparsers = parser.add_subparsers(title='actions', dest='action')
 
 		show_parser = subparsers.add_parser('show', help="Print your profiles")
@@ -309,12 +39,12 @@ class Module(EgoModule):
 		show_json_parser.set_defaults(handler=self.handle_show_json_action)
 
 		get_parser = subparsers.add_parser('get', help="Print the value of a given profile")
-		get_parser.add_argument('profile', choices=self.valid_profiles)
+		get_parser.add_argument('profile', choices=valid_profile_types)
 		get_parser.set_defaults(handler=self.handle_get_action)
 
 		list_parser = subparsers.add_parser('list', help="List given profiles (or all by default)")
-		list_parser.add_argument('profiles', nargs='*', choices=self.valid_profiles, action=MultiChoicesAction, help=(
-			"Profiles to show: %s" % ', '.join(self.valid_profiles)
+		list_parser.add_argument('profiles', nargs='*', choices=valid_profile_types, action=MultiChoicesAction, help=(
+			"Profiles to show: %s" % ', '.join(valid_profile_types)
 		))
 		list_parser.set_defaults(handler=self.handle_list_action)
 
@@ -336,7 +66,7 @@ class Module(EgoModule):
 		mixins_parser.set_defaults(handler=self.handle_mix_ins_action)
 
 	def header(self, info):
-		self.log("\n=== " + Color.BOLD + Color.GREEN + info + Color.END + ": ===\n")
+		self.log("\n=== " + Color.BOLD + Color.GREEN + str(info) + Color.END + ": ===\n")
 
 	def python_info(self):
 		self.header("Python kit")
@@ -354,97 +84,67 @@ class Module(EgoModule):
 					self.log("%s%12s%s: %s%s%s" % (Color.BOLD, key, Color.END, Color.CYAN, item.name, Color.END))
 		self.log("")
 
-	def short_JSON(self, ps, key_order):
+	def short_JSON(self):
 		outdict = {}
-		for key in key_order:
+		for p_type in [ProfileType.ARCH, ProfileType.BUILD, ProfileType.SUBARCH, ProfileType.FLAVOR, ProfileType.MIX_IN]:
+			key = str(p_type)
 			outdict[key] = []
-			if key not in ps.descendents:
-				continue
-			for item in ps.descendents[key]:
+			for item in self.tree.get_children(p_type):
 				out = {}
-				out["shortname"] = item.shortname
-				if item.path is not None:
-					out["path"] = item.path
+				out["shortname"] = item.name
+				#if item.path is not None:
+					# TODO: support path
+				#	out["path"] = item.path
 				outdict[key].append(out)
 		return outdict
-
-	def get_profile_lister(self):
-		if "arch" in self.ps.descendents and len(self.ps.descendents['arch']) != 0:
-			# We list subarches based on the arch path, ie. "arch/x86-64bit/subarch" -- so we need to provide arch name:
-			return ProfileLister(
-				self.repodir, self.egodescfile, valid_profiles=self.valid_profiles, arch=self.ps.descendents["arch"][0].shortname
-			)
-		else:
-			return ProfileLister(self.repodir, self.egodescfile, valid_profiles=self.valid_profiles)
 
 	def handle_show_action(self, **options):
 		self.short_list()
 		self.python_info()
-		inherited_things = []
-		if "flavor" in self.ps.descendents and len(self.ps.descendents["flavor"]):
-			# follow first flavor:
-			inherited_things.append(self.ps.descendents["flavor"][0])
-		if "mix-ins" in self.ps.descendents:
-			# follow all mix-ins:
-			inherited_things.extend(self.ps.descendents["mix-ins"])
 
-		for item in inherited_things:
-			for x in ["flavor", "mix-ins"]:
-				ilist = item.inherited[x]
-				# pluralize output if needed:
-				if x[-1] != "s":
-					x += "s"
-				if ilist:
-					icl = item.cl
-					# de-pluralize
-					if icl == "mix-ins":
-						icl = "mix-in"
-					self.header("All inherited %s from %s %s" % (x, item.shortname, icl))
-					for i in ilist:
-						if i == i.child:
-							continue
-						iccl = i.child.cl
-						# de-pluralize
-						if iccl == "mix-ins":
-							iccl = "mix-in"
-						self.log("      %s%26s%s (from %s %s)" % (Color.CYAN, i.shortname, Color.END, i.child.shortname, iccl))
+		for specifier in self.tree.get_children([ProfileType.FLAVOR, ProfileType.MIX_IN]):
+
+			for list_type in [ ProfileType.FLAVOR, ProfileType.MIX_IN ]:
+				inherited_things = list(self.tree.recursively_get_children(list_type, specifier=specifier))
+
+				if not len(inherited_things):
+					continue
+
+				self.header("All inherited %s from %s %s" % (str(list_type), specifier.name, str(specifier.classify())))
+
+				# TODO: I don't think we support "child" yet:
+				for inherited_spec in inherited_things:
+					self.log("      %s%26s%s (from %s %s)" % (Color.CYAN, inherited_spec.name, Color.END, "foo", "bar"))
 		self.log("")
 
 	def handle_update_action(self, **options):
 		try:
-			self.ps.write(self.key_order, self.valid_multi_profiles)
+			self.tree.write()
 		except PermissionError:
 			self.fatal("You do not have permission to update profiles.")
 
 	def handle_show_json_action(self, **options):
-		self.log(json.dumps(self.short_JSON(self.ps, self.key_order), indent=4))
+		self.log(json.dumps(self.short_JSON(), indent=4))
 
 	def handle_get_action(self, **options):
-		profile = options['profile']
-		short_json = self.short_JSON(self.ps, self.key_order)
-		self.log(' '.join(p['shortname'] for p in short_json[profile]))
+		self.log(' '.join(p.name for p in self.tree.get_children(ProfileType.from_string(options['profile']))))
 
 	def handle_list_action(self, **options):
-		pl = self.get_profile_lister()
+
 		# Time to list all available profile settings.
 		profiles = options['profiles']
 
-		for key in pl.keys():
-			if profiles and key not in profiles:
-				# user-specified sub-list, only list those things
+		for key in [ ProfileType.ARCH, ProfileType.BUILD, ProfileType.SUBARCH, ProfileType.FLAVOR, ProfileType.MIX_IN ]:
+			if profiles and str(key) not in profiles:
 				continue
 
 			# active_keys: Names of active (currently enabled explicitly by user) profile keys
 			# of this type (ie. flavor, etc.). These active ones will get highlighted differently.
 
-			active_keys = []
-			if key in self.ps.descendents:
-				for value in self.ps.descendents[key]:
-					active_keys.append(value.shortname)
-
+			active_keys = [ x.name for x in self.tree.get_children(key) ]
+			recursively_active_keys = set( x.name for x in self.tree.recursively_get_children(key) )
+			available_keys = sorted(list(self.catalog.list(key)))
 			self.header(key)
-			items = pl.list(key)
-			items.sort()
 
 			# We handle our own output formatting/spacing/newlines. These vars are used for this.
 			# lpos - column position; maxpos - when to wrap; count - item count.
@@ -455,10 +155,10 @@ class Module(EgoModule):
 
 			# write each item out -- when we cross maxpos characters, add a newline and indent:
 			self.echo(" " * lpos)
-			if not items:
+			if not len(available_keys):
 				self.echo("None available")
 				continue
-			for x in items:
+			for x in available_keys:
 				if lpos > maxpos:
 					self.echo("\n")
 					lpos = 4
@@ -470,7 +170,7 @@ class Module(EgoModule):
 						# parens to mark as read-only -- USE style. Not really read-only but should
 						# not generally be changed by user.
 						outx = "(" + outx + ")"
-				elif key in self.all_enabled and x in self.all_enabled[key]:
+				elif x in recursively_active_keys:
 					# highlight if enabled through inheritance:
 					outx = Color.DARKCYAN + x + Color.END
 				else:
@@ -488,25 +188,27 @@ class Module(EgoModule):
 	def handle_single_profile_actions(self, **options):
 		action = options['action']
 		newset = options['new_value']
-		pl = self.get_profile_lister()
-		if action in ["build", "arch"]:
-			if action in self.ps.descendents and len(action) > 0:
+		print(action, newset)
+		profile_type = ProfileType.from_string(action)
+		if profile_type == None:
+			self.fatal("Unknown profile type: %s" % action)
+		elif profile_type == ProfileType.OTHER:
+			self.fatal("Profile type of 'other' not valid.")
+
+		available_shortnames = set(self.catalog.list(profile_type))
+		current_setting = list(self.tree.get_children())[0]
+
+		if profile_type in [ ProfileType.BUILD, ProfileType.ARCH ]:
+			if newset in available_shortnames and len(action) > 0:
 				self.warning("%s already set to %s -- typically, user should not change this." % (
-					action, self.ps.descendents[action][0].shortname))
-		if newset not in pl.list(action):
+					action, current_setting.name))
+
+		if newset not in available_shortnames:
 			self.fatal("%s %s not available. Can't set." % (action, newset))
 		self.writeout = True
-		# ps is the head of our heirarchy of ProfileSettings. Hack it -- inject our new profile info as a
-		# direct descendent of ps. Then the write() function will write the correct stuff out to the
-		# profile.
-		action_path = pl.find(action, newset)
-		self.ps.descendents[action] = [
-			ProfileSetting(
-				config=self.config, ego_module=self, repomap=self.ps.repomap, name=newset, reponame=self.reponame,
-				all_enabled=self.all_enabled, valid_profiles=self.valid_profiles, cl=action,
-				parent_line='%s:%s/%s' % (self.reponame, action_path, newset), child=self.ps,
-			)
-		]
+
+		self.tree.replace_entry(profile_type, "core-kit:" + self.catalog.find_path(profile_type, newset))
+
 		self.short_list()
 		self.log(">>> Set %s to %s." % (action, newset))
 
@@ -523,8 +225,7 @@ class Module(EgoModule):
 			else:
 				adds.add(mixin)
 
-		arch = list(self.tree.get_children([ProfileType.ARCH]))[0].name
-		valids = list(self.catalog.list(ProfileType.MIX_IN, arch=arch))
+		valids = list(self.catalog.list(ProfileType.MIX_IN))
 
 		for mixin in adds.union(subs):
 			if mixin not in valids:
@@ -532,7 +233,6 @@ class Module(EgoModule):
 
 		# remove "-" arguments.
 		removed = set()
-		not_added = set()
 		added = set()
 
 		# for mix_in in enabled-mix-ins:
@@ -544,7 +244,7 @@ class Module(EgoModule):
 				self.tree.remove_name(ProfileType.MIX_IN, mix_in.name)
 				self.writeout = True
 
-		available_mix_in_shortnames = set(self.catalog.list(ProfileType.MIX_IN, arch=arch))
+		available_mix_in_shortnames = set(self.catalog.list(ProfileType.MIX_IN))
 		not_added = adds - available_mix_in_shortnames
 
 		for shortname in adds & available_mix_in_shortnames:
@@ -566,45 +266,10 @@ class Module(EgoModule):
 
 	def handle(self, **options):
 		portdir = portage.settings.repositories.mainRepoLocation()
-		self.repodir = portdir + "/profiles"
-		self.egodescfile = self.repodir + "/profiles.ego.desc"
 
 		upgrade_to_core_kit = False
 
-		# We use /etc/portage/make.profile as our starting point for resolving profile settings.
-
-		profiledir = "/etc/portage/make.profile"
-
-		# The reponame file is used for resolving profiles, particularly those set in /etc/portage/make.profile,
-		# which reference a repository name, as in:
-
-		# gentoo:funtoo/1.0/linux-gnu/arch/x86-64bit.
-
-		reponamefile = os.path.join(self.repodir, "repo_name")
-
-		if os.path.exists(reponamefile):
-			with open(reponamefile, "r") as rnf:
-				self.reponame = rnf.read().strip()
-		else:
-			self.fatal("Unable to find the repository name in %s - exiting." % reponamefile)
-
-
-		self.catalog = ProfileCatalog(portdir + "/profiles")
-		self.tree = ProfileTree(self.catalog, "core-kit", { "core-kit" : portdir})
-
-
-		# connect to ego sync module:
-
-		# all_enabled is used to record all enabled sub-profile settings, even those enabled through inheritance.
-		# It is a dict that is indexed by sub-profile type. Each key has a value that is a list.
-
-		self.all_enabled = dict((p, set()) for p in self.valid_profiles)
-
-		# Use ProfileSetting to recurse into the current system's profile settings, and see what is enabled and inherited.
-		self.ps = ProfileSetting(
-			config=self.config, ego_module=self, repomap={self.reponame: self.repodir}, reponame=self.reponame,
-			path=profiledir, valid_profiles=self.valid_profiles, all_enabled=self.all_enabled
-		)
+		self.catalog, self.tree = getProfileCatalogAndTree(portdir)
 
 		# If the profile needs to be written out for any reason, to either update it or fix it, writeout will be set to
 		# true.
@@ -614,20 +279,20 @@ class Module(EgoModule):
 		handler = options.pop('handler', self.handle_show_action)
 		handler(**options)
 
-		for x in self.ps.parents:
-			c = x.cl
-			if c in self.valid_single_profiles and len(self.ps.descendents[c]) > 1:
-				self.warning("Extra profile of type '%s' defined: '%s'. Will be removed." % (c, x.shortname))
+		for profile_type in ProfileType.single():
+			settings = list(self.tree.get_children(profile_type))
+			if len(settings) > 1:
+				for setting in settings[1:]:
+					self.warning("Extra profile of type '%s' defined: '%s'. Will be removed." % (str(profile_type), setting.name))
 				self.writeout = True
-		for key in self.required_profiles:
-			if key not in self.ps.descendents:
-				self.warning("No %s defined. Please set a %s." % (key, key))
+			elif len(settings) == 0:
+				self.warning("No %s defined. Please set." % str(profile_type))
 
 		if self.writeout:
 			if upgrade_to_core_kit:
 				self.warning("Upgrading gentoo repository references to core-kit.")
 			try:
-				self.ps.write(self.key_order, self.valid_multi_profiles)
+				self.tree.write()
 			except PermissionError:
 				self.fatal("You do not have permission to update profiles.")
 

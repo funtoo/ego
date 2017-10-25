@@ -97,18 +97,20 @@ class EgoModule:
 		# Easy method for modules to perform constructor-related things.
 		pass
 
-	def __init__(self, name, install_path, config):
+	def __init__(self, name, install_path, config, VERSION):
 		self.name = name
 		self.install_path = install_path
 		self.config = config
 		self.info = config.ego_mods_info[name]
+		self.version = VERSION
 		self.setup()
 
 	def __call__(self, *args):
+		global VERSION
 		parser = argparse.ArgumentParser('ego ' + self.name, description=self.info['description'])
 		parser.add_argument('--version', action='version', version=(
 			"ego %(ego_version)s / %(module)s %(module_version)s (by %(module_author)s)" % {
-				'ego_version': self.config.ego_version, 'module': self.name,
+				'ego_version': self.version, 'module': self.name,
 				'module_version': self.info['version'], 'module_author': self.info['author'],
 			}
 		))

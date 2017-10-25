@@ -35,6 +35,10 @@ class ProfileTest(unittest.TestCase):
 		mixin_list = list(self.pt.recursively_get_children(child_types=[ProfileType.MIX_IN]))
 		self.assertEqual(len(mixin_list), 14)
 
+	def test_from_string(self):
+		for t in list(ProfileType):
+			self.assertEqual(ProfileType.from_string(t._strval), t)
+
 	def test_mixin_list(self):
 		mix_in_set = {'print', 'mediaformat-audio-extra', 'mediaformat-video-common', 'lxde',
 		              'mediadevice-audio-consumer', 'dvd', 'mediaformat-gfx-common', 'selinux', 'gfxcard-intel-glamor',

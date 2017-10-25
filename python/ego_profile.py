@@ -15,7 +15,6 @@ from enum import Enum
 import errno
 from collections import OrderedDict, defaultdict
 
-
 class ProfileName(Enum):
 	"""
 	The ``ProfileName`` and ``ProfileType`` implementation give us the following enumerations that can be compared
@@ -83,6 +82,25 @@ class ProfileType(ProfileName):
 	MIX_IN = (5, "mix-ins")
 	OTHER = (99, "other")
 
+	@classmethod
+	def from_string(cls, my_str):
+		if my_str == "mix-in":
+			# support non-plural version of "mix-ins":
+			return ProfileType.MIX_IN
+		for t in list(cls):
+			if t._strval == my_str:
+				return t
+		return None
+
+	@classmethod
+	def valid(cls):
+		# valid for use in setting profiles.
+		return [ ProfileType.ARCH, ProfileType.BUILD, ProfileType.SUBARCH, ProfileType.FLAVOR, ProfileType.MIX_IN ]
+
+	@classmethod
+	def single(cls):
+		# profile types that should only be set once.
+		return [ ProfileType.ARCH, ProfileType.BUILD, ProfileType.FLAVOR ]
 
 class ProfileCatalog:
 	"""
@@ -284,6 +302,12 @@ class ProfileTree(object):
 		self.root_parent_dir = root_parent_dir if root_parent_dir is not None else '/etc/portage/make.profile'
 		self.reload()
 
+	def get_arch(self):
+		current_arch = list(self.get_children(ProfileType.ARCH))
+		if len(current_arch):
+			return current_arch[0]
+		return None
+
 	def reload(self, parent_lines=None):
 		self.profile_path_map = {}
 
@@ -444,12 +468,12 @@ class ProfileTree(object):
 					continue
 				yield line.strip()
 
-	def spiff(self):
-		"""A quick example that will output the contents of /etc/portage/make.profile/parent"""
-		for spec in self.profile_hier:
-			print(repr(spec))
-			print(str(spec))
-
+def getProfileCatalogAndTree(portdir):
+	catalog = ProfileCatalog(portdir + "/profiles")
+	tree = ProfileTree(catalog, "core-kit", {"core-kit": portdir})
+	current_arch = tree.get_arch()
+	catalog.set_arch(current_arch.name if current_arch is not None else None)
+	return catalog, tree
 
 if __name__ == "__main__":
 	# A quick example to parse profiles in core-kit. Note how the profiles tree specified in the ProfileCatalog()

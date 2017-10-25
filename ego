@@ -10,37 +10,25 @@ Funtoo's personality tool
 # Copyright 2015-2017 Daniel Robbins and Funtoo Solutions, Inc.
 # See LICENSE.txt for terms of distribution.
 
-import configparser
 import os
 import sys
 
 VERSION = "2.2.1"
 
-settings = configparser.ConfigParser()
-try:
-	settings.read('/etc/ego.conf')
-except IOError:
-	print("Config file /etc/ego.conf not found.")
-	sys.exit(1)
-
-if 'EGO_INSTALL_PATH' in os.environ:
-	install_path = os.environ['EGO_INSTALL_PATH']
-elif "global" in settings and "install_path" in settings["global"]:
-	install_path = settings["global"]["install_path"]
-else:
-	install_path = "/usr/share/ego"
+install_path="/var/src/ego"
 sys.path.insert(0, install_path + "/python")
+from ego_config import EgoConfig
 
-from ego_helpers import EgoConfig, Color, header, run_ego_module
+econfig = EgoConfig(install_path=install_path)
 
-ego_config = EgoConfig(install_path, settings, VERSION)
+from ego_helpers import Color, header, run_ego_module
 
 if __name__ == "__main__":
 	exec_name = os.path.basename(sys.argv[0])
 	action = None
 	if exec_name != "ego":
 		# called as shortcut symlink
-		for key, config in ego_config.ego_mods_info.items():
+		for key, config in econfig.ego_mods_info.items():
 			if "shortcut" in config and os.path.basename(config["shortcut"]) == exec_name:
 				action = key
 				args = sys.argv[1:]
@@ -52,7 +40,7 @@ if __name__ == "__main__":
 		if len(sys.argv) == 1 or (len(sys.argv) == 2 and sys.argv[1] in ["info", "help"]):
 			print("Usage: %s [module] [info|options]..." % os.path.basename(sys.argv[0]))
 			header("Available ego modules")
-			for mod, info in ego_config.available_modules():
+			for mod, info in econfig.available_modules():
 				desc = ''
 				if "description" in info:
 					desc = info["description"]
@@ -63,20 +51,20 @@ if __name__ == "__main__":
 		elif len(sys.argv) == 3 and sys.argv[2] in ["info", "help"]:
 			mod = sys.argv[1]
 			action = sys.argv[2]
-			if mod not in ego_config.ego_mods:
+			if mod not in econfig.ego_mods:
 				print("Module not found: %s. Exiting." % mod)
 				sys.exit(1)
-			if mod not in ego_config.ego_mods_info:
+			if mod not in econfig.ego_mods_info:
 				print("No %s is available for %s ego module." % (action, mod))
 			else:
 				if action == "info":
 					print("Extended information for %s ego module:" % mod)
-					for key in ego_config.ego_mods_info[mod]:
+					for key in econfig.ego_mods_info[mod]:
 						print("%20s: %s" % (key, ego_config.ego_mods_info[mod][key]))
 					print()
 				else:
-					if "help" in ego_config.ego_mods_info[mod]:
-						print(ego_config.ego_mods_info[mod]["help"])
+					if "help" in econfig.ego_mods_info[mod]:
+						print(econfig.ego_mods_info[mod]["help"])
 					else:
 						print("No help available for this ego module.")
 			action = None
@@ -88,6 +76,6 @@ if __name__ == "__main__":
 			print(Color.RED + "Please specify an action. Type ego help for more info." + Color.END)
 			sys.exit(1)
 	if action:
-		run_ego_module(install_path, action, ego_config, args)
+		run_ego_module(install_path, action, econfig, args, VERSION)
 
 # vim: ts=4 sw=4 noexpandtab
