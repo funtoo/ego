@@ -3,7 +3,7 @@
 import sys
 import unittest
 sys.path.insert(0, "..")
-from ego_profile import *
+from ego.profile import *
 import os
 
 class ProfileTest(unittest.TestCase):

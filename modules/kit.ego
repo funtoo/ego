@@ -1,11 +1,14 @@
 #!/usr/bin/python3
 
-import os, sys
+import os
+import sys
 from datetime import datetime
-from ego import EgoModule
-from ego_helpers import Color, ago
+
+from ego.module import EgoModule
+from ego.output import Color, ago
 from git_helper import GitHelper
-from mediawiki_cli_parser import wikitext_parse
+from mediawiki.cli_parser import wikitext_parse
+
 
 class Module(EgoModule):
 
@@ -35,13 +38,13 @@ class Module(EgoModule):
 		if not self._output_header():
 			return
 		print("  " + Color.UNDERLINE + "kit".ljust(20), "is active?".ljust(15), "branch".ljust(15), "stability".ljust(9), Color.END)
-		kit_sha1 = self.kit_sha1
+		kit_sha1 = self.config.kit_sha1
 
-		for kit in self.kit_info["kit_order"]:
+		for kit in self.config.kit_info["kit_order"]:
 			if kit not in kit_sha1:
 				continue
 
-			kit_branch, kit_default_branch = self.get_configured_kit(kit, True)
+			kit_branch, kit_default_branch = self.config.get_configured_kit(kit, True)
 
 			if kit_branch == None:
 				kit_branch = kit_default_branch
@@ -81,7 +84,7 @@ class Module(EgoModule):
 		sys.stdout.write("\n")
 
 	def _get_branch_stability_string(self, kit, kit_branch):
-		kit_stability = self.kit_info["kit_settings"][kit]['stability'][kit_branch]
+		kit_stability = self.config.kit_info["kit_settings"][kit]['stability'][kit_branch]
 		if kit_stability == "prime":
 			kit_stability = Color.green("prime")
 		elif kit_stability == "near-prime":
@@ -102,12 +105,12 @@ class Module(EgoModule):
 		if not self._output_header():
 			return
 		print("  " + Color.UNDERLINE + "kit".ljust(20), "active branch".ljust(20), "default".ljust(20), "stability".ljust(9) + Color.END)
-		for kit in self.kit_info["kit_order"]:
-			kit_branch, kit_default_branch = self.get_configured_kit(kit, True)
+		for kit in self.config.kit_info["kit_order"]:
+			kit_branch, kit_default_branch = self.config.get_configured_kit(kit, True)
 			if kit_branch == None:
 				kit_branch = kit_default_branch
-			if 'stability' in self.kit_info["kit_settings"][kit] and kit_branch in \
-					self.kit_info['kit_settings'][kit]['stability']:
+			if 'stability' in self.config.kit_info["kit_settings"][kit] and kit_branch in \
+					self.config.kit_info['kit_settings'][kit]['stability']:
 				kit_stability = self._get_branch_stability_string(kit, kit_branch)
 			else:
 				kit_stability = ""

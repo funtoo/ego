@@ -4,10 +4,12 @@ import os
 import pwd
 import re
 import sys
-from ego import EgoModule
-from ego_helpers import Color, run_ego_module
-from git_helper import GitHelper
+
 from cmdtools import run
+from ego.module import EgoModule
+from ego.output import Color, Output
+from git_helper import GitHelper
+
 
 class Module(EgoModule):
 
@@ -28,14 +30,14 @@ class Module(EgoModule):
 	def sync_kit(self, kit_name, branch=None):
 		if branch is None:
 			# use default
-			branch = self.kit_info["kit_settings"][kit_name]["default"]
+			branch = self.config.kit_info["kit_settings"][kit_name]["default"]
 		if branch is None:
-			self.fatal("Fatal: branch cannot be None.")
-		if branch == self.kit_info["kit_settings"][kit_name]["default"]:
-			self.log(Color.purple("Syncing %s branch %s" % (kit_name, branch)))
+			Output.fatal("Fatal: branch cannot be None.")
+		if branch == self.config.kit_info["kit_settings"][kit_name]["default"]:
+			Output.log(Color.purple("Syncing %s branch %s" % (kit_name, branch)))
 		else:
 			# highlight non-default branches in green for convenience
-			self.log(Color.purple("Syncing %s branch " % kit_name) + Color.green(branch) + Color.purple(" (non-default)"))
+			Output.log(Color.purple("Syncing %s branch " % kit_name) + Color.green(branch) + Color.purple(" (non-default)"))
 		kit_path = os.path.join(self.config.kit_root, kit_name)
 		kit = GitHelper(self, kit_path)
 		if not kit.isGitRepo():
@@ -46,7 +48,7 @@ class Module(EgoModule):
 		if not kit.exists():
 			retval = kit.shallowClone(self.config.sync_base_url.format(repo=kit_name), branch, depth=2)
 			if retval != 0:
-				self.fatal("Could not clone kit '%s' into '%s'." % (kit_name, kit_path))
+				Output.fatal("Could not clone kit '%s' into '%s'." % (kit_name, kit_path))
 
 		if not kit.localBranchExists(branch):
 			kit.fetchRemote(branch)
@@ -57,15 +59,15 @@ class Module(EgoModule):
 
 		# do sync
 		sha1 = kit.commitID
-		desired_sha1 = self.kit_sha1[kit_name][branch]
+		desired_sha1 = self.config.kit_sha1[kit_name][branch]
 		success = False
 
-		def sha1_check(sha1, desired_sha1):
-			self.debug((sha1, desired_sha1))
-			if not self.hex_re.match(sha1):
-				self.fatal("Fatal: kit CommitID not a SHA1: %s" % sha1)
+		def sha1_check(my_sha1, desired_sha1):
+			Output.debug((my_sha1, desired_sha1))
+			if not self.hex_re.match(my_sha1):
+				Output.fatal("Fatal: kit CommitID not a SHA1: %s" % my_sha1)
 			if not self.hex_re.match(desired_sha1):
-				self.fatal("Fatal: kit-sha1.json value not a SHA1: %s" % desired_sha1)
+				Output.fatal("Fatal: kit-my_sha1.json value not a SHA1: %s" % desired_sha1)
 
 		sha1_check(sha1, desired_sha1)
 
@@ -90,7 +92,7 @@ class Module(EgoModule):
 			try:
 				os.mkdir(self.root)
 			except PermissionError:
-				self.fatal(
+				Output.fatal(
 					"You don't have enough privileges. You should probably run this command as root."
 				)
 		stat_info = os.stat(self.root)
@@ -98,7 +100,7 @@ class Module(EgoModule):
 			try:
 				run("chown -R %s:%s %s" % (uid, gid, self.root), quiet=True)
 			except PermissionError:
-				self.fatal(
+				Output.fatal(
 					"You don't have enough privileges. You should probably run this command as root."
 				)
 		# We need to fork here in order to sync as sync_user and then switch back to root
@@ -109,24 +111,24 @@ class Module(EgoModule):
 				os.setgid(gid)
 				os.setuid(uid)
 			except PermissionError:
-				self.fatal(
+				Output.fatal(
 					"You don't have enough privileges. You should probably run this command as root."
 				)
 			if not options['kits_only']:
 				repo = GitHelper(self, self.root)
-				self.log(Color.green("Syncing meta-repo"))
+				Output.log(Color.green("Syncing meta-repo"))
 				if repo.isGitRepo():
-					retval = repo.fetchRemote("master")
+					repo.fetchRemote("master")
 					retval = repo.pull(options=["--no-commit", "-f", "--no-recurse-submodules"])
 					if retval != 0:
-						self.fatal("There was an error syncing meta-repo.")
+						Output.fatal("There was an error syncing meta-repo.")
 				else:
 					retval = repo.shallowClone(
 						self.config.sync_base_url.format(repo="meta-repo"), self.config.meta_repo_branch)
 					if retval != 0:
-						self.fatal("Could not clone meta-repo into '%s'." % (self.root,))
+						Output.fatal("Could not clone meta-repo into '%s'." % (self.root,))
 			fails = []
-			for kt in self.kit_info["kit_order"]:
+			for kt in self.config.kit_info["kit_order"]:
 				branch = None
 				if "kits" in self.config.settings:
 					if kt in self.config.settings["kits"]:
@@ -135,10 +137,10 @@ class Module(EgoModule):
 				# Let's now check to make sure that the kit specified in settings is a valid kit, still present in
 				# metadata. If not, we should inform the user and fall back to the default kit.
 
-				if branch != None:
-					if branch not in self.kit_sha1[kt]:
+				if branch is not None:
+					if branch not in self.config.kit_sha1[kt]:
 						# We are not recording a sha1 -- this is not an active kit
-						self.warning("Kit %s branch %s specified in ego.conf is not currently active; using default kit instead." % (kt, branch))
+						Output.warning("Kit %s branch %s specified in ego.conf is not currently active; using default kit instead." % (kt, branch))
 						branch = None
 
 				success = self.sync_kit(kt, branch=branch)
@@ -146,19 +148,19 @@ class Module(EgoModule):
 					fails.append((kt, branch))
 			if len(fails):
 				for kt, branch in fails:
-					self.error("There was an error syncing %s." % kt)
+					Output.error("There was an error syncing %s." % kt)
 				sys.exit(1)
 			sys.exit(0)
 		# Forked process terminated here
 		if os.waitpid(pid, 0)[1] > 0:
 			return False
-		self.log(Color.green("Sync successful and kits in alignment! :)"))
-		self.log(Color.green("Updating profiles..."))
+		Output.log(Color.green("Sync successful and kits in alignment! :)"))
+		Output.log(Color.green("Updating profiles..."))
 		try:
-			run_ego_module(self.install_path, 'profile', self.config, ['update'])
+			EgoModule.run_ego_module(self.install_path, 'profile', self.config, ['update'])
 		except PermissionError:
-			self.error("Could not update ego profiles automatically due to permissions (code in /root, most likely.)")
-			self.error("Please run epro update manually as root.")
+			Output.error("Could not update ego profiles automatically due to permissions (code in /root, most likely.)")
+			Output.error("Please run epro update manually as root.")
 		return True
 
 	def handle(self, **options):

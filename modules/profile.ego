@@ -1,14 +1,14 @@
 #!/usr/bin/python3
+
 import argparse
 import json
-import os
-import sys
 
 import portage
 
-from ego import EgoModule
-from ego_helpers import Color, depluralize
-from ego_profile import getProfileCatalogAndTree, ProfileType
+from ego.module import EgoModule
+from ego.output import Color, Output, depluralize
+from ego.profile import getProfileCatalogAndTree, ProfileType
+
 
 class MultiChoicesAction(argparse.Action):
 
@@ -65,24 +65,21 @@ class Module(EgoModule):
 		mixins_parser.add_argument('mixins', nargs='*')
 		mixins_parser.set_defaults(handler=self.handle_mix_ins_action)
 
-	def header(self, info):
-		self.log("\n=== " + Color.BOLD + Color.GREEN + str(info) + Color.END + ": ===\n")
-
 	def python_info(self):
-		self.header("Python kit")
-		self.log("%s%12s%s: %s%s%s" % (
-			Color.BOLD, "branch", Color.END, Color.CYAN, self.get_configured_kit("python-kit"), Color.END))
+		Output.header("Python kit")
+		Output.log("%s%12s%s: %s%s%s" % (
+			Color.BOLD, "branch", Color.END, Color.CYAN, self.config.get_configured_kit("python-kit"), Color.END))
 
 	def short_list(self):
-		self.header("Enabled Profiles")
+		Output.header("Enabled Profiles")
 		for key in [ ProfileType.ARCH, ProfileType.BUILD, ProfileType.SUBARCH, ProfileType.FLAVOR, ProfileType.MIX_IN ]:
 			all_enabled = list(self.tree.get_children(key))
 			if len(all_enabled) == 0:
-				self.log("%s%12s%s: (not set)" % (Color.BOLD, key, Color.END))
+				Output.log("%s%12s%s: (not set)" % (Color.BOLD, key, Color.END))
 			else:
 				for item in all_enabled:
-					self.log("%s%12s%s: %s%s%s" % (Color.BOLD, key, Color.END, Color.CYAN, item.name, Color.END))
-		self.log("")
+					Output.log("%s%12s%s: %s%s%s" % (Color.BOLD, key, Color.END, Color.CYAN, item.name, Color.END))
+		Output.log("")
 
 	def short_JSON(self):
 		outdict = {}
@@ -110,26 +107,26 @@ class Module(EgoModule):
 				if not len(inherited_things):
 					continue
 
-				self.header("All inherited %s from %s %s" % (str(list_type), specifier.name, str(specifier.classify())))
+				Output.header("All inherited %s from %s %s" % (str(list_type), specifier.name, str(specifier.classify())))
 
 				for inherited_spec in inherited_things:
 					parent = self.tree.get_parent(inherited_spec)
 					parent_name = parent.name if parent else "master profile"
 					parent_type = depluralize(str(parent.classify())) if parent else "(None)"
-					self.log("      %s%26s%s (from %s %s)" % (Color.CYAN, inherited_spec.name, Color.END, parent_name, parent_type))
-		self.log("")
+					Output.log("      %s%26s%s (from %s %s)" % (Color.CYAN, inherited_spec.name, Color.END, parent_name, parent_type))
+		Output.log("")
 
 	def handle_update_action(self, **options):
 		try:
 			self.tree.write()
 		except PermissionError:
-			self.fatal("You do not have permission to update profiles.")
+			Output.fatal("You do not have permission to update profiles.")
 
 	def handle_show_json_action(self, **options):
-		self.log(json.dumps(self.short_JSON(), indent=4))
+		Output.log(json.dumps(self.short_JSON(), indent=4))
 
 	def handle_get_action(self, **options):
-		self.log(' '.join(p.name for p in self.tree.get_children(ProfileType.from_string(options['profile']))))
+		Output.log(' '.join(p.name for p in self.tree.get_children(ProfileType.from_string(options['profile']))))
 
 	def handle_list_action(self, **options):
 
@@ -146,7 +143,7 @@ class Module(EgoModule):
 			active_keys = [ x.name for x in self.tree.get_children(key) ]
 			recursively_active_keys = set( x.name for x in self.tree.recursively_get_children(key) )
 			available_keys = sorted(list(self.catalog.list(key)))
-			self.header(key)
+			Output.header(str(key))
 
 			# We handle our own output formatting/spacing/newlines. These vars are used for this.
 			# lpos - column position; maxpos - when to wrap; count - item count.
@@ -156,15 +153,15 @@ class Module(EgoModule):
 			count = 0
 
 			# write each item out -- when we cross maxpos characters, add a newline and indent:
-			self.echo(" " * lpos)
+			Output.echo(" " * lpos)
 			if not len(available_keys):
-				self.echo("None available")
+				Output.echo("None available")
 				continue
 			for x in available_keys:
 				if lpos > maxpos:
-					self.echo("\n")
+					Output.echo("\n")
 					lpos = 4
-					self.echo(" " * lpos)
+					Output.echo(" " * lpos)
 				if x in active_keys:
 					# make it stand out if it explicitly enabled:
 					outx = Color.BOLD + Color.CYAN + x + "*" + Color.END
@@ -179,40 +176,38 @@ class Module(EgoModule):
 					outx = x
 				count += 1
 				if count == 1 or lpos == 4:
-					self.echo(outx)
+					Output.echo(outx)
 					lpos += len(x)
 				else:
-					self.echo(", " + outx)
+					Output.echo(", " + outx)
 					lpos += len(x) + 2
-			self.log("")
-		self.log("")
+			Output.log("")
+		Output.log("")
 
 	def handle_single_profile_actions(self, **options):
 		action = options['action']
 		newset = options['new_value']
-		print(action, newset)
 		profile_type = ProfileType.from_string(action)
 		if profile_type == None:
-			self.fatal("Unknown profile type: %s" % action)
+			Output.fatal("Unknown profile type: %s" % action)
 		elif profile_type == ProfileType.OTHER:
-			self.fatal("Profile type of 'other' not valid.")
+			Output.fatal("Profile type of 'other' not valid.")
 
 		available_shortnames = set(self.catalog.list(profile_type))
-		current_setting = list(self.tree.get_children())[0]
+		current_setting = list(self.tree.get_children(profile_type))[0]
 
 		if profile_type in [ ProfileType.BUILD, ProfileType.ARCH ]:
 			if newset in available_shortnames and len(action) > 0:
-				self.warning("%s already set to %s -- typically, user should not change this." % (
-					action, current_setting.name))
+				Output.warning("Previous value: %s -- typically, user should not change this." % current_setting.name)
 
 		if newset not in available_shortnames:
-			self.fatal("%s %s not available. Can't set." % (action, newset))
+			Output.fatal("%s %s not available. Can't set." % (action, newset))
 		self.writeout = True
 
 		self.tree.replace_entry(profile_type, "core-kit:" + self.catalog.find_path(profile_type, newset))
 
 		self.short_list()
-		self.log(">>> Set %s to %s." % (action, newset))
+		Output.log(">>> Set %s to %s." % (action, newset))
 
 	def handle_mix_ins_action(self, **options):
 		mixins = options['mixins']
@@ -231,7 +226,7 @@ class Module(EgoModule):
 
 		for mixin in adds.union(subs):
 			if mixin not in valids:
-				self.fatal("Error: %s is not a valid mix-in." % mixin)
+				Output.fatal("Error: %s is not a valid mix-in." % mixin)
 
 		# remove "-" arguments.
 		removed = set()
@@ -258,13 +253,13 @@ class Module(EgoModule):
 
 		self.short_list()
 		for mixin in subs.difference(removed):
-			self.warning("Mix-in %s not found, not removing." % mixin)
+			Output.warning("Mix-in %s not found, not removing." % mixin)
 		for mixin in not_added:
-			self.warning("Mix-in %s already active, not adding." % mixin)
+			Output.warning("Mix-in %s already active, not adding." % mixin)
 		for mixin in removed:
-			self.log(">>> Removed %s mix-in." % mixin)
+			Output.log(">>> Removed %s mix-in." % mixin)
 		for mixin in added:
-			self.log(">>> Added %s mix-in." % mixin)
+			Output.log(">>> Added %s mix-in." % mixin)
 
 	def handle(self, **options):
 		portdir = portage.settings.repositories.mainRepoLocation()
@@ -285,18 +280,18 @@ class Module(EgoModule):
 			settings = list(self.tree.get_children(profile_type))
 			if len(settings) > 1:
 				for setting in settings[1:]:
-					self.warning("Extra profile of type '%s' defined: '%s'. Will be removed." % (str(profile_type), setting.name))
+					Output.warning("Extra profile of type '%s' defined: '%s'. Will be removed." % (str(profile_type), setting.name))
 				self.writeout = True
 			elif len(settings) == 0:
-				self.warning("No %s defined. Please set." % str(profile_type))
+				Output.warning("No %s defined. Please set." % str(profile_type))
 
 		if self.writeout:
 			if upgrade_to_core_kit:
-				self.warning("Upgrading gentoo repository references to core-kit.")
+				Output.warning("Upgrading gentoo repository references to core-kit.")
 			try:
 				self.tree.write()
 			except PermissionError:
-				self.fatal("You do not have permission to update profiles.")
+				Output.fatal("You do not have permission to update profiles.")
 
 	def __call__(self, *args):
 		# Little trick to force end of arguments when using mix-ins command to

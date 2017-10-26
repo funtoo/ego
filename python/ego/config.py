@@ -1,11 +1,12 @@
 #!/usr/bin/python3
 
 import sys
-import configparser
 from configparser import InterpolationError
 import os
-import json
 import glob
+import json
+from collections import OrderedDict
+from pathlib import Path
 
 class EgoConfig(object):
 
@@ -21,27 +22,47 @@ class EgoConfig(object):
 		else:
 			return default
 
-	def __init__(self, install_path="/usr/share/ego"):
+	def load_kit_metadata(self, fn):
+		if not hasattr(self, '_kit_%s' % fn):
+			path = Path(self.meta_repo_root) / 'metadata' / ('kit-%s.json' % fn)
+			try:
+				with path.open() as f:
+					return json.loads(f.read(), object_pairs_hook=OrderedDict)
+			except OSError:
+				return {}
+		return getattr(self, '_kit_%s' % fn)
 
-		settings = configparser.ConfigParser()
-		try:
-			settings.read('/etc/ego.conf')
-		except IOError:
-			print("Config file /etc/ego.conf not found.")
-			sys.exit(1)
+	@property
+	def kit_info(self):
+		return self.load_kit_metadata('info')
 
-		if 'EGO_INSTALL_PATH' in os.environ:
-			install_path = os.environ['EGO_INSTALL_PATH']
-		elif "global" in settings and "install_path" in settings["global"]:
-			install_path = settings["global"]["install_path"]
+	@property
+	def kit_sha1(self):
+		return self.load_kit_metadata('sha1')
 
-		sys.path.insert(0, install_path + "/python")
+	def get_configured_kit(self, kit, show_default=False):
+		if "kits" in self.settings and kit in self.settings["kits"]:
+			branch = self.settings["kits"][kit]
+		else:
+			branch = None
+		if branch and not show_default:
+			return branch
+		default = self.kit_info["kit_settings"][kit]["default"]
+		if show_default:
+			return (branch, default)
+		else:
+			return default
+
+	def __init__(self, settings, install_path="/usr/share/ego"):
+
+		# TODO: This is a mess and needs some cleaning up
 
 		self.ego_dir = install_path
 		self.ego_mods_dir = "%s/modules" % self.ego_dir
 		self.ego_mods_info_dir = "%s/modules-info" % self.ego_dir
 		self.ego_mods = []
 		self.ego_mods_info = {}
+
 		if os.path.isdir(self.ego_mods_dir):
 			for match in glob.glob(self.ego_mods_dir + "/*.ego"):
 				self.ego_mods.append(match.split("/")[-1][:-4])
@@ -57,6 +78,7 @@ class EgoConfig(object):
 		self.meta_repo_root = self.get_setting("global", "meta_repo_path", "/var/git/meta-repo")
 		self.sync_base_url = self.get_setting("global", "sync_base_url", "https://github.com/funtoo/{repo}")
 		self.meta_repo_branch = self.get_setting("global", "meta_repo_branch", "master")
+
 		kit_path = self.get_setting("global", "kits_path", "kits")
 		if kit_path.startswith("/"):
 			self.kit_root = kit_path

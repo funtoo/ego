@@ -5,13 +5,15 @@
 # Copyright 2017 Daniel Robbins and Funtoo Solutions, Inc.
 # See LICENSE.txt for terms of distribution. 
 
-import shutil
-import mwparserfromhell
 import html
-import subprocess
-from tabulate_color import tabulate
-from ego_helpers import *
 import re
+import shutil
+import subprocess
+
+import mwparserfromhell
+from tabulate_color import tabulate
+
+from ego.output import *
 
 rows, columns = subprocess.check_output(['stty', 'size']).decode().split()
 term_size = shutil.get_terminal_size((100,20))

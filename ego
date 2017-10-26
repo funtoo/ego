@@ -10,18 +10,31 @@ Funtoo's personality tool
 # Copyright 2015-2017 Daniel Robbins and Funtoo Solutions, Inc.
 # See LICENSE.txt for terms of distribution.
 
+import configparser
 import os
 import sys
 
 VERSION = "2.2.1"
 
-install_path="/var/src/ego"
+install_path = "/usr/share/ego"
+settings = configparser.ConfigParser()
+try:
+	settings.read('/etc/ego.conf')
+except IOError:
+	print("Config file /etc/ego.conf not found.")
+	sys.exit(1)
+
+if "global" in settings and "install_path" in settings["global"]:
+	install_path = settings["global"]["install_path"]
+
 sys.path.insert(0, install_path + "/python")
-from ego_config import EgoConfig
 
-econfig = EgoConfig(install_path=install_path)
+from ego.config import EgoConfig
 
-from ego_helpers import Color, header, run_ego_module
+econfig = EgoConfig(settings, install_path=install_path)
+
+from ego.output import Color, Output
+from ego.module import EgoModule
 
 if __name__ == "__main__":
 	exec_name = os.path.basename(sys.argv[0])
@@ -39,7 +52,7 @@ if __name__ == "__main__":
 	else:
 		if len(sys.argv) == 1 or (len(sys.argv) == 2 and sys.argv[1] in ["info", "help"]):
 			print("Usage: %s [module] [info|options]..." % os.path.basename(sys.argv[0]))
-			header("Available ego modules")
+			Output.header("Available ego modules")
 			for mod, info in econfig.available_modules():
 				desc = ''
 				if "description" in info:
@@ -60,7 +73,7 @@ if __name__ == "__main__":
 				if action == "info":
 					print("Extended information for %s ego module:" % mod)
 					for key in econfig.ego_mods_info[mod]:
-						print("%20s: %s" % (key, ego_config.ego_mods_info[mod][key]))
+						print("%20s: %s" % (key, econfig.ego_mods_info[mod][key]))
 					print()
 				else:
 					if "help" in econfig.ego_mods_info[mod]:
@@ -76,6 +89,6 @@ if __name__ == "__main__":
 			print(Color.RED + "Please specify an action. Type ego help for more info." + Color.END)
 			sys.exit(1)
 	if action:
-		run_ego_module(install_path, action, econfig, args, VERSION)
+		EgoModule.run_ego_module(install_path, action, econfig, args, VERSION)
 
 # vim: ts=4 sw=4 noexpandtab

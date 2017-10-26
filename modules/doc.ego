@@ -1,9 +1,10 @@
 #!/usr/bin/python3
 import sys
 
-from ego import EgoModule
-import mediawiki_api
-from mediawiki_cli_parser import wikitext_parse
+from ego.module import EgoModule
+from ego.output import Output
+from mediawiki.api import Wiki
+from mediawiki.cli_parser import wikitext_parse
 
 
 class Module(EgoModule):
@@ -12,8 +13,8 @@ class Module(EgoModule):
 		parser.add_argument('wiki_page', help="The name of a wiki page")
 
 	def handle(self, **options):
-		miwiki = mediawiki_api.Wiki("http://www.funtoo.org/api.php")
-		self.log((
+		miwiki = Wiki("http://www.funtoo.org/api.php")
+		Output.log((
 			"Fetching doc \"{wiki_page}\" from wiki... (http://www.funtoo.org/{wiki_page})"
 		).format(**options))
 		try:

@@ -1,14 +1,12 @@
 #!/usr/bin/python3
 
 
-import importlib.machinery
-import sys
-from datetime import datetime
-
 # Ego Helpers module.
 #
 # Copyright 2017 Daniel Robbins and Funtoo Solutions, Inc.
-# See LICENSE.txt for terms of distribution. 
+# See LICENSE.txt for terms of distribution.
+
+import sys
 
 def ago(diff):
 
@@ -39,28 +37,6 @@ def ago(diff):
 	else:
 		out = "just now"
 	return out
-
-def get_install_path(settings):
-	if "global" in settings and "install_path" in settings["global"]:
-		return settings["global"]["install_path"]
-	else:
-		return "/usr/share/ego"
-
-def get_ego_module(install_path, modname):
-	loader = importlib.machinery.SourceFileLoader(modname, '%s/modules/%s.ego' % (install_path, modname))
-	try:
-		return loader.load_module()
-	except FileNotFoundError:
-		return None
-
-def run_ego_module(install_path, modname, config, args, VERSION):
-	mod = get_ego_module(install_path, modname)
-	if mod:
-		ego_module = mod.Module(modname, install_path, config, VERSION)
-		ego_module(*args)
-	else:
-		print(Color.RED + "Error: ego module \"%s\" not found." % modname + Color.END)
-		sys.exit(1)
 
 def depluralize(str):
 	if str[-1] == "s":
@@ -146,8 +122,60 @@ class Color(object):
 	def ljust(self, width, fillchar=' '):
 		return self + self.default(' ' * (width - len(self)))
 
-def header(info):
-	print("\n=== " + Color.BOLD + Color.GREEN + info + Color.END + ": ===\n")
+
+class Output:
+
+	verbosity = 1
+
+	@classmethod
+	def header(self, info):
+		print("\n=== " + Color.BOLD + Color.GREEN + info + Color.END + ": ===\n")
+
+	@classmethod
+	def _output(cls, message, err=False):
+		message = str(message)
+		if not message.endswith('\n'):
+			message += '\n'
+		out = sys.stderr if err else sys.stdout
+		out.write(message)
+		out.flush()
+
+	@classmethod
+	def debug(cls, message):
+		"""Output debug message to stdout. Auto-append newline if missing"""
+		if cls.verbosity > 1:
+			cls._output(message)
+
+	@classmethod
+	def log(cls, message):
+		"""Output message to stdout. Auto-append newline if missing."""
+		if cls.verbosity > 0:
+			cls._output(message)
+
+	@classmethod
+	def echo(cls, message):
+		"""Output message as-is to stdout."""
+		if cls.verbosity > 0:
+			sys.stdout.write(str(message))
+			sys.stdout.flush()
+
+	@classmethod
+	def warning(cls, message):
+		"""Output warning message to stdout. Auto-append newline if missing."""
+		if cls.verbosity > -1:
+			cls._output(Color.yellow("WARNING: " + str(message)))
+
+	@classmethod
+	def error(cls, message):
+		"""Output error message to stderr. Auto-append newline if missing."""
+		if cls.verbosity > -1:
+			cls._output(Color.red("ERROR: " + str(message)), err=True)
+
+	@classmethod
+	def fatal(cls, message, exit_code=1):
+		"""Output error message to stderr and exit. Auto-append newline if missing."""
+		cls.error(message)
+		sys.exit(exit_code)
 
 class Table:
 
@@ -206,7 +234,5 @@ class Table:
 					(row * width)[:width] for width in self.cols_width
 				]) + '\n'
 		return output
-
-
 
 # vim: ts=4 sw=4 noet

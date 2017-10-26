@@ -3,8 +3,8 @@
 import sys
 import unittest
 sys.path.insert(0, "..")
-from ego_profile import ProfileType, ProfileSpecifier
-import os
+from ego.profile import ProfileType
+
 
 class ProfileEnumTest(unittest.TestCase):
 
