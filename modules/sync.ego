@@ -67,7 +67,7 @@ class Module(EgoModule):
 			if not self.hex_re.match(my_sha1):
 				Output.fatal("Fatal: kit CommitID not a SHA1: %s" % my_sha1)
 			if not self.hex_re.match(desired_sha1):
-				Output.fatal("Fatal: kit-my_sha1.json value not a SHA1: %s" % desired_sha1)
+				Output.fatal("Fatal: kit-sha1.json value not a SHA1: %s" % desired_sha1)
 
 		sha1_check(sha1, desired_sha1)
 
