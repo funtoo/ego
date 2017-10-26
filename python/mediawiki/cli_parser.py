@@ -11,7 +11,7 @@ import shutil
 import subprocess
 
 import mwparserfromhell
-from tabulate_color import tabulate
+from third_party.tabulate_color import tabulate
 
 from ego.output import *
 
