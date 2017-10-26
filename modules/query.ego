@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-
+import argparse
 import json
 import sys
 from datetime import datetime
@@ -20,19 +20,19 @@ class Module(EgoModule):
 		versions_parser = subparsers.add_parser('versions', aliases=['v'], help=(
 			"Show available ebuild versions matching the given atom."
 		))
-		versions_parser.add_argument('atom', type=appi.QueryAtom)
+		versions_parser.add_argument('atom', type=self.atom_argument(False))
 		versions_parser.set_defaults(handler=self.handle_versions_subcommand)
 
 		origin_parser = subparsers.add_parser('origin', aliases=['o'], help=(
 			"Show from which repository the given package comes from."
 		))
-		origin_parser.add_argument('package', type=appi.QueryAtom)
+		origin_parser.add_argument('package', type=self.atom_argument(False))
 		origin_parser.set_defaults(handler=self.handle_origin_subcommand)
 
 		bugs_parser = subparsers.add_parser('bugs', help=(
 			"Show Funtoo bugs related to the given package."
 		))
-		bugs_parser.add_argument('package', type=appi.QueryAtom)
+		bugs_parser.add_argument('package', type=self.atom_argument(False))
 		bugs_parser.set_defaults(handler=self.handle_bugs_subcommand)
 
 	def handle(self, **options):
@@ -160,5 +160,14 @@ class Module(EgoModule):
 				)
 
 		sys.stdout.write(str(table))
+
+	@staticmethod
+	def atom_argument(strict=True):
+		def atom_type(value):
+			try:
+				return appi.QueryAtom(value, strict)
+			except appi.AtomError as e:
+				raise argparse.ArgumentTypeError(str(e))
+		return atom_type
 
 # vim: ts=4 noet sw=4
