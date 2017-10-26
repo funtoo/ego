@@ -6,6 +6,7 @@ from datetime import datetime
 from xml.etree import ElementTree
 
 import appi
+import appi.exception
 import requests
 
 from ego.module import EgoModule
@@ -166,7 +167,7 @@ class Module(EgoModule):
 		def atom_type(value):
 			try:
 				return appi.QueryAtom(value, strict)
-			except appi.AtomError as e:
+			except appi.exception.AtomError as e:
 				raise argparse.ArgumentTypeError(str(e))
 		return atom_type
 
