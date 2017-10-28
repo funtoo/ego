@@ -118,7 +118,10 @@ class Module(EgoModule):
 				repo = GitHelper(self, self.root)
 				Output.log(Color.green("Syncing meta-repo"))
 				if repo.isGitRepo():
-					repo.fetchRemote("master")
+					repo.fetchRemote("master", options=["--no-recurse-submodules"])
+					repo.checkout("master")
+					repo.reset(options=["--hard"])
+					repo.clean(options=["-fd"])
 					retval = repo.pull(options=["--no-commit", "-f", "--no-recurse-submodules"])
 					if retval != 0:
 						Output.fatal("There was an error syncing meta-repo.")

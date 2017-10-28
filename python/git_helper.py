@@ -35,10 +35,12 @@ class GitHelper(object):
 		if self.isReadOnly():
 			self.module.fatal("Repository is at %s is read-only. Cannot update." % self.root)
 
-	def fetchRemote(self, branch, remote="origin"):
+	def fetchRemote(self, branch, remote="origin", options=None):
+		options = options or []
 		self.readOnlyCheck()
+		opts = " ".join(options)
 		run("git -C %s remote set-branches --add %s %s" % (self.root, remote, branch), quiet=self.quiet)
-		return run("git -C %s fetch %s refs/heads/%s:refs/remotes/%s/%s" % (self.root, remote, branch, remote, branch), quiet=self.quiet)
+		return run("git -C %s fetch %s %s refs/heads/%s:refs/remotes/%s/%s" % (self.root, opts, remote, branch, remote, branch), quiet=self.quiet)
 
 	def shallowClone(self, url, branch, depth=1):
 		return run("git clone -b %s --depth=%s --single-branch %s %s" % (branch, depth, url, self.root), quiet=self.quiet)
