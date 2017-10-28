@@ -78,8 +78,8 @@ class Module(EgoModule):
 		return True
 
 	def _output_footer(self):
-		wikitext = """Active branches displayed above reflect the settings specified in {{c|/etc/ego.conf}}. After making changes to
-{{c|ego.conf}}, be sure to run {{c|ego sync}} in order to synchronize kit git repositories to their specified branches."""
+		wikitext = """{{Note|This information comes from {{c|/etc/ego.conf}} and meta-repo metadata. After making changes to
+{{c|ego.conf}}, be sure to run {{c|ego sync}} in so that the individual kit repositories on disk are synchronized with the kit branches shown above.}}"""
 		wikitext_parse(wikitext, sys.stdout, indent="  ")
 		sys.stdout.write("\n")
 
