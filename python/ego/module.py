@@ -22,9 +22,8 @@ class EgoModule:
 		# Easy method for modules to perform constructor-related things.
 		pass
 
-	def __init__(self, name, install_path, config, VERSION=None):
+	def __init__(self, name, config, VERSION=None):
 		self.name = name
-		self.install_path = install_path
 		self.config = config
 		self.info = config.ego_mods_info[name]
 		self.version = VERSION
@@ -56,21 +55,17 @@ class EgoModule:
 		raise NotImplementedError
 
 	@classmethod
-	def get_ego_module(cls, install_path, modname):
-		loader = importlib.machinery.SourceFileLoader(modname, '%s/modules/%s.ego' % (install_path, modname))
+	def run_ego_module(cls, modname, config, args, VERSION=None):
+		loader = importlib.machinery.SourceFileLoader(modname, '%s/modules/%s.ego' % (config.ego_dir, modname))
 		try:
-			return loader.load_module()
+			mod = loader.load_module()
+			if mod:
+				ego_module = mod.Module(modname, config, VERSION)
+				ego_module(*args)
+			else:
+				print(Color.RED + "Error: ego module \"%s\" not found." % modname + Color.END)
+				sys.exit(1)
 		except FileNotFoundError:
 			return None
-
-	@classmethod
-	def run_ego_module(cls, install_path, modname, config, args, VERSION=None):
-		mod = EgoModule.get_ego_module(install_path, modname)
-		if mod:
-			ego_module = mod.Module(modname, install_path, config, VERSION)
-			ego_module(*args)
-		else:
-			print(Color.RED + "Error: ego module \"%s\" not found." % modname + Color.END)
-			sys.exit(1)
 
 # vim: ts=4 sw=4 noexpandtab

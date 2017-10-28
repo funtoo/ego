@@ -157,7 +157,7 @@ class Module(EgoModule):
 		Output.log(Color.green("Sync successful and kits in alignment! :)"))
 		Output.log(Color.green("Updating profiles..."))
 		try:
-			EgoModule.run_ego_module(self.install_path, 'profile', self.config, ['update'])
+			EgoModule.run_ego_module('profile', self.config, ['update'])
 		except PermissionError:
 			Output.error("Could not update ego profiles automatically due to permissions (code in /root, most likely.)")
 			Output.error("Please run epro update manually as root.")
