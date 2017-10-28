@@ -1,0 +1,151 @@
+.\" Man page generated from reStructuredText.
+.
+.TH EGO QUERY 1 "" "2.3.0" "Funtoo Linux Core System"
+.SH NAME
+ego query \- Funtoo Linux Ego Query Module
+.
+.nr rst2man-indent-level 0
+.
+.de1 rstReportMargin
+\\$1 \\n[an-margin]
+level \\n[rst2man-indent-level]
+level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
+-
+\\n[rst2man-indent0]
+\\n[rst2man-indent1]
+\\n[rst2man-indent2]
+..
+.de1 INDENT
+.\" .rstReportMargin pre:
+. RS \\$1
+. nr rst2man-indent\\n[rst2man-indent-level] \\n[an-margin]
+. nr rst2man-indent-level +1
+.\" .rstReportMargin post:
+..
+.de UNINDENT
+. RE
+.\" indent \\n[an-margin]
+.\" old: \\n[rst2man-indent\\n[rst2man-indent-level]]
+.nr rst2man-indent-level -1
+.\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
+.in \\n[rst2man-indent\\n[rst2man-indent-level]]u
+..
+.SH SYNOPSIS
+.sp
+The \fBego query\fP is a tool to display information about packages. Bellow are described the various available commands.
+.sp
+\fBego query [\-h] [\-\-version] [\-\-verbosity VERBOSITY | \-v | \-q] {versions,v,origin,o,bugs} ...\fP
+.sp
+\fBego query versions <atom>\fP
+.sp
+\fBego query origin <package>\fP
+.sp
+\fBego query bugs <package>\fP
+.SH QUERY VERSIONS
+.sp
+The \fBversions\fP (shortcut: \fBv\fP) command lists all available versions matching a given atom.
+For each version, it also shows its slot and repository (along with git branch if any).:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+$ ego query versions python
+ dev\-lang/python|     slot|                 repo
+\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-+\-\-\-\-\-\-\-\-\-+\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-
+          2.7.12|      2.7| python\-kit/3.6\-prime
+        * 2.7.13|         | python\-kit/3.6\-prime
+\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-+\-\-\-\-\-\-\-\-\-+\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-
+           3.4.5| 3.4/3.4m| python\-kit/3.6\-prime
+           3.4.6|         | python\-kit/3.6\-prime
+\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-+\-\-\-\-\-\-\-\-\-+\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-
+         * 3.5.3| 3.5/3.5m| python\-kit/3.6\-prime
+\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-+\-\-\-\-\-\-\-\-\-+\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-
+      * 3.6.1\-r1| 3.6/3.6m| python\-kit/3.6\-prime
+
+$ ego query versions \(aq=python\-3*\(aq
+ dev\-lang/python|     slot|                 repo
+\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-+\-\-\-\-\-\-\-\-\-+\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-
+           3.4.5| 3.4/3.4m| python\-kit/3.6\-prime
+           3.4.6|         | python\-kit/3.6\-prime
+\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-+\-\-\-\-\-\-\-\-\-+\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-
+         * 3.5.3| 3.5/3.5m| python\-kit/3.6\-prime
+\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-+\-\-\-\-\-\-\-\-\-+\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-
+      * 3.6.1\-r1| 3.6/3.6m| python\-kit/3.6\-prime
+
+$ ego query v dev\-lang/python:3.5
+ dev\-lang/python|     slot|                 repo
+\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-+\-\-\-\-\-\-\-\-\-+\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-
+         * 3.5.3| 3.5/3.5m| python\-kit/3.6\-prime
+
+$ ego query v coffee\-script
+ dev\-lang/coffee\-script| slot|           repo
+\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-+\-\-\-\-\-+\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-
+               1.9.3\-r1|    0| dev\-kit/master
+               * 1.12.5|     | dev\-kit/master
+
+ dev\-ruby/coffee\-script| slot|           repo
+\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-+\-\-\-\-\-+\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-
+                  2.4.1|    0| dev\-kit/master
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+Installed versions are in bold and marked with a star.
+.SH QUERY ORIGIN
+.sp
+The \fBorigin\fP (shortcut: \fBo\fP) command will tell you where a given package comes from and give
+you the URL to browse the ebuilds. This is mainly a tool for developers designed to figure out
+where fixes should be applied.:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+$ ego query origin dev\-python/appi
+dev\-python/appi::python\-kit comes from flora
+        https://github.com/funtoo/flora/tree/master/dev\-python/appi
+$ ego query o screen
+app\-misc/screen::core\-kit comes from kit\-fixups
+        https://github.com/funtoo/kit\-fixups/tree/master/core\-kit/global/app\-misc/screen
+        https://gitweb.gentoo.org/repo/gentoo.git/tree/app\-misc/screen
+app\-vim/screen::editors\-kit comes from gentoo\-staging
+        http://git.funtoo.org/gentoo\-staging/tree/app\-vim/screen
+        https://gitweb.gentoo.org/repo/gentoo.git/tree/app\-vim/screen
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+When the package is also available in Gentoo, the URL to the Gentoo repository is also shown in
+cyan as you may want to compare Funtoo version with Gentoo\(aqs.
+.SH QUERY BUGS
+.sp
+The \fBbugs\fP command lists bugs reported on \fI\%https://bugs.funtoo.org/\fP regarding the given atom.
+This allows you to quickly find out if an issue you\(aqre facing was reported recently.:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+$ ego query bugs www\-client/chromium
+FL\-4233 2017\-09\-21 Closed Unable to emerge the package \(aqwww\-client/chromium\(aq due to a missing dependency
+FL\-3019 2015\-11\-27 Closed Emerge fails to find proper dependencies for www\-client/chromium on arm with system\-ffmpeg
+FL\-444  2013\-03\-05 Closed www\-client/chromium depends on missing >=media\-libs/mesa\-9.1
+$ ego query bugs mesa
+FL\-3269 2016\-07\-19 Backlog media\-libs/mesa need video_cards_virgl use flag.
+FL\-2225 2015\-03\-29 Closed  [media\-libs/mesa] upgrading to 10.4.4 failed
+FL\-2224 2015\-03\-29 Closed  [media\-libs/mesa] bump new 10.4.4 version to 10.4.7
+FL\-634  2013\-07\-22 Closed  portage complaining that media\-libs/mesa and x11\-libs/cairo need openvg flag
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SH ADDITIONAL DOCUMENTATION
+.sp
+Please see \fI\%http://www.funtoo.org/Package:Ego\fP (\fBedoc "Package:Ego" | less\fP) for more detailed documentation.
+.SH AUTHOR
+Antoine Pinsard <antoine.pinsard@gmail.com>
+.\" Generated by docutils manpage writer.
+.
