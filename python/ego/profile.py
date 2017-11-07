@@ -319,10 +319,28 @@ class ProfileTree(object):
 
 		self.profile_hier = self._recurse(parent_lines=parent_lines)
 
-	def write(self):
-		with open(os.path.join(self.root_parent_dir, "parent"), "w") as outfile:
-			for specifier, odict in self.profile_hier.items():
-				outfile.write(str(specifier) + '\n')
+	@property
+	def master_parent_file(self):
+		return os.path.join(self.root_parent_dir, "parent")
+
+	def write(self, config, outfile):
+
+		python_kit_branch = config.get_configured_kit("python-kit")
+
+		# TODO: it's possible to get blank lines in the profile file, and the specifier doesn't like this...
+
+		for specifier, odict in self.profile_hier.items():
+			strout = str(specifier)
+			if strout.find(":funtoo/kits/python-kit/") != -1:
+				# strip old python-kit settings
+				continue
+			outfile.write(strout + '\n')
+
+		# add new python-kit settings
+		for kit in os.listdir(config.kit_root):
+			python_path = os.path.join(config.kit_root, kit, "profiles/funtoo/kits/python-kit/", python_kit_branch)
+			if os.path.exists(python_path):
+				outfile.write("%s:funtoo/kits/python-kit/" % kit + python_kit_branch + "\n")
 
 	def remove_line(self, spec_str):
 		"""
@@ -477,6 +495,8 @@ class ProfileTree(object):
 		with open(fn, 'r') as f:
 			for line in f.readlines():
 				if len(line) and line[0] == "#":
+					continue
+				elif len(line) == 0:
 					continue
 				yield line.strip()
 

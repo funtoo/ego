@@ -118,7 +118,8 @@ class Module(EgoModule):
 
 	def handle_update_action(self, **options):
 		try:
-			self.tree.write()
+			with open(self.tree.master_parent_file, "w") as outfile:
+				self.tree.write(self.config, outfile)
 		except PermissionError:
 			Output.fatal("You do not have permission to update profiles.")
 
@@ -288,10 +289,7 @@ class Module(EgoModule):
 		if self.writeout:
 			if upgrade_to_core_kit:
 				Output.warning("Upgrading gentoo repository references to core-kit.")
-			try:
-				self.tree.write()
-			except PermissionError:
-				Output.fatal("You do not have permission to update profiles.")
+			self.handle_update_action()
 
 	def __call__(self, *args):
 		# Little trick to force end of arguments when using mix-ins command to
