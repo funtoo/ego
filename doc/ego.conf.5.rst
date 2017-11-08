@@ -54,6 +54,14 @@ value or set to 0, which will cause the kits to be cloned with complete history.
 This setting defines the directory that will house meta-repo once cloned, and also where ego and Portage will look for
 meta-repo. The default value for *meta_repo_path* is ``/var/git/meta-repo``.
 
+**repos_conf_path**
+
+This setting specifies the directory which will be used to store generated repos.conf entries. By default, ego will
+generate repos.conf configuration files (and ensure they are updated) after an ``ego sync`` operation. To differentiate
+ego-generated repos.conf configuration files from user-provided files, all ego-generated files will have the prefix
+``ego-``. Also note that ego will take care of cleaning up (deleting) any ``ego-`` prefixed repos.conf entries that
+no longer exist in meta-repo.
+
 **sync_user**
 
 This setting defines the user and group that are used to perform the sync operation, and thus the user and group which

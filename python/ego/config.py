@@ -89,6 +89,7 @@ class EgoConfig(object):
 		self.meta_repo_root = self.get_setting("global", "meta_repo_path", "/var/git/meta-repo")
 		self.sync_base_url = self.get_setting("global", "sync_base_url", "https://github.com/funtoo/{repo}")
 		self.meta_repo_branch = self.get_setting("global", "meta_repo_branch", "master")
+		self.repos_conf_path = self.get_setting("global", "repos_conf_path", "/etc/portage/repos.conf")
 
 		kit_path = self.get_setting("global", "kits_path", "kits")
 		if kit_path.startswith("/"):

@@ -82,6 +82,48 @@ class Module(EgoModule):
 				success = kit.checkout(desired_sha1)
 		return success
 
+	def update_repos_conf(self):
+
+		if os.path.islink(self.config.repos_conf_path):
+			try:
+				os.unlink(self.config.repos_conf_path)
+				Output.echo(Color.darkcyan("Upgrading %s symlink to directory..." % self.config.repos_conf_path))
+			except PermissionError:
+				Output.warning("Unable to convert %s to directory; please do so manually." %
+				               self.config.repos_conf_path)
+
+		# generate new repos.conf entries:
+
+		if not os.path.exists(self.config.repos_conf_path):
+			os.makedirs(self.config.repos_conf_path)
+		config_files = set(os.listdir(self.config.repos_conf_path))
+		updated_config_files = set()
+		for kit_name in self.config.kit_info["kit_order"]:
+			repo_conf_path = os.path.join(self.config.repos_conf_path, "ego-" + kit_name)
+			kit_path= os.path.join(self.config.kit_root, kit_name)
+			if kit_name == "nokit":
+				kit_priority = -500
+			else:
+				kit_priority = 1
+			with open(repo_conf_path, "w") as f:
+				f.write("""[%s]
+location = %s
+auto-sync = no
+priority = %s	
+				""" % ( kit_name, kit_path, kit_priority))
+			updated_config_files.add("ego-" + kit_name)
+
+		# clean up any repos.conf entries that begin with "ego-" that are stale:
+
+		for config_file in config_files - updated_config_files:
+			if config_file.startswith("ego-"):
+				config_file_path = os.path.join(self.config.repos_conf_path, config_file)
+				try:
+					os.unlink(config_file_path)
+				except PermissionError:
+					Output.warning("Unable to remove stale repos.conf file: %s. Please remove manually." %
+					               config_file_path)
+
 	def sync_meta_repo(self, **options):
 		pwnam = pwd.getpwnam(self.config.sync_user)
 		uid = pwnam.pw_uid
@@ -107,6 +149,7 @@ class Module(EgoModule):
 		# We need to fork here in order to sync as sync_user and then switch back to root
 		pid = os.fork()
 		if pid == 0:
+			# in child process.
 			os.chdir('/tmp')  # Make sure we are not in /root or other user-forbidden directory
 			try:
 				os.setgid(gid)
@@ -153,13 +196,16 @@ class Module(EgoModule):
 			if len(fails):
 				for kt, branch in fails:
 					Output.error("There was an error syncing %s." % kt)
+			# these exit commands get run by the child process
 				sys.exit(1)
 			sys.exit(0)
-		# Forked process terminated here
+		# Forked process terminated here - now we are back in the parent:
 		if os.waitpid(pid, 0)[1] > 0:
 			return False
 		Output.log(Color.green("Sync successful and kits in alignment! :)"))
-		Output.log(Color.green("Updating profiles..."))
+		Output.log(Color.darkcyan("Updating profiles..."))
+		Output.log(Color.darkcyan("Updating repos.conf..."))
+		self.update_repos_conf()
 		try:
 			EgoModule.run_ego_module('profile', self.config, ['update'])
 		except PermissionError:
