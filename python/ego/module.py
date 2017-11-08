@@ -1,10 +1,23 @@
 import argparse
 import importlib.machinery
 import sys
+import os
 
 from ego.output import Color, Output
 
-__all__ = ['EgoModule']
+__all__ = ['EgoModule', 'usage']
+
+def usage(config):
+	print("Usage: %s [module] [info|options]..." % os.path.basename(sys.argv[0]))
+	Output.header("Available ego modules")
+	for mod, info in config.available_modules():
+		desc = ''
+		if "description" in info:
+			desc = info["description"]
+		if "shortcut" in info:
+			desc += " (%s%s%s)" % (Color.BOLD, info["shortcut"], Color.END)
+		print("%s%15s%s - %s" % (Color.CYAN, mod, Color.END, desc))
+	print()
 
 class EgoModule:
 

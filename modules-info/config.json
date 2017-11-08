@@ -1,0 +1,6 @@
+{
+	"description" : "Change ego.conf options from command-line",
+	"author" : "Daniel Robbins",
+	"version" : "1.0",
+	"actions" : [ "get", "set" ]
+}

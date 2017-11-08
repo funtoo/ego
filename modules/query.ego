@@ -9,7 +9,7 @@ import appi
 import appi.exception
 import requests
 
-from ego.module import EgoModule
+from ego.module import EgoModule, usage
 from ego.output import Color, Output, Table
 
 
@@ -37,8 +37,11 @@ class Module(EgoModule):
 		bugs_parser.set_defaults(handler=self.handle_bugs_subcommand)
 
 	def handle(self, **options):
-		handler = options.pop('handler')
-		handler(**options)
+		try:
+			handler = options.pop('handler')
+			handler(**options)
+		except KeyError:
+			usage(self.config)
 
 	def handle_versions_subcommand(self, **options):
 		"""Given a valid atom string, print version, slot, repository and a marker

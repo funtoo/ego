@@ -21,7 +21,7 @@ sync
   Ego sync module. See ego-sync(8).
 
 profile
-  Ego profile module (shortcut: *epro*) See ego-profile(8).
+  Ego profile querying and selection module (shortcut: *epro*) See ego-profile(8).
 
 query
   Ego query module. See ego-query(1).
@@ -30,7 +30,10 @@ doc
   Ego Wiki Documentation module. (shortcut: *edoc*) See ego-doc(1).
 
 kit
-  Ego kit module. see ego-kit(1).
+  Ego kit information module. see ego-kit(1).
+
+config
+  Ego configuration module to allow changing ``/etc/ego.conf`` from the command-line. See ego-config(8).
 
 You can invoke the relevant module by using the calling convention ``ego module [arg1...]``. For example, to view the
 Funtoo Linux Installation Guide, type ``ego doc Install | less``. Alternatively, you can use the module shortcut if

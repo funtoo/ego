@@ -22,6 +22,16 @@ class EgoConfig(object):
 		else:
 			return default
 
+	def set_setting(self, section, key, value):
+		if section not in self.settings:
+			self.settings.add_section(section)
+		self.settings.set(section, key, value)
+		self._save()
+
+	def _save(self):
+		with open(self.settings_path, "w") as outfile:
+			self.settings.write(outfile)
+
 	def load_kit_metadata(self, fn):
 		if not hasattr(self, '_kit_%s' % fn):
 			path = Path(self.meta_repo_root) / 'metadata' / ('kit-%s.json' % fn)
@@ -53,7 +63,7 @@ class EgoConfig(object):
 		else:
 			return default
 
-	def __init__(self, settings, install_path="/usr/share/ego"):
+	def __init__(self, settings, settings_path, install_path="/usr/share/ego"):
 
 		# TODO: This is a mess and needs some cleaning up
 
@@ -74,6 +84,7 @@ class EgoConfig(object):
 			else:
 				self.ego_mods_info[mod] = {}
 		self.settings = settings
+		self.settings_path = settings_path
 
 		self.meta_repo_root = self.get_setting("global", "meta_repo_path", "/var/git/meta-repo")
 		self.sync_base_url = self.get_setting("global", "sync_base_url", "https://github.com/funtoo/{repo}")

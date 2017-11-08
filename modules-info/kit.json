@@ -1,5 +1,5 @@
 {
-	"description" : "Kit-related information.",
+	"description" : "Kit-related information",
 	"author" : "Daniel Robbins",
 	"version" : "1.0",
 	"actions" : [ "status", "list", "show" ]

@@ -17,8 +17,9 @@ import sys
 VERSION = "2.3.1"
 
 settings = configparser.ConfigParser()
+settings_path = '/etc/ego.conf'
 try:
-	settings.read('/etc/ego.conf')
+	settings.read(settings_path)
 except IOError:
 	print("Config file /etc/ego.conf not found.")
 	sys.exit(1)
@@ -38,10 +39,12 @@ sys.path.insert(0, install_path + "/python")
 
 from ego.config import EgoConfig
 
-econfig = EgoConfig(settings, install_path=install_path)
+econfig = EgoConfig(settings, settings_path, install_path=install_path)
 
 from ego.output import Color, Output
-from ego.module import EgoModule
+from ego.module import EgoModule, usage
+
+
 
 if __name__ == "__main__":
 	exec_name = os.path.basename(sys.argv[0])
@@ -60,16 +63,7 @@ if __name__ == "__main__":
 	else:
 		# generic help display
 		if len(sys.argv) == 1 or (len(sys.argv) == 2 and sys.argv[1] in ["info", "help"]):
-			print("Usage: %s [module] [info|options]..." % os.path.basename(sys.argv[0]))
-			Output.header("Available ego modules")
-			for mod, info in econfig.available_modules():
-				desc = ''
-				if "description" in info:
-					desc = info["description"]
-				if "shortcut" in info:
-					desc += " (%s%s%s)" % (Color.BOLD, info["shortcut"], Color.END)
-				print("%s%15s%s - %s" % (Color.CYAN, mod, Color.END, desc))
-			print()
+			usage(econfig)
 		elif len(sys.argv) == 3 and sys.argv[1] in ["info", "help"]:
 			# ego help query, etc.
 			mod = sys.argv[2]

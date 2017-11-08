@@ -1,0 +1,47 @@
+#!/usr/bin/python3
+
+from ego.module import EgoModule, usage
+from ego.output import Color, Output
+
+class Module(EgoModule):
+
+	def handle_get_action(self, **options):
+		val = self.config.get_setting(options["section"][0], options["key"][0], default="")
+		print(val)
+
+	def handle_set_action(self, **options):
+		val = self.config.get_setting(options["section"][0], options["key"][0], default="")
+		Output.header("Changing setting %s/%s" % ( options["section"][0], options["key"][0]))
+		print(Color.darkcyan("Old value:"), val)
+		self.config.set_setting(options["section"][0], options["key"][0], options["value"][0])
+		print(Color.cyan("New value:"), options["value"][0])
+		print()
+		print("Setting saved to %s." % self.config.settings_path)
+
+	def add_arguments(self, parser):
+
+		subparsers = parser.add_subparsers(title='actions', dest='action')
+
+		get_parser = subparsers.add_parser('get', help="get a configuration setting")
+		get_parser.add_argument('section', nargs=1)
+		get_parser.add_argument('key', nargs=1)
+		get_parser.set_defaults(handler=self.handle_get_action)
+
+		set_parser = subparsers.add_parser('set', help="set a configuration setting")
+		set_parser.add_argument('section', nargs=1)
+		set_parser.add_argument('key', nargs=1)
+		set_parser.add_argument('value', nargs=1)
+		set_parser.set_defaults(handler=self.handle_set_action)
+
+	def handle_show_action(self, **options):
+		print(self.config)
+
+	def handle(self, **options):
+		global usage
+		try:
+			handler = options.pop('handler', self.handle_get_action)
+			handler(**options)
+		except KeyError:
+			usage(self.config)
+
+# vim: ts=4 noexpandtab sw=4
