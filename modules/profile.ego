@@ -1,9 +1,8 @@
 #!/usr/bin/python3
 
+import os
 import argparse
 import json
-
-import portage
 
 from ego.module import EgoModule
 from ego.output import Color, Output, depluralize
@@ -263,7 +262,7 @@ class Module(EgoModule):
 			Output.log(">>> Added %s mix-in." % mixin)
 
 	def handle(self, **options):
-		portdir = portage.settings.repositories.mainRepoLocation()
+		portdir = os.path.join(self.config.kit_root, "core-kit")
 
 		upgrade_to_core_kit = False
 
