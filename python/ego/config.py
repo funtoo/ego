@@ -86,6 +86,8 @@ class EgoConfig(object):
 			self.kit_root = os.path.join(self.meta_repo_root, kit_path)
 		self.sync_user = self.get_setting("global", "sync_user", "portage")
 
+		self.kit_depth = self.get_setting("global", "kits_depth", 2)
+
 	def available_modules(self):
 		for x in self.ego_mods:
 			yield x, self.ego_mods_info[x]

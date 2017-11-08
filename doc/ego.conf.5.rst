@@ -43,6 +43,12 @@ Use this setting to specify the path to the kits directory used by meta-repo. Wh
 will be relative to *meta_repo_path*, but it can also be set to an absolute path, in which case it will be interpreted
 as-is. The default settings for *kits_path* is "kits".
 
+**kits_depth**
+
+This setting specifies the default depth to use when cloning a kit. The default is 2, which is the minimum functioning
+default when using Funtoo kits directly. If using a time-delayed version of meta-repo, this can be set to a custom
+value or set to 0, which will cause the kits to be cloned with complete history.
+
 **meta_repo_path**
 
 This setting defines the directory that will house meta-repo once cloned, and also where ego and Portage will look for
