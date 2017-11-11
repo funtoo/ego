@@ -43,11 +43,11 @@ class EgoConfig(object):
 		return getattr(self, '_kit_%s' % fn)
 
 	@property
-	def kit_info(self):
+	def kit_info_metadata(self):
 		return self.load_kit_metadata('info')
 
 	@property
-	def kit_sha1(self):
+	def kit_sha1_metadata(self):
 		return self.load_kit_metadata('sha1')
 
 	def get_configured_kit(self, kit, show_default=False):
@@ -57,7 +57,7 @@ class EgoConfig(object):
 			branch = None
 		if branch and not show_default:
 			return branch
-		default = self.kit_info["kit_settings"][kit]["default"]
+		default = self.kit_info_metadata["kit_settings"][kit]["default"]
 		if show_default:
 			return (branch, default)
 		else:

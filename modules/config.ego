@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 
-from ego.module import EgoModule, usage
+import sys
+from ego.module import EgoModule
 from ego.output import Color, Output
 
 class Module(EgoModule):
@@ -10,11 +11,30 @@ class Module(EgoModule):
 		print(val)
 
 	def handle_set_action(self, **options):
-		val = self.config.get_setting(options["section"][0], options["key"][0], default="")
-		Output.header("Changing setting %s/%s" % ( options["section"][0], options["key"][0]))
+		section = options["section"][0]
+		key = options["key"][0]
+		value = options["value"][0]
+
+		# for kits, do some validation of config settings:
+
+		if section == "kits":
+			sha1s = self.config.kit_sha1_metadata
+			if key not in sha1s:
+				Output.fatal("No such kit: %s" % key)
+			if value not in sha1s[key]:
+				Output.error("No such branch for kit %s: %s" % ( key, value ))
+				Output.header("Available branches")
+				for branch in sha1s[key].keys():
+					print("  ", branch)
+				print()
+				sys.exit(1)
+
+		val = self.config.get_setting(section, key, default="")
+
+		Output.header("Changing setting %s/%s" % ( section, key))
 		print(Color.darkcyan("Old value:"), val)
-		self.config.set_setting(options["section"][0], options["key"][0], options["value"][0])
-		print(Color.cyan("New value:"), options["value"][0])
+		self.config.set_setting(section, key, value)
+		print(Color.cyan("New value:"), value)
 		print()
 		print("Setting saved to %s." % self.config.settings_path)
 
