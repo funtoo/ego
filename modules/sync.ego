@@ -106,11 +106,16 @@ class Module(EgoModule):
 			else:
 				kit_priority = 1
 			with open(repo_conf_path, "w") as f:
+				if kit_name == "core-kit":
+					f.write("""[DEFAULT]
+main-repo = core-kit
+
+""")
 				f.write("""[%s]
 location = %s
 auto-sync = no
 priority = %s	
-				""" % ( kit_name, kit_path, kit_priority))
+""" % ( kit_name, kit_path, kit_priority))
 			updated_config_files.add("ego-" + kit_name)
 
 		# clean up any repos.conf entries that begin with "ego-" that are stale:
