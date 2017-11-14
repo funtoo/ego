@@ -69,7 +69,7 @@ class Module(EgoModule):
 
 	def _output_header(self):
 		if not os.path.exists(self.config.meta_repo_root):
-			print("meta-repo does not exist and needs to be cloned.")
+			print("Funtoo's meta-repo does not exist and needs to be cloned. Please run 'ego sync' to perform initial clone.")
 			return False
 
 		sync_ago_string = ago(datetime.now() - self.repo.last_sync())
