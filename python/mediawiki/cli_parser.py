@@ -15,8 +15,7 @@ from third_party.tabulate_color import tabulate
 
 from ego.output import *
 
-rows, columns = subprocess.check_output(['stty', 'size']).decode().split()
-term_size = shutil.get_terminal_size((100,20))
+columns, rows = shutil.get_terminal_size((100,20))
 text_width = min(int(columns) - 1, 140)
 
 class TextType(str):
