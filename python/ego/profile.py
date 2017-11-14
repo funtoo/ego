@@ -500,6 +500,7 @@ class ProfileTree(object):
 					continue
 				yield line.strip()
 
+
 def getProfileCatalogAndTree(portdir):
 	catalog = ProfileCatalog(portdir + "/profiles")
 	tree = ProfileTree(catalog, "core-kit", {"core-kit": portdir})
