@@ -32,6 +32,12 @@ class EgoConfig(object):
 		with open(self.settings_path, "w") as outfile:
 			self.settings.write(outfile)
 
+	def meta_repo_exists(self):
+		if os.path.exists(self.meta_repo_root) and os.path.exists(self.meta_repo_root + "/metadata"):
+			return True
+		else:
+			return False
+
 	def load_kit_metadata(self, fn):
 		if not hasattr(self, '_kit_%s' % fn):
 			path = Path(self.meta_repo_root) / 'metadata' / ('kit-%s.json' % fn)
