@@ -112,7 +112,7 @@ class ProfileCatalog:
 	JSON file will be read in and contains paths where ProfileCatalog can find each type of sub-profile.
 	
 	ProfileCatalog allows an ``arch`` string to be set via ``self.set_arch()`` or specified directly as a keyword
-	argument to the ``self.list() method. When specified, this string will be used to augment the list of mix-ins with
+	argument to the ``self.list()`` method. When specified, this string will be used to augment the list of mix-ins with
 	subarch mix-ins, and provide a list of subarches. Note that without specifying ``arch``, it is impossible for
 	``ProfileCatalog`` to know where to look for subarch profiles.
 
@@ -186,7 +186,7 @@ class ProfileCatalog:
 
 class ProfileSpecifier(object):
 	""" ``ProfileSpecifier`` is an object used by ``ProfileTree`` to model the profile hierarchy. Each
-	``ProfileSpecifier`` takes a specifier that is in one of the following formats::
+	``ProfileSpecifier`` takes a specifier that is in one of the following formats:
 
 	``:foo/bar/oni``
 	  Relative to the base of the profile root.
@@ -446,8 +446,8 @@ class ProfileTree(object):
 		This method will return all immediate children of a particular profile type or types.
 
 		:param specifier: ``ProfileSpecifier`` in hierarchy to look, or root of hierarchy if None
-		:param child_types: a list of ``ProfileType``s to collect in a list. If ``None``, collect all.
-		:return:  A list of ``ProfileSpecifier``s matching the criteria.
+		:param child_types: a list of ``ProfileType``\s to collect in a list. If ``None``, collect all.
+		:return:  A list of ``ProfileSpecifier``\s matching the criteria.
 		"""
 
 		child_dict = self.profile_path_map[specifier.resolved_path if specifier else self.root_parent_dir]
@@ -468,7 +468,7 @@ class ProfileTree(object):
 		This method will recursively scan the profile hierarchy for all enabled profiles of a particular type or types.
 		A list of ``ProfileSpecifier`` objects will be returned.
 
-		:param child_types: A list of ``ProfileType``s to scan for, or ``None`` to return all types. Or just a single ``ProfileType``.
+		:param child_types: A list of ``ProfileType``\s to scan for, or ``None`` to return all types. Or just a single ``ProfileType``.
 		:param specifier: Start at the specified ``ProfileSpecifier`` in the hierarchy, or at top if ``None``.
 		:param _child_dict: Used for recursion calls only.
 		:return: A list of ``ProfileSpecifier`` objects matching the criteria.
