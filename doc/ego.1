@@ -1,6 +1,6 @@
 .\" Man page generated from reStructuredText.
 .
-.TH EGO 1 "" "2.3.1" "Funtoo Linux Core System"
+.TH EGO 1 "" "2.3.2" "Funtoo Linux Core System"
 .SH NAME
 ego \- Funtoo Linux System Management Meta-Command
 .
@@ -40,7 +40,7 @@ following modules are supported:
 Ego sync module. See ego\-sync(8).
 .TP
 .B profile
-Ego profile module (shortcut: \fIepro\fP) See ego\-profile(8).
+Ego profile querying and selection module (shortcut: \fIepro\fP) See ego\-profile(8).
 .TP
 .B query
 Ego query module. See ego\-query(1).
@@ -49,7 +49,10 @@ Ego query module. See ego\-query(1).
 Ego Wiki Documentation module. (shortcut: \fIedoc\fP) See ego\-doc(1).
 .TP
 .B kit
-Ego kit module. see ego\-kit(1).
+Ego kit information module. see ego\-kit(1).
+.TP
+.B config
+Ego configuration module to allow changing \fB/etc/ego.conf\fP from the command\-line. See ego\-config(8).
 .UNINDENT
 .sp
 You can invoke the relevant module by using the calling convention \fBego module [arg1...]\fP\&. For example, to view the
