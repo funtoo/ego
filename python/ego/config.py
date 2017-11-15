@@ -32,7 +32,7 @@ class EgoConfig(object):
 		with open(self.settings_path, "w") as outfile:
 			self.settings.write(outfile)
 
-	def meta_repo_exists(self):
+	def metadata_exists(self):
 		if os.path.exists(self.meta_repo_root) and os.path.exists(self.meta_repo_root + "/metadata"):
 			return True
 		else:

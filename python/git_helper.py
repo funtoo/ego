@@ -70,7 +70,7 @@ class GitHelper(object):
 	def exists(self):
 		return os.path.exists(self.root)
 
-	def isGitRepo(self):
+	def is_git_repo(self):
 		return os.path.exists(os.path.join(self.root, ".git"))
 
 	def checkout(self, branch="master", origin=None):
@@ -82,8 +82,12 @@ class GitHelper(object):
 		return retval == 0
 
 	def last_sync(self):
+		"""Returns datetime of last sync, or None if not a git repo."""
 		check_f = self.root + "/.git/FETCH_HEAD"
-		return datetime.fromtimestamp(os.path.getmtime(check_f))
+		try:
+			return datetime.fromtimestamp(os.path.getmtime(check_f))
+		except FileNotFoundError:
+			return None
 
 	@property
 	def commitID(self):

@@ -40,7 +40,7 @@ class Module(EgoModule):
 			Output.log(Color.purple("Syncing %s branch " % kit_name) + Color.green(branch) + Color.purple(" (non-default)"))
 		kit_path = os.path.join(self.config.kit_root, kit_name)
 		kit = GitHelper(self, kit_path)
-		if not kit.isGitRepo():
+		if not kit.is_git_repo():
 			try:
 				os.rmdir(kit.root)
 			except OSError:
@@ -50,7 +50,8 @@ class Module(EgoModule):
 			                   depth=self.config.kits_depth if self.config.kits_depth != 0 else None)
 			if retval != 0:
 				Output.fatal("Could not clone kit '%s' into '%s'." % (kit_name, kit_path))
-
+		else:
+			Output.fatal("Kit %s exists but does not appear to be a git repository. Can't sync." % kit_name)
 		if not kit.localBranchExists(branch):
 			kit.fetchRemote(branch)
 		kit.checkout(branch)
@@ -166,7 +167,7 @@ priority = %s
 			if not options['kits_only']:
 				repo = GitHelper(self, self.root)
 				Output.log(Color.green("Syncing meta-repo"))
-				if repo.isGitRepo():
+				if repo.is_git_repo():
 					repo.fetchRemote("master", options=["--no-recurse-submodules"])
 					repo.checkout("master")
 					repo.reset(options=["--hard"])
@@ -174,11 +175,13 @@ priority = %s
 					retval = repo.pull(options=["--no-commit", "-f", "--no-recurse-submodules"])
 					if retval != 0:
 						Output.fatal("There was an error syncing meta-repo.")
-				else:
+				elif not repo.exists():
 					retval = repo.clone(
 						self.config.sync_base_url.format(repo="meta-repo"), self.config.meta_repo_branch)
 					if retval != 0:
 						Output.fatal("Could not clone meta-repo into '%s'." % (self.root,))
+				else:
+					Output.fatal("Meta-repo exists but does not appear to be a git repository. Can't sync.")
 			fails = []
 			for kt in self.config.kit_info_metadata["kit_order"]:
 				branch = None

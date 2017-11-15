@@ -68,13 +68,15 @@ class Module(EgoModule):
 		self._output_footer()
 
 	def _output_header(self):
-		if not self.config.meta_repo_exists():
+		if not self.config.metadata_exists():
 			self._no_repo_available()
 			return False
 
-		sync_ago_string = ago(datetime.now() - self.repo.last_sync())
-		print(Color.green(self.config.meta_repo_root) + " (updated %s):" % sync_ago_string)
-		print()
+		last_sync = self.repo.last_sync()
+		if last_sync is not None:
+			sync_ago_string = ago(datetime.now() - self.repo.last_sync())
+			print(Color.green(self.config.meta_repo_root) + " (updated %s):" % sync_ago_string)
+			print()
 		return True
 
 	def _output_footer(self):
