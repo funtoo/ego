@@ -106,3 +106,6 @@ venv.bak/
 # mypy
 .mypy_cache/
 
+# Ignore .idea directory. Causes issues when used on a system other 
+# than the original one it was created on
+.idea/
