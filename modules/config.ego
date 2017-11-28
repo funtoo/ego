@@ -57,11 +57,10 @@ class Module(EgoModule):
 		print(self.config)
 
 	def handle(self, **options):
-		global usage
 		try:
 			handler = options.pop('handler', self.handle_get_action)
 			handler(**options)
 		except KeyError:
-			usage(self.config)
+			options["parser"].print_help()
 
 # vim: ts=4 noexpandtab sw=4
