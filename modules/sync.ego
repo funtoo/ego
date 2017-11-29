@@ -51,7 +51,8 @@ class Module(EgoModule):
 			if retval != 0:
 				Output.fatal("Could not clone kit '%s' into '%s'." % (kit_name, kit_path))
 		else:
-			Output.fatal("Kit %s exists but does not appear to be a git repository. Can't sync." % kit_name)
+			if not kit.is_git_repo():
+				Output.fatal("Kit %s exists but does not appear to be a git repository. Can't sync." % kit_name)
 		if not kit.localBranchExists(branch):
 			kit.fetchRemote(branch)
 		kit.checkout(branch)
@@ -137,22 +138,21 @@ priority = %s
 		if "HOME" in os.environ:
 			# git will look here for various things
 			del os.environ["HOME"]
-		if not os.path.exists(self.root):
-			try:
-				os.mkdir(self.root)
-			except PermissionError:
-				Output.fatal(
-					"You don't have enough privileges. You should probably run this command as root."
-				)
-		stat_info = os.stat(self.root)
+
+		containing_dir = os.path.dirname(self.root)
+		if not os.path.exists(containing_dir):
+			os.makedirs(containing_dir, 0o775)
+		stat_info = os.stat(containing_dir)
 		if stat_info.st_uid != uid and self.config.sync_user != "root":
 			try:
-				run("chown -R %s:%s %s" % (uid, gid, self.root), quiet=True)
+				run("chown -R %s:%s %s" % (uid, gid, containing_dir), quiet=True)
 			except PermissionError:
 				Output.fatal(
 					"You don't have enough privileges. You should probably run this command as root."
 				)
-		# We need to fork here in order to sync as sync_user and then switch back to root
+
+		# /var/git exists now, and is owned by portage:portage, and is ug=rwx, o=rx. Now we can drop perms and clone:
+
 		pid = os.fork()
 		if pid == 0:
 			# in child process.
@@ -176,10 +176,9 @@ priority = %s
 					if retval != 0:
 						Output.fatal("There was an error syncing meta-repo.")
 				elif not repo.exists():
-					retval = repo.clone(
-						self.config.sync_base_url.format(repo="meta-repo"), self.config.meta_repo_branch)
+					retval = repo.clone(self.config.sync_base_url.format(repo="meta-repo"), self.config.meta_repo_branch)
 					if retval != 0:
-						Output.fatal("Could not clone meta-repo into '%s'." % (self.root,))
+						Output.fatal("Could not clone meta-repo at '%s'." % (self.root,))
 				else:
 					Output.fatal("Meta-repo exists but does not appear to be a git repository. Can't sync.")
 			fails = []
