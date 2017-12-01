@@ -89,7 +89,7 @@ class Module(EgoModule):
 		if os.path.islink(self.config.repos_conf_path):
 			try:
 				os.unlink(self.config.repos_conf_path)
-				Output.echo(Color.darkcyan("Upgrading %s symlink to directory..." % self.config.repos_conf_path))
+				Output.echo(Color.darkcyan("Upgrading %s symlink to directory...\n" % self.config.repos_conf_path))
 			except PermissionError:
 				Output.warning("Unable to convert %s to directory; please do so manually." %
 				               self.config.repos_conf_path)
