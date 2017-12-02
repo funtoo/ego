@@ -212,6 +212,12 @@ class ProfileSpecifier(object):
 		self.tree = tree
 		self.cwd = cwd
 		self.spec_str = spec_str
+
+		if self.spec_str.startswith("gentoo:"):
+			self.spec_str = "core-kit:" + self.spec_str[7:]
+			self.modified = True
+		else:
+			self.modified = False
 		self._resolved_path = None
 		self._profile_type = None
 
@@ -322,6 +328,13 @@ class ProfileTree(object):
 	@property
 	def master_parent_file(self):
 		return os.path.join(self.root_parent_dir, "parent")
+
+	@property
+	def modified(self):
+		for specifier, odict in self.profile_hier.items():
+			if specifier.modified:
+				return True
+		return False
 
 	def write(self, config, outfile):
 

@@ -48,7 +48,7 @@ class Module(EgoModule):
 		list_parser.set_defaults(handler=self.handle_list_action)
 
 		update_parser = subparsers.add_parser('update', help="Update your profiles (/etc/portage/make.profile/parent)")
-		update_parser.set_defaults(handler=self.handle_update_action)
+		update_parser.set_defaults(handler=self.handle_write)
 
 		single_profile_parsers = [
 			subparsers.add_parser('arch', help="Change your arch profile"),
@@ -115,7 +115,7 @@ class Module(EgoModule):
 					Output.log("      %s%26s%s (from %s %s)" % (Color.CYAN, inherited_spec.name, Color.END, parent_name, parent_type))
 		Output.log("")
 
-	def handle_update_action(self, **options):
+	def handle_write(self, **options):
 		try:
 			with open(self.tree.master_parent_file, "w") as outfile:
 				self.tree.write(self.config, outfile)
@@ -245,7 +245,7 @@ class Module(EgoModule):
 		not_added = adds - available_mix_in_shortnames
 
 		for shortname in adds & available_mix_in_shortnames:
-			self.tree.append_mixin("gentoo:" + self.catalog.find_path(ProfileType.MIX_IN, shortname))
+			self.tree.append_mixin("core-kit:" + self.catalog.find_path(ProfileType.MIX_IN, shortname))
 			self.writeout = True
 
 		# Do all output here -- our shortList() will reflect the mix-in changes made above. Then put informational messages
@@ -264,14 +264,12 @@ class Module(EgoModule):
 	def handle(self, **options):
 		portdir = os.path.join(self.config.kit_root, "core-kit")
 
-		upgrade_to_core_kit = False
-
 		self.catalog, self.tree = getProfileCatalogAndTree(portdir)
 
 		# If the profile needs to be written out for any reason, to either update it or fix it, writeout will be set to
 		# true.
 
-		self.writeout = upgrade_to_core_kit
+		self.writeout = self.tree.modified
 
 		handler = options.pop('handler', self.handle_show_action)
 		handler(**options)
@@ -286,9 +284,7 @@ class Module(EgoModule):
 				Output.warning("No %s defined. Please set." % str(profile_type))
 
 		if self.writeout:
-			if upgrade_to_core_kit:
-				Output.warning("Upgrading gentoo repository references to core-kit.")
-			self.handle_update_action()
+			self.handle_write()
 
 	def __call__(self, *args):
 		# Little trick to force end of arguments when using mix-ins command to
