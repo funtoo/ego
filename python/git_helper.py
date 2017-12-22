@@ -4,6 +4,7 @@ import os
 from cmdtools import run_statusoutput, run
 from pathlib import Path
 from datetime import datetime
+from ego.output import Output
 
 class GitHelper(object):
 
@@ -33,7 +34,7 @@ class GitHelper(object):
 
 	def readOnlyCheck(self):
 		if self.isReadOnly():
-			self.module.fatal("Repository is at %s is read-only. Cannot update." % self.root)
+			Output.fatal("Repository is at %s is read-only. Cannot update." % self.root)
 
 	def fetchRemote(self, branch, remote="origin", options=None):
 		options = options or []
