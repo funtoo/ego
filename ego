@@ -14,7 +14,7 @@ import configparser
 import os
 import sys
 
-VERSION = "2.3.3"
+VERSION = "2.3.4"
 
 settings = configparser.ConfigParser()
 settings_path = '/etc/ego.conf'
