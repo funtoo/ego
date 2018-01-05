@@ -116,7 +116,7 @@ main-repo = core-kit
 				f.write("""[%s]
 location = %s
 auto-sync = no
-priority = %s	
+priority = %s
 """ % ( kit_name, kit_path, kit_priority))
 			updated_config_files.add("ego-" + kit_name)
 
