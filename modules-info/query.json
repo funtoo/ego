@@ -1,6 +1,6 @@
 {
 	"description" : "Query package information",
 	"author" : "Antoine Pinsard",
-	"version" : "1.0",
+	"version" : "1.1",
 	"actions" : [ "versions", "origin", "bugs" ]
 }

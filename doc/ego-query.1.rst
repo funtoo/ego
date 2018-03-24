@@ -69,7 +69,8 @@ For each version, it also shows its slot and repository (along with git branch i
  -----------------------+-----+---------------
                    2.4.1|    0| dev-kit/master
 
-Installed versions are in bold and marked with a star.
+Installed versions are in bold and marked with a star (*). Except for installed versions that are
+not in the tree anymore. Those versions are marked with a red minus (-) sign.
 
 
 QUERY ORIGIN

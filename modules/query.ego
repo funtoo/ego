@@ -78,7 +78,11 @@ class Module(EgoModule):
 				repo = (repo + '/') + Color.green(branch)
 			version = Color.cyan(ebuild.version)
 			if ebuild.is_installed():
-				version = Color.bold('* ') + Color.bold(version)
+				if ebuild.is_in_tree():
+					marker = '* '
+				else:
+					marker = Color.red('- ')
+				version = Color.bold(marker) + Color.bold(version)
 			table.append(version, Color.yellow(slot), repo)
 
 		Output.echo(table)
