@@ -68,17 +68,21 @@ class Module(EgoModule):
 				old_slot = slot
 			else:
 				slot = ''
-			repo = ebuild.repository
+			repo_name = ebuild.repo_name
 			try:
-				branch = self.config.get_configured_kit(repo.name)
+				branch = self.config.get_configured_kit(repo_name)
 			except KeyError:
 				branch = None
-			repo = Color.blue(repo.name)
+			repo = Color.blue(repo_name)
 			if branch:
 				repo = (repo + '/') + Color.green(branch)
 			version = Color.cyan(ebuild.version)
 			if ebuild.is_installed():
-				version = Color.bold('* ') + Color.bold(version)
+				if ebuild.is_in_tree():
+					marker = '* '
+				else:
+					marker = Color.red('- ')
+				version = Color.bold(marker) + Color.bold(version)
 			table.append(version, Color.yellow(slot), repo)
 
 		Output.echo(table)

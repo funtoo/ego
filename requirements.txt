@@ -1,4 +1,4 @@
--e git+https://gitlab.com/apinsard/appi.git@0.1#egg=appi
+-e git+https://gitlab.com/apinsard/appi.git@0.2#egg=appi
 mwparserfromhell
 git+https://github.com/apinsard/portage.git@master
 requests
