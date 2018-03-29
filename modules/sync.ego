@@ -155,15 +155,15 @@ priority = %s
 					               config_file_path)
 
 	def sync_meta_repo(self):
-		pwnam = pwd.getpwnam(self.config.sync_user)
-		uid = pwnam.pw_uid
-		gid = pwnam.pw_gid
 		if "HOME" in os.environ:
 			# git will look here for various things
 			del os.environ["HOME"]
 
 		containing_dir = os.path.dirname(self.root)
 		if self.options.dest is None:
+			pwnam = pwd.getpwnam(self.config.sync_user)
+			uid = pwnam.pw_uid
+			gid = pwnam.pw_gid
 			if not os.path.exists(containing_dir):
 				os.makedirs(containing_dir, 0o775)
 			stat_info = os.stat(containing_dir)
