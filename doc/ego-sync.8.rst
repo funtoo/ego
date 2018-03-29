@@ -14,7 +14,7 @@ Funtoo Linux Sync Module
 SYNOPSIS
 ========
 
-``ego sync [-h] [--kits-only] [--dest DESTINATION]``
+``ego sync [-h] [--kits-only|--meta-repo-only] [--dest DESTINATION]``
 
 USAGE
 =====
@@ -26,6 +26,10 @@ Syncing Kits Only
 ~~~~~~~~~~~~~~~~~
 
 Use the ``--kits-only`` option to tell ego to only sync the kits themselves, and not update meta-repo.
+
+Syncing Meta-Repo Only
+~~~~~~~~~~~~~~~~~~~~~~
+Use the ``--meta-repo-only`` option to tell ego to only sync meta-repo, and not update or clone any kits.
 
 Creating a Meta-Repo For Archiving
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
