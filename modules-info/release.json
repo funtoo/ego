@@ -1,0 +1,6 @@
+{
+	"description" : "Release-related information",
+	"author" : "Daniel Robbins",
+	"version" : "1.0",
+	"actions" : [ "status", "list", "show", "upgrade" ]
+}

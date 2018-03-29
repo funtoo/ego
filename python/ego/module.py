@@ -4,6 +4,7 @@ import sys
 import os
 
 from ego.output import Color, Output
+from mediawiki.cli_parser import wikitext_parse
 
 __all__ = ['EgoModule', 'usage']
 
@@ -41,6 +42,14 @@ class EgoModule:
 		self.info = config.ego_mods_info[name]
 		self.version = VERSION
 		self.setup()
+
+	def _no_repo_available(self, exit=True):
+		wikitext = "{{Note|Meta-repo has not yet been cloned, so no kit information is available. Type {{c|ego sync}}"
+		wikitext += " to perform an initial clone of meta-repo.}}"
+		wikitext_parse(wikitext, sys.stdout, indent="  ")
+		sys.stdout.write("\n")
+		if exit:
+			sys.exit(1)
 
 	def __call__(self, *args):
 		parser = argparse.ArgumentParser('ego ' + self.name, description=self.info['description'])

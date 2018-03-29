@@ -86,13 +86,6 @@ class Module(EgoModule):
 		wikitext_parse(wikitext, sys.stdout, indent="  ")
 		sys.stdout.write("\n")
 
-	def _no_repo_available(self):
-		wikitext = "{{Note|Meta-repo has not yet been cloned, so no kit information is available. Type {{c|ego sync}}"
-		wikitext += " to perform an initial clone of meta-repo.}}"
-		wikitext_parse(wikitext, sys.stdout, indent="  ")
-		sys.stdout.write("\n")
-		sys.exit(1)
-
 	def _get_branch_stability_string(self, kit, kit_branch):
 		kit_stability = self.config.kit_info_metadata["kit_settings"][kit]['stability'][kit_branch]
 		if kit_stability == "prime":

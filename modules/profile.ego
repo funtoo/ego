@@ -96,7 +96,10 @@ class Module(EgoModule):
 
 	def handle_show_action(self, **options):
 		self.short_list()
-		self.python_info()
+		if not self.config.metadata_exists():
+			self._no_repo_available()
+		else:
+			self.python_info()
 
 		for specifier in self.tree.get_children([ProfileType.FLAVOR, ProfileType.MIX_IN]):
 
