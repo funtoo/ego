@@ -181,13 +181,14 @@ priority = %s
 		if pid == 0:
 			# in child process.
 			os.chdir('/tmp')  # Make sure we are not in /root or other user-forbidden directory
-			try:
-				os.setgid(gid)
-				os.setuid(uid)
-			except PermissionError:
-				Output.fatal(
-					"You don't have enough privileges. You should probably run this command as root."
-				)
+			if self.options.dest is None:
+				try:
+					os.setgid(gid)
+					os.setuid(uid)
+				except PermissionError:
+					Output.fatal(
+						"You don't have enough privileges. You should probably run this command as root."
+					)
 			if not self.options.kits_only:
 				repo = GitHelper(self, self.root)
 				Output.log(Color.green("Syncing meta-repo"))
