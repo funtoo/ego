@@ -23,6 +23,9 @@ try:
 except IOError:
 	print("Config file /etc/ego.conf not found.")
 	sys.exit(1)
+except configparser.Error as e:
+	print("Config file error: %s" % e.message)
+	sys.exit(1)
 
 file_path = os.path.realpath(__file__)
 parent_path = os.path.dirname(file_path)
