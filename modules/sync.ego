@@ -45,9 +45,17 @@ class Module(EgoModule):
 				os.rmdir(kit.root)
 			except OSError:
 				pass
+		sha1_data = self.config.kit_sha1_metadata[kit_name][branch]
+		if type(sha1_data) == dict:
+			# new format
+			desired_depth = sha1_data["depth"] if self.config.kits_depth !=0 else None
+			desired_sha1 = sha1_data["sha1"]
+		else:
+			desired_depth = self.config.kits_depth if self.config.kits_depth != 0 else None
+			desired_sha1 = sha1_data
+
 		if not kit.exists():
-			retval = kit.clone(self.config.sync_base_url.format(repo=kit_name), branch,
-			                   depth=self.config.kits_depth if self.config.kits_depth != 0 else None)
+			retval = kit.clone(self.config.sync_base_url.format(repo=kit_name), branch, depth=desired_depth)
 			if retval != 0:
 				Output.fatal("Could not clone kit '%s' into '%s'." % (kit_name, kit_path))
 		else:
@@ -62,7 +70,6 @@ class Module(EgoModule):
 
 		# do sync
 		sha1 = kit.commitID
-		desired_sha1 = self.config.kit_sha1_metadata[kit_name][branch]
 		success = False
 
 		def sha1_check(my_sha1, desired_sha1):
@@ -91,8 +98,7 @@ class Module(EgoModule):
 				os.unlink(self.config.repos_conf_path)
 				Output.echo(Color.darkcyan("Upgrading %s symlink to directory...\n" % self.config.repos_conf_path))
 			except PermissionError:
-				Output.warning("Unable to convert %s to directory; please do so manually." %
-				               self.config.repos_conf_path)
+				Output.warning("Unable to convert %s to directory; please do so manually." % self.config.repos_conf_path)
 
 		# generate new repos.conf entries:
 
