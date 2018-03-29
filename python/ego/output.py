@@ -7,6 +7,10 @@
 # See LICENSE.txt for terms of distribution.
 
 import sys
+if sys.stdout.isatty():
+	is_tty = True
+else:
+	is_tty = False
 
 def ago(diff):
 
@@ -48,17 +52,17 @@ class ColorType(str):
 	pass
 
 class Color(object):
-	PURPLE = ColorType('\033[95m')
-	CYAN = ColorType('\033[96m')
-	DARKCYAN = ColorType('\033[36m')
-	DARKBLUEBG = ColorType('\033[48;5;018m')
-	BLUE = ColorType('\033[94m')
-	GREEN = ColorType('\033[92m')
-	YELLOW = ColorType('\033[93m')
-	RED = ColorType('\033[91m')
-	BOLD = ColorType('\033[1m')
-	UNDERLINE = ColorType('\033[4m')
-	END = ColorType('\033[0m')
+	PURPLE = ColorType('\033[95m' if is_tty else "")
+	CYAN = ColorType('\033[96m' if is_tty else "")
+	DARKCYAN = ColorType('\033[36m' if is_tty else "")
+	DARKBLUEBG = ColorType('\033[48;5;018m' if is_tty else "")
+	BLUE = ColorType('\033[94m' if is_tty else "")
+	GREEN = ColorType('\033[92m' if is_tty else "")
+	YELLOW = ColorType('\033[93m' if is_tty else "")
+	RED = ColorType('\033[91m' if is_tty else "")
+	BOLD = ColorType('\033[1m' if is_tty else "")
+	UNDERLINE = ColorType('\033[4m' if is_tty else "")
+	END = ColorType('\033[0m' if is_tty else "")
 	AUTOFLUSH = ColorType("")
 
 	@classmethod
