@@ -17,11 +17,15 @@ import sys
 VERSION = "2.4.0_beta1"
 
 settings = configparser.ConfigParser()
-settings_path = '/etc/ego.conf'
+
+if "EGO_CONFIG" in os.environ:
+	settings_path = os.environ["EGO_CONFIG"]
+else:
+	settings_path = '/etc/ego.conf'
 try:
 	settings.read(settings_path)
 except IOError:
-	print("Config file /etc/ego.conf not found.")
+	print("Config file %s not found." % settings_path)
 	sys.exit(1)
 except configparser.Error as e:
 	print("Config file error: %s" % e.message)
@@ -46,8 +50,6 @@ econfig = EgoConfig(settings, settings_path, install_path=install_path)
 
 from ego.output import Color, Output
 from ego.module import EgoModule, usage
-
-
 
 if __name__ == "__main__":
 	exec_name = os.path.basename(sys.argv[0])

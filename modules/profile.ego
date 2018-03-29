@@ -94,7 +94,7 @@ class Module(EgoModule):
 				outdict[key].append(out)
 		return outdict
 
-	def handle_show_action(self, **options):
+	def handle_show_action(self):
 		self.short_list()
 		if not self.config.metadata_exists():
 			self._no_repo_available()
@@ -118,23 +118,23 @@ class Module(EgoModule):
 					Output.log("      %s%26s%s (from %s %s)" % (Color.CYAN, inherited_spec.name, Color.END, parent_name, parent_type))
 		Output.log("")
 
-	def handle_write(self, **options):
+	def handle_write(self):
 		try:
 			with open(self.tree.master_parent_file, "w") as outfile:
 				self.tree.write(self.config, outfile)
 		except PermissionError:
 			Output.fatal("You do not have permission to update profiles.")
 
-	def handle_show_json_action(self, **options):
+	def handle_show_json_action(self):
 		Output.log(json.dumps(self.short_JSON(), indent=4))
 
-	def handle_get_action(self, **options):
-		Output.log(' '.join(p.name for p in self.tree.get_children(ProfileType.from_string(options['profile']))))
+	def handle_get_action(self):
+		Output.log(' '.join(p.name for p in self.tree.get_children(ProfileType.from_string(self.options.profile))))
 
-	def handle_list_action(self, **options):
+	def handle_list_action(self):
 
 		# Time to list all available profile settings.
-		profiles = options['profiles']
+		profiles = self.options.profiles
 
 		for key in [ ProfileType.ARCH, ProfileType.BUILD, ProfileType.SUBARCH, ProfileType.FLAVOR, ProfileType.MIX_IN ]:
 			if profiles and str(key) not in profiles:
@@ -187,9 +187,9 @@ class Module(EgoModule):
 			Output.log("")
 		Output.log("")
 
-	def handle_single_profile_actions(self, **options):
-		action = options['action']
-		newset = options['new_value']
+	def handle_single_profile_actions(self):
+		action = self.options.action
+		newset = self.options.new_value
 		profile_type = ProfileType.from_string(action)
 		if profile_type == None:
 			Output.fatal("Unknown profile type: %s" % action)
@@ -212,8 +212,8 @@ class Module(EgoModule):
 		self.short_list()
 		Output.log(">>> Set %s to %s." % (action, newset))
 
-	def handle_mix_ins_action(self, **options):
-		mixins = options['mixins']
+	def handle_mix_ins_action(self):
+		mixins = self.options.mixins
 
 		adds = set()
 		subs = set()
@@ -264,8 +264,8 @@ class Module(EgoModule):
 		for mixin in added:
 			Output.log(">>> Added %s mix-in." % mixin)
 
-	def handle(self, **options):
-		portdir = os.path.join(self.config.kit_root, "core-kit")
+	def handle(self):
+		portdir = os.path.join(self.config.kits_root, "core-kit")
 
 		self.catalog, self.tree = getProfileCatalogAndTree(portdir)
 
@@ -274,8 +274,8 @@ class Module(EgoModule):
 
 		self.writeout = self.tree.modified
 
-		handler = options.pop('handler', self.handle_show_action)
-		handler(**options)
+		handler = getattr(self.options, "handler", self.handle_show_action)
+		handler()
 
 		for profile_type in ProfileType.single():
 			settings = list(self.tree.get_children(profile_type))

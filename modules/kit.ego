@@ -33,7 +33,7 @@ class Module(EgoModule):
 		list_parser = subparsers.add_parser('list', help="List all available kits.")
 		list_parser.set_defaults(handler=self.kits_list)
 
-	def kits_list(self, **options):
+	def kits_list(self):
 		if not self._output_header():
 			return
 
@@ -98,7 +98,7 @@ class Module(EgoModule):
 			kit_stability = Color.red(kit_stability)
 		return kit_stability
 
-	def meta_repo_info(self, **options):
+	def meta_repo_info(self):
 		"""
 		This implements 'ego sync status' and is just a starting point. It currently displays the ego.conf-defined
 		or default repo, but not the actual git repo that is selected on disk. So it should be a lot more sophisticated
@@ -126,6 +126,6 @@ class Module(EgoModule):
 				      str(kit_stability).ljust(10) + Color.END)
 		self._output_footer()
 
-	def handle(self, **options):
-		handler = options.pop('handler', self.meta_repo_info)
-		handler(**options)
+	def handle(self):
+		handler = getattr(self.options, 'handler', self.meta_repo_info)
+		handler()

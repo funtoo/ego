@@ -6,14 +6,14 @@ from ego.output import Color, Output
 
 class Module(EgoModule):
 
-	def handle_get_action(self, **options):
-		val = self.config.get_setting(options["section"][0], options["key"][0], default="")
+	def handle_get_action(self):
+		val = self.config.get_setting(self.options.section[0], self.options.key[0], default="")
 		print(val)
 
-	def handle_set_action(self, **options):
-		section = options["section"][0]
-		key = options["key"][0]
-		value = options["value"][0]
+	def handle_set_action(self):
+		section = self.options.section[0]
+		key = self.options.key[0]
+		value = self.options.value[0]
 
 		# for kits, do some validation of config settings:
 
@@ -53,14 +53,11 @@ class Module(EgoModule):
 		set_parser.add_argument('value', nargs=1)
 		set_parser.set_defaults(handler=self.handle_set_action)
 
-	def handle_show_action(self, **options):
+	def handle_show_action(self):
 		print(self.config)
 
-	def handle(self, **options):
-		try:
-			handler = options.pop('handler', self.handle_get_action)
-			handler(**options)
-		except KeyError:
-			options["parser"].print_help()
+	def handle(self):
+		handler = getattr(self.options, 'handler', self.handle_get_action)
+		handler()
 
 # vim: ts=4 noexpandtab sw=4

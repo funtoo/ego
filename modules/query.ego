@@ -36,18 +36,18 @@ class Module(EgoModule):
 		bugs_parser.add_argument('package', type=self.atom_argument(False))
 		bugs_parser.set_defaults(handler=self.handle_bugs_subcommand)
 
-	def handle(self, **options):
-		try:
-			handler = options.pop('handler')
-			handler(**options)
-		except KeyError:
+	def handle(self):
+		handler = getattr(self.options, "handler", None)
+		if handler is not None:
+			handler()
+		else:
 			usage(self.config)
 
-	def handle_versions_subcommand(self, **options):
+	def handle_versions_subcommand(self):
 		"""Given a valid atom string, print version, slot, repository and a marker
 		if installed for each ebuild matching the atom.
 		"""
-		atom = options['atom']
+		atom = self.options.atom
 		ebuilds = sorted(atom.list_matching_ebuilds(), key=lambda x: (
 			x.category, x.package, x.get_version()))
 		old_cat_pkg = None
@@ -87,7 +87,7 @@ class Module(EgoModule):
 
 		Output.echo(table)
 
-	def handle_origin_subcommand(self, **options):
+	def handle_origin_subcommand(self):
 		"""Given a valid atom string, print the origin repository where this
 		package was retrieved before being merged to kits.
 		Using another information than category, package and repository in the
@@ -102,7 +102,7 @@ class Module(EgoModule):
 			'rh1': 'https://github.com/x48rph/glassfish/tree/master/{cat}/{pkg}',
 		}
 		gentoo_base_url = 'https://gitweb.gentoo.org/repo/gentoo.git/tree/{cat}/{pkg}'
-		atom = options['package']
+		atom = self.options.package
 		r = requests.get('http://ports.funtoo.org/packages.xml')
 		root = ElementTree.fromstring(r.text)
 		xpath = 'category'
@@ -141,9 +141,9 @@ class Module(EgoModule):
 					)
 				)
 
-	def handle_bugs_subcommand(self, **options):
+	def handle_bugs_subcommand(self):
 		"""Given a valid atom string, list related bugs on bugs.funtoo.org."""
-		atom = options['package']
+		atom = self.options.package
 		searches = set(
 			'{}/{}'.format(x.category, x.package)
 			for x in atom.list_matching_ebuilds()

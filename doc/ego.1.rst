@@ -39,6 +39,12 @@ You can invoke the relevant module by using the calling convention ``ego module 
 Funtoo Linux Installation Guide, type ``ego doc Install | less``. Alternatively, you can use the module shortcut if
 one exists, such as ``edoc install | less``.
 
+ENVIRONMENT VARIABLES
+---------------------
+
+``EGO_CONFIG``
+  Use this environment variable to set an alternate path to the configuration file (default is ``/etc/ego.conf``.)
+
 LICENSE
 --------
 

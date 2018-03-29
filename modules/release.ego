@@ -33,6 +33,6 @@ class Module(EgoModule):
 		list_parser = subparsers.add_parser('list', help="List all available releases.")
 		list_parser.set_defaults(handler=self.release_list)
 
-	def handle(self, **options):
-		handler = options.pop('handler', self.meta_repo_info)
-		handler(**options)
+	def handle(self):
+		handler = getattr(self.options, 'handler', self.meta_repo_info)
+		handler()

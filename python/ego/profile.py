@@ -350,8 +350,8 @@ class ProfileTree(object):
 			outfile.write(strout + '\n')
 
 		# add new python-kit settings
-		for kit in os.listdir(config.kit_root):
-			python_path = os.path.join(config.kit_root, kit, "profiles/funtoo/kits/python-kit/", python_kit_branch)
+		for kit in os.listdir(config.kits_root):
+			python_path = os.path.join(config.kits_root, kit, "profiles/funtoo/kits/python-kit/", python_kit_branch)
 			if os.path.exists(python_path):
 				outfile.write("%s:funtoo/kits/python-kit/" % kit + python_kit_branch + "\n")
 

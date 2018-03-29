@@ -12,13 +12,13 @@ class Module(EgoModule):
 	def add_arguments(self, parser):
 		parser.add_argument('wiki_page', help="The name of a wiki page")
 
-	def handle(self, **options):
+	def handle(self):
 		miwiki = Wiki("http://www.funtoo.org/api.php")
 		Output.log((
-			"Fetching doc \"{wiki_page}\" from wiki... (http://www.funtoo.org/{wiki_page})"
-		).format(**options))
+			"Fetching doc \"%s\" from wiki... (http://www.funtoo.org/{wiki_page})"
+		) % self.options.wiki_page)
 		try:
-			wikitext_page = miwiki.getPage(options['wiki_page'])
+			wikitext_page = miwiki.getPage(self.options.wiki_page)
 			wikitext_parse(wikitext_page, sys.stdout)
 		except BrokenPipeError:
 			# this gets rid of ugly broken pipe message from python:

@@ -99,9 +99,9 @@ class EgoConfig(object):
 
 		kit_path = self.get_setting("global", "kits_path", "kits")
 		if kit_path.startswith("/"):
-			self.kit_root = kit_path
+			self.kits_root = kit_path
 		else:
-			self.kit_root = os.path.join(self.meta_repo_root, kit_path)
+			self.kits_root = os.path.join(self.meta_repo_root, kit_path)
 		self.sync_user = self.get_setting("global", "sync_user", "portage")
 
 		self.kits_depth = self.get_setting("global", "kits_depth", 2)

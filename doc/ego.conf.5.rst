@@ -49,6 +49,9 @@ This setting specifies the default depth to use when cloning a kit. The default 
 default when using Funtoo kits directly. If using a time-delayed version of meta-repo, this can be set to a custom
 value or set to 0, which will cause the kits to be cloned with complete history.
 
+Note that in ego 2.4.0 and greater, when git-depth data is detected in meta-repo, this depth data will be used instead,
+and this setting has no effect unless set to 0, which will enable full history.
+
 **meta_repo_path**
 
 This setting defines the directory that will house meta-repo once cloned, and also where ego and Portage will look for

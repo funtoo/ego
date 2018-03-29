@@ -41,7 +41,9 @@ class EgoModule:
 		self.config = config
 		self.info = config.ego_mods_info[name]
 		self.version = VERSION
+		self.options = None
 		self.setup()
+
 
 	def _no_repo_available(self, exit=True):
 		wikitext = "{{Note|Meta-repo has not yet been cloned, so no kit information is available. Type {{c|ego sync}}"
@@ -66,15 +68,17 @@ class EgoModule:
 		verbosity_group.add_argument('-q', default=0, action='count', help="Decrease verbosity level by 1 per occurrence")
 		self.add_arguments(parser)
 		options = parser.parse_args(args)
+		self.options = options
 		options = vars(options)
 		options["parser"] = parser
 		Output.verbosity = options.pop('verbosity') + options.pop('v') - options.pop('q')
-		self.handle(**options)
+
+		self.handle()
 
 	def add_arguments(self, parser):
 		pass
 
-	def handle(self, **options):
+	def handle(self):
 		raise NotImplementedError
 
 	@classmethod

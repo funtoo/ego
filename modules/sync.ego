@@ -18,16 +18,32 @@ class Module(EgoModule):
 	@property
 	def root(self):
 		if not hasattr(self, '_root'):
-			root = self.config.meta_repo_root
+			if self.options.dest != None:
+				root = self.options.dest
+			else:
+				root = self.config.meta_repo_root
 			if not os.path.exists(os.path.dirname(root)):
 				os.makedirs(os.path.dirname(root))
 			self._root = root
 		return self._root
 
+	@property
+	def kits_root(self):
+		if not hasattr(self, '_kits_root'):
+			if self.options.dest != None:
+				root = self.options.dest + "/kits"
+			else:
+				root = self.config.kits_root
+			if not os.path.exists(os.path.dirname(root)):
+				os.makedirs(os.path.dirname(root))
+			self._kits_root = root
+		return self._kits_root
+
 	def add_arguments(self, parser):
 		parser.add_argument('--kits-only', action='store_true', help="Do not sync meta-repo, only kits.")
+		parser.add_argument('--dest', dest="dest", default=None, help="Manually specify destination of meta-repo")
 
-	def sync_kit(self, kit_name, branch=None):
+	def sync_kit(self, kit_name, kit_root, branch=None):
 		if branch is None:
 			# use default
 			branch = self.config.kit_info_metadata["kit_settings"][kit_name]["default"]
@@ -38,7 +54,7 @@ class Module(EgoModule):
 		else:
 			# highlight non-default branches in green for convenience
 			Output.log(Color.purple("Syncing %s branch " % kit_name) + Color.green(branch) + Color.purple(" (non-default)"))
-		kit_path = os.path.join(self.config.kit_root, kit_name)
+		kit_path = os.path.join(kit_root, kit_name)
 		kit = GitHelper(self, kit_path)
 		if not kit.is_git_repo():
 			try:
@@ -108,7 +124,7 @@ class Module(EgoModule):
 		updated_config_files = set()
 		for kit_name in self.config.kit_info_metadata["kit_order"]:
 			repo_conf_path = os.path.join(self.config.repos_conf_path, "ego-" + kit_name)
-			kit_path= os.path.join(self.config.kit_root, kit_name)
+			kit_path = os.path.join(self.config.kit_root, kit_name)
 			if kit_name == "nokit":
 				kit_priority = -500
 			else:
@@ -137,7 +153,7 @@ priority = %s
 					Output.warning("Unable to remove stale repos.conf file: %s. Please remove manually." %
 					               config_file_path)
 
-	def sync_meta_repo(self, **options):
+	def sync_meta_repo(self):
 		pwnam = pwd.getpwnam(self.config.sync_user)
 		uid = pwnam.pw_uid
 		gid = pwnam.pw_gid
@@ -170,7 +186,7 @@ priority = %s
 				Output.fatal(
 					"You don't have enough privileges. You should probably run this command as root."
 				)
-			if not options['kits_only']:
+			if not self.options.kits_only:
 				repo = GitHelper(self, self.root)
 				Output.log(Color.green("Syncing meta-repo"))
 				if repo.is_git_repo():
@@ -203,7 +219,7 @@ priority = %s
 						Output.warning("Kit %s branch %s specified in ego.conf is not currently active; using default kit instead." % (kt, branch))
 						branch = None
 
-				success = self.sync_kit(kt, branch=branch)
+				success = self.sync_kit(kt, self.kits_root, branch=branch)
 				if not success:
 					fails.append((kt, branch))
 			if len(fails):
@@ -216,17 +232,19 @@ priority = %s
 		if os.waitpid(pid, 0)[1] > 0:
 			return False
 		Output.log(Color.green("Sync successful and kits in alignment! :)"))
-		Output.log(Color.darkcyan("Updating profiles..."))
-		Output.log(Color.darkcyan("Updating repos.conf..."))
-		self.update_repos_conf()
-		try:
-			EgoModule.run_ego_module('profile', self.config, ['update'])
-		except PermissionError:
-			Output.error("Could not update ego profiles automatically due to permissions (code in /root, most likely.)")
-			Output.error("Please run epro update manually as root.")
+		if self.options.dest is None:
+			# not manually overridden for archiving...
+			Output.log(Color.darkcyan("Updating repos.conf..."))
+			self.update_repos_conf()
+			Output.log(Color.darkcyan("Updating profiles..."))
+			try:
+				EgoModule.run_ego_module('profile', self.config, ['update'])
+			except PermissionError:
+				Output.error("Could not update ego profiles automatically due to permissions (code in /root, most likely.)")
+				Output.error("Please run epro update manually as root.")
 		return True
 
-	def handle(self, **options):
-		self.sync_meta_repo(**options)
+	def handle(self):
+		self.sync_meta_repo()
 
 # vim: ts=4 sw=4 noet
