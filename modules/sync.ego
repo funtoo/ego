@@ -162,16 +162,17 @@ priority = %s
 			del os.environ["HOME"]
 
 		containing_dir = os.path.dirname(self.root)
-		if not os.path.exists(containing_dir):
-			os.makedirs(containing_dir, 0o775)
-		stat_info = os.stat(containing_dir)
-		if stat_info.st_uid != uid and self.config.sync_user != "root":
-			try:
-				run("chown -R %s:%s %s" % (uid, gid, containing_dir), quiet=True)
-			except PermissionError:
-				Output.fatal(
-					"You don't have enough privileges. You should probably run this command as root."
-				)
+		if self.options.dest is None:
+			if not os.path.exists(containing_dir):
+				os.makedirs(containing_dir, 0o775)
+			stat_info = os.stat(containing_dir)
+			if stat_info.st_uid != uid and self.config.sync_user != "root":
+				try:
+					run("chown -R %s:%s %s" % (uid, gid, containing_dir), quiet=True)
+				except PermissionError:
+					Output.fatal(
+						"You don't have enough privileges. You should probably run this command as root."
+					)
 
 		# /var/git exists now, and is owned by portage:portage, and is ug=rwx, o=rx. Now we can drop perms and clone:
 
