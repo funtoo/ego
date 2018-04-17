@@ -1,5 +1,5 @@
 {
-	"description" : "Release-related information",
+	"description" : "Upgrade-related tools",
 	"author" : "Daniel Robbins",
 	"version" : "1.0",
 	"actions" : [ "status", "list", "show", "upgrade" ]

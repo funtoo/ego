@@ -1,0 +1,101 @@
+class UpgradeHandler:
+	pass
+
+class KitHandler(UpgradeHandler):
+	pass
+
+class ReleaseHandler(UpgradeHandler):
+	pass
+
+class Release12UpgradeHandler(UpgradeHandler):
+
+	key = "release"
+
+	_kits = [
+		"core-kit"
+		"security-kit",
+		"media-kit",
+		"java-kit",
+		"ruby-kit",
+		"haskell-kit",
+		"lisp-scheme-kit",
+		"lang-kit",
+		"dev-kit",
+		"desktop-kit"
+	]
+
+	@classmethod
+	def available_upgrades(cls):
+
+		reqs = []
+		results = []
+
+		for kit in cls._kits:
+			if kit == "media-kit":
+				reqs.append({"kit": kit, "branch": "1.1-prime"})
+			reqs.append({"kit": kit, "branch": "1.0-prime"})
+
+		for kit in cls._kits:
+			results.append({"kit": kit, "branch": "1.2-prime"})
+
+		return [
+			{
+				"target": {"release": "1.2"},
+				"requirements": reqs,
+				"results": results
+			}
+		]
+
+	def get_steps(self):
+
+
+class PythonKitUpgradeHandler(KitHandler):
+
+	key = "python-kit"
+
+	@classmethod
+	def available_upgrades(cls):
+
+		return [
+			{
+				"target": {"kit": "python-kit", "branch": "3.6-prime"},
+				"requirements": [
+					{"kit": "python-kit", "branch": "3.4-prime"}
+				]
+			}
+		]
+
+	def get_steps(self, cur_kits, new_kits):
+		new_branch = new_kits["python-kit"]
+		old_branch = cur_kits["python_kit"]
+		new_v, new_rating = new_branch.split("-") # "3.6", "prime"
+		old_v, old_rating = old_branch.split("-")
+		new_major = Decimal(new_v[:3]) # 3.6
+		old_major = Decimal(old_v[:3])
+		post_steps = [ "emerge -uDN @world" ]
+		if new_major != old_major:
+			post_steps += ["eselect python set --python3 python%s" % new_major]
+		for major in self.settings["remove"]:
+			post_steps.append("emerge -C =dev-lang/python-%s" % major)
+		return [], post_steps
+
+
+class Module(EgoModule):
+
+	def setup(self):
+		self.repo = GitHelper(self, self.root)
+
+	@property
+	def root(self):
+		if not hasattr(self, '_root'):
+			root = self.config.meta_repo_root
+			if not os.path.exists(os.path.dirname(root)):
+				os.makedirs(os.path.dirname(root))
+			self._root = root
+		return self._root
+
+	def list_upgrades(self):
+		for my_class in PythonKitUpgradeHandler, Release12UpgradeHandler:
+			print(my_class.key)
+			for upgrade in my_class.available_upgrades():
+				print("  ",upgrade["target"])

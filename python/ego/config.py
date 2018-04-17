@@ -1,12 +1,42 @@
 #!/usr/bin/python3
 
 import sys
-from configparser import InterpolationError
+
 import os
 import glob
 import json
 from collections import OrderedDict
 from pathlib import Path
+import configparser
+from configparser import InterpolationError
+
+def getConfig():
+	settings = configparser.ConfigParser()
+	if "EGO_CONFIG" in os.environ:
+		settings_path = os.environ["EGO_CONFIG"]
+	else:
+		settings_path = '/etc/ego.conf'
+	try:
+		settings.read(settings_path)
+	except IOError:
+		print("Config file %s not found." % settings_path)
+		sys.exit(1)
+	except configparser.Error as e:
+		print("Config file error: %s" % e.message)
+		sys.exit(1)
+	file_path = os.path.realpath(__file__)
+	parent_path = os.path.dirname(file_path)
+
+	if os.path.isdir(os.path.join(parent_path, ".git")) and os.path.basename(parent_path) == "ego":
+		# we are being run from a git repository; so run in "dev mode", grab modules, etc from git path...
+		install_path = parent_path
+	elif "global" in settings and "install_path" in settings["global"]:
+		install_path = settings["global"]["install_path"]
+	else:
+		install_path = "/usr/share/ego"
+	sys.path.insert(0, install_path + "/python")
+	return EgoConfig(settings, settings_path, install_path=install_path)
+
 
 class EgoConfig(object):
 

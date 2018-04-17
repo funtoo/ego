@@ -132,7 +132,7 @@ class TaskRunner(object):
 		pass
 
 	def run(self):
-		for task in self.tasks: 
+		for task in self.tasks:
 			if not task.execute(self):
 				self.failEvent()
 				return False
