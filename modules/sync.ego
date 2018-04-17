@@ -155,15 +155,15 @@ priority = %s
 					               config_file_path)
 
 	def sync_meta_repo(self):
-		pwnam = pwd.getpwnam(self.config.sync_user)
-		uid = pwnam.pw_uid
-		gid = pwnam.pw_gid
 		if "HOME" in os.environ:
 			# git will look here for various things
 			del os.environ["HOME"]
 
 		containing_dir = os.path.dirname(self.root)
 		if self.options.dest is None:
+			pwnam = pwd.getpwnam(self.config.sync_user)
+			uid = pwnam.pw_uid
+			gid = pwnam.pw_gid
 			if not os.path.exists(containing_dir):
 				os.makedirs(containing_dir, 0o775)
 			stat_info = os.stat(containing_dir)
@@ -181,13 +181,14 @@ priority = %s
 		if pid == 0:
 			# in child process.
 			os.chdir('/tmp')  # Make sure we are not in /root or other user-forbidden directory
-			try:
-				os.setgid(gid)
-				os.setuid(uid)
-			except PermissionError:
-				Output.fatal(
-					"You don't have enough privileges. You should probably run this command as root."
-				)
+			if self.options.dest is None:
+				try:
+					os.setgid(gid)
+					os.setuid(uid)
+				except PermissionError:
+					Output.fatal(
+						"You don't have enough privileges. You should probably run this command as root."
+					)
 			if not self.options.kits_only:
 				repo = GitHelper(self, self.root)
 				Output.log(Color.green("Syncing meta-repo"))
