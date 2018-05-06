@@ -134,6 +134,19 @@ USAGE EXAMPLES
 ``epro get flavor``
   Show current setting for flavor in plain-text format, suitable for scripting.
 
+USING PROFILES IN YOUR OWN REPOSITORIES
+=======================================
+
+Ego now supports profiles that are defined in your own repositories. See the ``ego.conf`` man page for information on
+how to configure this. The following commands are now supported to allow you to query and display profiles that are
+available in your own repositories:
+
+``epro list my_repo``
+  List the profiles available in ``my_repo``.
+
+``epro mix-ins + my_repo:foobar``
+  Add the ``foobar`` mix-in defined in ``my_repo``.
+
 ADDITIONAL DOCUMENTATION
 ========================
 

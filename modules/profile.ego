@@ -31,10 +31,10 @@ class Module(EgoModule):
 		valid_profile_types = [ str(x) for x in ProfileType.valid() ]
 		subparsers = parser.add_subparsers(title='actions', dest='action')
 
-		show_parser = subparsers.add_parser('show', help="Print your profiles")
+		show_parser = subparsers.add_parser('show', help="Print profiles")
 		show_parser.set_defaults(handler=self.handle_show_action)
 
-		show_json_parser = subparsers.add_parser('show-json', help="Print your profiles in JSON format")
+		show_json_parser = subparsers.add_parser('show-json', help="Print profiles in JSON format")
 		show_json_parser.set_defaults(handler=self.handle_show_json_action)
 
 		get_parser = subparsers.add_parser('get', help="Print the value of a given profile")
@@ -47,7 +47,7 @@ class Module(EgoModule):
 		))
 		list_parser.set_defaults(handler=self.handle_list_action)
 
-		update_parser = subparsers.add_parser('update', help="Update your profiles (/etc/portage/make.profile/parent)")
+		update_parser = subparsers.add_parser('update', help="Update profiles (/etc/portage/make.profile/parent)")
 		update_parser.set_defaults(handler=self.handle_write)
 
 		single_profile_parsers = [
