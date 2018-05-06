@@ -556,6 +556,8 @@ def getProfileCatalogAndTree():
 	catalog.set_arch(current_arch.name if current_arch is not None else None)
 	return catalog, tree
 
+#TODO: can currently keep adding multiple 'gnome' mix-ins....
+
 if __name__ == "__main__":
 	# A quick example to parse profiles in core-kit. Note how the profiles tree specified in the ProfileCatalog()
 	# constructor is completely decoupled from the core-kit repo. In theory, it could live anywhere.
