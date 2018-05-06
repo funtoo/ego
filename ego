@@ -98,6 +98,9 @@ if __name__ == "__main__":
 			print(Color.RED + "Please specify an action. Type ego help for more info." + Color.END)
 			sys.exit(1)
 	if action:
-		EgoModule.run_ego_module(action, econfig, args, VERSION)
+		try:
+			EgoModule.run_ego_module(action, econfig, args, VERSION)
+		except KeyboardInterrupt:
+			Output.fatal("Interrupted -- exiting.")
 
 # vim: ts=4 sw=4 noexpandtab
