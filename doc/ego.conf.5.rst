@@ -97,7 +97,7 @@ After changing default kit values, be sure to run ``ego sync`` to update meta-re
 be sure to run ``epro update`` to regenerate your profile information (in some cases, this can be done manually by
 ``ego sync``).
 
-Profile Section
+Profiles Section
 ===============
 
 The *profile* section can be used to specify repositories that contain Funtoo-compatible multi-profiles. It is used
