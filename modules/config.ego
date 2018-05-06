@@ -6,6 +6,8 @@ from ego.output import Color, Output
 
 class Module(EgoModule):
 
+	valid_sections = ["kits", "profiles", "global"]
+
 	def handle_get_action(self):
 		val = self.config.get_setting(self.options.section[0], self.options.key[0], default="")
 		print(val)
@@ -14,6 +16,9 @@ class Module(EgoModule):
 		section = self.options.section[0]
 		key = self.options.key[0]
 		value = self.options.value[0]
+
+		if section not in self.valid_sections:
+			Output.fatal("Section should be one of: " + repr(self.valid_sections))
 
 		# for kits, do some validation of config settings:
 
