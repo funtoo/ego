@@ -265,9 +265,7 @@ class Module(EgoModule):
 			Output.log(">>> Added %s mix-in." % mixin)
 
 	def handle(self):
-		portdir = os.path.join(self.config.kits_root, "core-kit")
-
-		self.catalog, self.tree = getProfileCatalogAndTree(portdir)
+		self.catalog, self.tree = getProfileCatalogAndTree()
 
 		# If the profile needs to be written out for any reason, to either update it or fix it, writeout will be set to
 		# true.

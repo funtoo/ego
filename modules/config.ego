@@ -4,8 +4,6 @@ import sys
 from ego.module import EgoModule
 from ego.output import Color, Output
 
-
-
 class Module(EgoModule):
 
 	def handle_get_action(self):

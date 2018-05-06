@@ -14,6 +14,7 @@ import os
 from enum import Enum
 import errno
 from collections import OrderedDict, defaultdict
+from ego.config import getConfig
 
 class ProfileName(Enum):
 	"""
@@ -102,6 +103,38 @@ class ProfileType(ProfileName):
 		# profile types that should only be set once.
 		return [ ProfileType.ARCH, ProfileType.BUILD, ProfileType.FLAVOR ]
 
+class MetaProfileCatalog:
+	"""
+	``MetaProfileCatalog`` is intended to provide an identical API to ``ProfileCatalog``, except that it can 'see both
+	Funtoo Linux profiles as well as user-created Funtoo-compatible profiles as configured in overlays and enabled via
+	``/etc/ego.conf``. ``MetaProfileCatalog`` does this by wrapping a ``ProfileCatalog`` that is hooked up to official
+	Funtoo Linux profiles, as well as any ``ProfileCatalog``s hooked up to overlays, and aggregating their results.
+
+	Currently, ``MetaProfileCatalog`` just wraps the official Funtoo ``ProfileCatalog``.
+
+	"""
+
+	def __init__(self):
+		self.config = getConfig()
+		self.master_catalog = ProfileCatalog(os.path.join(self.config.kits_root, "core-kit/profiles"))
+
+	def set_arch(self, arch=None):
+		self.master_catalog.set_arch(arch=arch)
+
+	def __getitem__(self, key, arch=None):
+		return self.master_catalog.__getitem__(key, arch=arch)
+
+	def find_path(self, profile_type, name):
+		return self.master_catalog.find_path(profile_type, name)
+
+	def list(self, key, arch=None):
+		return self.master_catalog.list(key, arch=arch)
+
+	@property
+	def profile_root(self):
+		# This property is used by ProfileSpecifier for resolving ':foo' stuff in profiles.
+		return self.config.kits_root + "/core-kit/profiles"
+
 class ProfileCatalog:
 	"""
 
@@ -141,15 +174,17 @@ class ProfileCatalog:
 		"""
 		Returns relative path of a particular profile that we have already found via a list() call.
 
-		:param name:
-		:return:
+		:param profile_type: The ProfileType Enum of the profile.
+		:param name: The literal name of the profile, such as "gnome"
+		:return: a relative path to the profile.
 		"""
 		return self.directory_map[profile_type][name]
 
 	def list(self, key, arch=None):
 
 		"""
-		Yields available profiles of a particular ProfileType.
+		Yields available profiles of a particular ProfileType. For example, given a ProfileType of mix-in,
+		this method may yield: "gnome", "foobar", "mymixin".
 
 		:param key: A ProfileType specifying the ProfileType to list.
 		:param arch: An arch must be specified in order to also list ``subarch`` and arch-specific mix-ins.
@@ -514,9 +549,9 @@ class ProfileTree(object):
 				yield line.strip()
 
 
-def getProfileCatalogAndTree(portdir):
-	catalog = ProfileCatalog(portdir + "/profiles")
-	tree = ProfileTree(catalog, "core-kit", {"core-kit": portdir})
+def getProfileCatalogAndTree():
+	catalog = MetaProfileCatalog()
+	tree = ProfileTree(catalog, "core-kit", {"core-kit": catalog.config.kits_root + "/core-kit"})
 	current_arch = tree.get_arch()
 	catalog.set_arch(current_arch.name if current_arch is not None else None)
 	return catalog, tree
@@ -524,8 +559,7 @@ def getProfileCatalogAndTree(portdir):
 if __name__ == "__main__":
 	# A quick example to parse profiles in core-kit. Note how the profiles tree specified in the ProfileCatalog()
 	# constructor is completely decoupled from the core-kit repo. In theory, it could live anywhere.
-
-	pt = ProfileTree(ProfileCatalog("/var/git/meta-repo/kits/core-kit/profiles"), "core-kit", {"core-kit": "/var/git/meta-repo/kits/core-kit"})
+	pt = ProfileTree(MetaProfileCatalog(), "core-kit", {"core-kit": "/var/git/meta-repo/kits/core-kit"})
 	# pt.spiff()
 	print(list(pt.get_children(child_types=[ProfileType.FLAVOR])))
 
