@@ -125,7 +125,7 @@ class Module(EgoModule):
 		updated_config_files = set()
 		for kit_name in self.config.kit_info_metadata["kit_order"]:
 			repo_conf_path = os.path.join(self.config.repos_conf_path, "ego-" + kit_name)
-			kit_path = os.path.join(self.config.kit_root, kit_name)
+			kit_path = os.path.join(self.config.kits_root, kit_name)
 			if kit_name == "nokit":
 				kit_priority = -500
 			else:
