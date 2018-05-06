@@ -424,7 +424,8 @@ class ProfileTree(object):
 		"""
 
 		new_lines = [spec_obj.spec_str for spec_obj in self.profile_hier.keys()]
-		new_lines.append(spec_str)
+		if spec_str not in new_lines:
+			new_lines.append(spec_str)
 
 		self.reload(new_lines)
 
@@ -555,8 +556,6 @@ def getProfileCatalogAndTree():
 	current_arch = tree.get_arch()
 	catalog.set_arch(current_arch.name if current_arch is not None else None)
 	return catalog, tree
-
-#TODO: can currently keep adding multiple 'gnome' mix-ins....
 
 if __name__ == "__main__":
 	# A quick example to parse profiles in core-kit. Note how the profiles tree specified in the ProfileCatalog()

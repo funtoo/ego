@@ -144,7 +144,7 @@ available in your own repositories:
 ``epro list my_repo``
   List the profiles available in ``my_repo``.
 
-``epro mix-ins + my_repo:foobar``
+``epro mix-ins +my_repo:foobar``
   Add the ``foobar`` mix-in defined in ``my_repo``.
 
 ADDITIONAL DOCUMENTATION
