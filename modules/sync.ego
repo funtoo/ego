@@ -176,7 +176,7 @@ priority = %s
 					)
 
 		# /var/git exists now, and is owned by portage:portage, and is ug=rwx, o=rx. Now we can drop perms and clone:
-
+		kit_stab_ratings = []
 		pid = os.fork()
 		if pid == 0:
 			# in child process.
@@ -208,6 +208,7 @@ priority = %s
 					Output.fatal("Meta-repo exists but does not appear to be a git repository. Can't sync.")
 			fails = []
 			if self.options.meta_only is None:
+
 				for kt in self.config.kit_info_metadata["kit_order"]:
 					branch = None
 					if "kits" in self.config.settings:
@@ -226,6 +227,14 @@ priority = %s
 					success = self.sync_kit(kt, self.kits_root, branch=branch)
 					if not success:
 						fails.append((kt, branch))
+					else:
+						kit_stability = self.config.kit_info_metadata["kit_settings"][kt]['stability']
+						if branch in kit_stability:
+							stab_rating = kit_stability[branch]
+						else:
+							stab_rating = "deprecated"
+						if stab_rating not in prime:
+							kit_stab_ratings.append((kt, branch, stab_rating))
 				if len(fails):
 					for kt, branch in fails:
 						Output.error("There was an error syncing %s." % kt)
@@ -255,6 +264,13 @@ priority = %s
 		if foreign_repo:
 			Output.log(Color.darkcyan("Updating non-funtoo repositories..."))
 			run("/usr/bin/emerge --sync", quiet=True)
+		if len(kit_stab_ratings):
+			print()
+			Output.log(Color.darkcyan("The following non-prime kits are currently selected:"))
+			for kit, branch, rating in kit_stab_ratings:
+				kb = "%s %s" % (kit, branch)
+				kb = kb.ljust(30)
+				Output.log(Color.darkcyan(kb) + Color.red(rating))
 
 		return True
 
