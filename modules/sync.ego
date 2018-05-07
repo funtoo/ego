@@ -154,6 +154,11 @@ priority = %s
 					Output.warning("Unable to remove stale repos.conf file: %s. Please remove manually." %
 					               config_file_path)
 
+		# clean up legacy funtoo symlink, if it exists...
+
+		if os.path.islink("/etc/portage/repos.conf/funtoo"):
+			os.unlink("/etc/portage/repos.conf/funtoo")
+
 	def sync_meta_repo(self):
 		if "HOME" in os.environ:
 			# git will look here for various things
