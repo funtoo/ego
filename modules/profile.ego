@@ -136,15 +136,17 @@ class Module(EgoModule):
 		# Time to list all available profile settings.
 		profiles = self.options.profiles
 
-		for key in [ ProfileType.ARCH, ProfileType.BUILD, ProfileType.SUBARCH, ProfileType.FLAVOR, ProfileType.MIX_IN ]:
+		for key in [ProfileType.ARCH, ProfileType.BUILD, ProfileType.SUBARCH, ProfileType.FLAVOR, ProfileType.MIX_IN]:
 			if profiles and str(key) not in profiles:
 				continue
 
 			# active_keys: Names of active (currently enabled explicitly by user) profile keys
 			# of this type (ie. flavor, etc.). These active ones will get highlighted differently.
 
-			active_keys = [ x.name for x in self.tree.get_children(key) ]
-			recursively_active_keys = set( x.name for x in self.tree.recursively_get_children(key) )
+			active_keys = [x.name for x in self.tree.get_children(key)]
+
+			# get specifier.name, which is a property that is the last part of the profile path:
+			recursively_active_keys = set(x.name for x in self.tree.recursively_get_children(key))
 			available_keys = sorted(list(self.catalog.list(key)))
 			Output.header(str(key))
 

@@ -15,6 +15,29 @@ from enum import Enum
 import errno
 from collections import OrderedDict, defaultdict
 from ego.config import getConfig
+from ego.output import Output
+from configparser import ConfigParser
+import configparser
+
+
+def all_funtoo_repos():
+	dict_out = {}
+	conf_in = ConfigParser()
+	try:
+		conf_in.read(map(lambda x: "/etc/portage/repos.conf/" + x, os.listdir("/etc/portage/repos.conf")))
+	except configparser.Error as e:
+		Output.error("Parse error in /etc/portage/repos.conf: %s" % e.message)
+		raise e
+	for repo_name in conf_in.sections():
+		if repo_name == "DEFAULT":
+			continue
+		if "location" not in conf_in[repo_name]:
+			Output.warning("No location specified for '%s' repository in /etc/portage/repos.conf" % repo_name)
+		dict_out[repo_name] = {
+			"has_profiles": os.path.exists(conf_in[repo_name]["location"] + "/profiles/profiles.ego.desc"),
+			"config": conf_in[repo_name]
+		}
+	return dict_out
 
 class ProfileName(Enum):
 	"""
@@ -103,6 +126,7 @@ class ProfileType(ProfileName):
 		# profile types that should only be set once.
 		return [ ProfileType.ARCH, ProfileType.BUILD, ProfileType.FLAVOR ]
 
+
 class MetaProfileCatalog:
 	"""
 	``MetaProfileCatalog`` is intended to provide an identical API to ``ProfileCatalog``, except that it can 'see both
@@ -114,21 +138,44 @@ class MetaProfileCatalog:
 
 	"""
 
-	def __init__(self):
+	def __init__(self, funtoo_repos):
 		self.config = getConfig()
-		self.master_catalog = ProfileCatalog(os.path.join(self.config.kits_root, "core-kit/profiles"))
+		self.catalogs = OrderedDict()
+		self.funtoo_repos = funtoo_repos
+		for repo, repo_info in funtoo_repos.items():
+			if not repo_info["has_profiles"]:
+				continue
+			pa = repo_info["config"]["location"]
+			self.catalogs[repo] = ProfileCatalog(repo, pa + "/profiles")
 
 	def set_arch(self, arch=None):
-		self.master_catalog.set_arch(arch=arch)
+		for repo_name, catalog in self.catalogs.items():
+			catalog.set_arch(arch=arch)
 
 	def __getitem__(self, key, arch=None):
-		return self.master_catalog.__getitem__(key, arch=arch)
+		return self.list(key, arch)
 
 	def find_path(self, profile_type, name):
-		return self.master_catalog.find_path(profile_type, name)
+		name_split = name.split(":")
+		if len(name_split) == 1:
+			repo = "core-kit"
+		else:
+			repo, name = name_split
+		if repo not in self.catalogs.keys():
+			raise KeyError("Specified repository '%s' is not available." % repo)
+		if repo is not None:
+			return self.catalogs[repo].find_path(profile_type, name)
+		else:
+			for repo_name, catalog in self.catalogs.items():
+				my_path = catalog.find_path(profile_type, name)
+				if my_path is not None:
+					return my_path
+		return None
 
 	def list(self, key, arch=None):
-		return self.master_catalog.list(key, arch=arch)
+		for repo_name, catalog in self.catalogs.items():
+			for name in catalog.list(key, arch=arch):
+				yield name
 
 	@property
 	def profile_root(self):
@@ -151,7 +198,8 @@ class ProfileCatalog:
 
 	"""
 
-	def __init__(self, profile_root):
+	def __init__(self, repo_name, profile_root):
+		self.repo_name = repo_name
 		self.profile_root = profile_root
 		self.egodescfile = self.profile_root + "/profiles.ego.desc"
 		self.directory_map = defaultdict(dict)
@@ -175,10 +223,13 @@ class ProfileCatalog:
 		Returns relative path of a particular profile that we have already found via a list() call.
 
 		:param profile_type: The ProfileType Enum of the profile.
-		:param name: The literal name of the profile, such as "gnome"
-		:return: a relative path to the profile.
+		:param name: The literal name of the profile, such as "gnome", or "core-kit:gnome"
+		:return: a relative path to the profile, or None if not found.
 		"""
-		return self.directory_map[profile_type][name]
+		try:
+			return self.directory_map[profile_type][name]
+		except KeyError:
+			return None
 
 	def list(self, key, arch=None):
 
@@ -206,13 +257,16 @@ class ProfileCatalog:
 		if str(key) in self.json_info:
 			dirlist += [self.json_info[str(key)]]
 
-		for dir in dirlist:
-			p = self.profile_root + "/" + dir
+		for dirname in dirlist:
+			p = self.profile_root + "/" + dirname
 			try:
 				for profile_root in os.listdir(p):
 					if os.path.isdir(p + "/" + profile_root):
-						self.directory_map[key][profile_root] = dir + "/" + profile_root
-						yield profile_root
+						self.directory_map[key][profile_root] = dirname + "/" + profile_root
+						if self.repo_name != "core-kit":
+							yield self.repo_name + ":" + profile_root
+						else:
+							yield profile_root
 			except OSError as e:
 				if e.errno not in (errno.ENOTDIR, errno.ENOENT, errno.ESTALE):
 					raise
@@ -237,11 +291,13 @@ class ProfileSpecifier(object):
 
 	"""
 
-	def __init__(self, tree, cwd, spec_str):
+	def __init__(self, tree, cwd, spec_str, repo_name):
 		"""
 		:param tree: A ``ProfileTree`` object.
 		:param cwd:  The current working directory of the ``parent`` file that the specifier came from.
 		:param spec_str: A single line from a ``parent`` file specifying another profile.
+		:param repo_name: The 'current' repo_name. None if found in /etc/portage/make.profiles/parent; if parsed from
+		inside a repo, then this will be something like 'core-kit'.
 		"""
 
 		self.tree = tree
@@ -255,6 +311,10 @@ class ProfileSpecifier(object):
 			self.modified = False
 		self._resolved_path = None
 		self._profile_type = None
+		self.repo_name = repo_name
+		spl = self.spec_str.split(":")
+		if len(spl) == 2:
+			self.repo_name = spl[0]
 
 	def __str__(self):
 		return self.spec_str
@@ -269,12 +329,15 @@ class ProfileSpecifier(object):
 
 			if self.spec_str[0] == ":":
 				# ":base" format -- relative to root of profile directory:
-				self._resolved_path = os.path.join(self.tree.catalog.profile_root, self.spec_str[1:])
+				# TODO: this may not be correct -- should ":foo" be relative to the base of whatever profile we happen to be in?
+				self._resolved_path = os.path.join(self.tree.master_catalog.profile_root, self.spec_str[1:])
 			else:
 				colsplit = self.spec_str.split(":")
-				if len(colsplit) == 2 and colsplit[0] in self.tree.repomap:
+				if len(colsplit) == 2 and colsplit[0] in self.tree.funtoo_repos.keys():
 					# "gentoo:foo" format - relative to a specified repo:
-					self._resolved_path = os.path.join(self.tree.repomap[colsplit[0]], "profiles", colsplit[1])
+					rel_path = self.tree.funtoo_repos[colsplit[0]]["config"]["location"]
+					self._resolved_path = os.path.join(rel_path, "profiles", colsplit[1])
+					# TODO: handle situation where for some reason, we have a repo entry referencing a non-existing repo
 				else:
 					if self.spec_str.startswith("/"):
 						# absolute path
@@ -289,7 +352,10 @@ class ProfileSpecifier(object):
 
 	@property
 	def name(self):
-		return self.resolved_path.split('/')[-1]
+		if self.repo_name is None or self.repo_name == "core-kit":
+			return self.resolved_path.split('/')[-1]
+		else:
+			return self.repo_name + ":" + self.resolved_path.split('/')[-1]
 
 	def classify(self):
 
@@ -336,11 +402,11 @@ class ProfileTree(object):
 	original ``ProfileSpecifier`` key.
 	"""
 
-	def __init__(self, catalog, master_repo_name, repomap, root_parent_dir=None):
+	def __init__(self, catalog, master_repo_name, funtoo_repos, root_parent_dir=None):
 
-		self.catalog = catalog
+		self.master_catalog = catalog
 		self.master_repo_name = master_repo_name
-		self.repomap = repomap
+		self.funtoo_repos = funtoo_repos
 		self.root_parent_dir = root_parent_dir if root_parent_dir is not None else '/etc/portage/make.profile'
 		self.parent_map = defaultdict(None)
 		# put variable definitions above this line ^^
@@ -458,7 +524,7 @@ class ProfileTree(object):
 		"""
 		return self.parent_map[spec_obj]
 
-	def _recurse(self, profile_path=None, parent_lines=None, _parent=None):
+	def _recurse(self, profile_path=None, parent_lines=None, _parent=None, repo_name=None):
 
 		"""
 		Called by the ``reload()`` method (which is called by the constructor too), this method recurses over the master
@@ -483,9 +549,9 @@ class ProfileTree(object):
 		if parent_lines is None:
 			parent_lines = self._read_parent(res_path)
 		for spec_str in parent_lines:
-			spec_obj = ProfileSpecifier(self, res_path, spec_str)
+			spec_obj = ProfileSpecifier(self, res_path, spec_str, repo_name)
 			self.parent_map[spec_obj] = _parent
-			new_children[spec_obj] = self._recurse(spec_obj, _parent=spec_obj)
+			new_children[spec_obj] = self._recurse(spec_obj, _parent=spec_obj, repo_name=spec_obj.repo_name)
 		self.profile_path_map[res_path] = new_children
 		return new_children
 
@@ -499,7 +565,9 @@ class ProfileTree(object):
 		:return:  A list of ``ProfileSpecifier``\s matching the criteria.
 		"""
 
+		# get OrderedDict of profile items defined at this particular profile location:
 		child_dict = self.profile_path_map[specifier.resolved_path if specifier else self.root_parent_dir]
+		# now iterate through each profile item defined:
 		for child_path, child_target_dict in child_dict.items():
 			if child_types is None:
 				# None means "yield all"
@@ -551,17 +619,11 @@ class ProfileTree(object):
 
 
 def getProfileCatalogAndTree():
-	catalog = MetaProfileCatalog()
-	tree = ProfileTree(catalog, "core-kit", {"core-kit": catalog.config.kits_root + "/core-kit"})
+	funtoo_repos = all_funtoo_repos()
+	catalog = MetaProfileCatalog(funtoo_repos)
+	tree = ProfileTree(catalog, "core-kit", funtoo_repos)
 	current_arch = tree.get_arch()
 	catalog.set_arch(current_arch.name if current_arch is not None else None)
 	return catalog, tree
-
-if __name__ == "__main__":
-	# A quick example to parse profiles in core-kit. Note how the profiles tree specified in the ProfileCatalog()
-	# constructor is completely decoupled from the core-kit repo. In theory, it could live anywhere.
-	pt = ProfileTree(MetaProfileCatalog(), "core-kit", {"core-kit": "/var/git/meta-repo/kits/core-kit"})
-	# pt.spiff()
-	print(list(pt.get_children(child_types=[ProfileType.FLAVOR])))
 
 # vim: ts=4 noet sw=4
