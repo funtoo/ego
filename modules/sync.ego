@@ -238,7 +238,7 @@ priority = %s
 							stab_rating = kit_stability[branch]
 						else:
 							stab_rating = "deprecated"
-						if stab_rating not in prime:
+						if stab_rating not in ["prime"]:
 							kit_stab_ratings.append((kt, branch, stab_rating))
 				if len(fails):
 					for kt, branch in fails:
