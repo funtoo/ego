@@ -97,25 +97,6 @@ After changing default kit values, be sure to run ``ego sync`` to update meta-re
 be sure to run ``epro update`` to regenerate your profile information (in some cases, this can be done manually by
 ``ego sync``).
 
-Profiles Section
-===============
-
-The *profile* section can be used to specify repositories that contain Funtoo-compatible multi-profiles. It is used
-as follows:
-
-  [profiles]
-
-  my_repo = special/funtoo
-
-With the settings above, the repository ``my_repo`` will be scanned for Funtoo-compatible profiles in
-``${repo_path}/profiles/special/funtoo/mix-ins``, etc. ``my_repo`` should specify a repository name as defined in
-the repository's ``repo_name`` file.
-
-When creating Funtoo-compatible profiles in your own repositories, you will want to follow the directory structure used
-in Funtoo Linux -- that is, have a ``mix-ins`` directory, ``flavor`` directory (if desired), etc. Also note that you
-can reference official Funtoo profiles as parents by putting something like ``core-kit:funtoo/1.0/linux-gnu/flavor/desktop``
-in your profiles` ``parent`` file.
-
 
 
 

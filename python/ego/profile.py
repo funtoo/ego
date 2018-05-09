@@ -164,10 +164,10 @@ class MetaProfileCatalog:
 		if repo not in self.catalogs.keys():
 			raise KeyError("Specified repository '%s' is not available." % repo)
 		if repo is not None:
-			return self.catalogs[repo].find_path(profile_type, name)
+			return repo + ":" + self.catalogs[repo].find_path(profile_type, name)
 		else:
 			for repo_name, catalog in self.catalogs.items():
-				my_path = catalog.find_path(profile_type, name)
+				my_path = repo_name + ":" + catalog.find_path(profile_type, name)
 				if my_path is not None:
 					return my_path
 		return None
@@ -256,6 +256,12 @@ class ProfileCatalog:
 
 		if str(key) in self.json_info:
 			dirlist += [self.json_info[str(key)]]
+
+		# For now, disable defining new arches in overlays. This prevents extra arches from being displayed when
+		# sub-arches are defined.
+
+		if self.repo_name != "core-kit" and key == ProfileType.ARCH:
+			return
 
 		for dirname in dirlist:
 			p = self.profile_root + "/" + dirname

@@ -123,7 +123,7 @@ class Module(EgoModule):
 			with open(self.tree.master_parent_file, "w") as outfile:
 				self.tree.write(self.config, outfile)
 		except PermissionError:
-			Output.fatal("You do not have permission to update profiles.")
+			Output.fatal("You do not have permission to update profiles. Any changes could not be saved.")
 
 	def handle_show_json_action(self):
 		Output.log(json.dumps(self.short_JSON(), indent=4))
@@ -147,7 +147,7 @@ class Module(EgoModule):
 
 			# get specifier.name, which is a property that is the last part of the profile path:
 			recursively_active_keys = set(x.name for x in self.tree.recursively_get_children(key))
-			available_keys = sorted(list(self.catalog.list(key)))
+			available_keys = sorted(list(self.catalog.list(key)), key=lambda x: x.split(":")[-1])
 			Output.header(str(key))
 
 			# We handle our own output formatting/spacing/newlines. These vars are used for this.
@@ -177,6 +177,8 @@ class Module(EgoModule):
 				elif x in recursively_active_keys:
 					# highlight if enabled through inheritance:
 					outx = Color.DARKCYAN + x + Color.END
+				elif ":" in x:
+					outx = Color.UNDERLINE + x + Color.END
 				else:
 					outx = x
 				count += 1
@@ -200,16 +202,18 @@ class Module(EgoModule):
 
 		available_shortnames = set(self.catalog.list(profile_type))
 		current_setting = list(self.tree.get_children(profile_type))[0]
-
-		if profile_type in [ ProfileType.BUILD, ProfileType.ARCH ]:
+		if profile_type in [ProfileType.BUILD, ProfileType.ARCH]:
 			if newset in available_shortnames and len(action) > 0:
 				Output.warning("Previous value: %s -- typically, user should not change this." % current_setting.name)
 
 		if newset not in available_shortnames:
-			Output.fatal("%s %s not available. Can't set." % (action, newset))
+			Output.fatal("%s %s is not available. Can't set." % (action, newset))
 		self.writeout = True
 
-		self.tree.replace_entry(profile_type, "core-kit:" + self.catalog.find_path(profile_type, newset))
+		profile_path = self.catalog.find_path(profile_type, newset)
+		if profile_path is None:
+			Output.fatal("Could not find profile path for %s." % newset)
+		self.tree.replace_entry(profile_type, profile_path)
 
 		self.short_list()
 		Output.log(">>> Set %s to %s." % (action, newset))
@@ -250,7 +254,10 @@ class Module(EgoModule):
 		not_added = adds - available_mix_in_shortnames
 
 		for shortname in adds & available_mix_in_shortnames:
-			self.tree.append_mixin("core-kit:" + self.catalog.find_path(ProfileType.MIX_IN, shortname))
+			profile_path = self.catalog.find_path(ProfileType.MIX_IN, shortname)
+			if profile_path is None:
+				Output.fatal("Could not find profile path for mix-in %s." % shortname)
+			self.tree.append_mixin(profile_path)
 			self.writeout = True
 
 		# Do all output here -- our shortList() will reflect the mix-in changes made above. Then put informational messages

@@ -137,15 +137,54 @@ USAGE EXAMPLES
 USING PROFILES IN YOUR OWN REPOSITORIES
 =======================================
 
-Ego now supports profiles that are defined in your own repositories. See the ``ego.conf`` man page for information on
-how to configure this. The following commands are now supported to allow you to query and display profiles that are
-available in your own repositories:
-
-``epro list my_repo``
-  List the profiles available in ``my_repo``.
+Ego now supports profiles that are defined in your own repositories. When using the ``epro list`` command, profiles
+from overlays will be underlined and prefixed with ``overlayname:``.
 
 ``epro mix-ins +my_repo:foobar``
   Add the ``foobar`` mix-in defined in ``my_repo``.
+
+DEFINING YOUR OWN PROFILES IN OVERLAYS
+======================================
+
+Creating your own subarches, mix-ins and flavors is now possible and easy to do in an existing overlay. First, add
+a file ``profiles/ego.profiles.desc`` which should include JSON similar to the following. You can use this exact
+configuration if you like::
+
+ {
+     "mix-ins" : "funtoo/1.0/linux-gnu/mix-ins",
+     "flavor" : "funtoo/1.0/linux-gnu/flavor",
+     "arch" : "funtoo/1.0/linux-gnu/arch",
+     "build" : "funtoo/1.0/linux-gnu/build"
+ }
+
+This file defines locations for mix-ins, flavors, subarches and builds of Funtoo Linux in your overlay. Note that
+currently, it is not possible to define arches in your overlay, just subarches, but it is still necessary to define
+an "arch" path in the JSON as this is used as a starting point to find subarch profiles.
+
+Using the above config, you are now ready to create your own profile settings. You would then place your mix-ins in::
+
+ <repo_path>/profiles/funtoo/1.0/linux-gnu/mix-ins/my_custom_mixin
+
+Or you could place new flavors in::
+
+ <repo_path>/profiles/funtoo/1.0/linux-gnu/flavor/my_new_flavor
+
+When adding subarches, you will want to use the following path format::
+
+ <repo_path>/profiles/funtoo/1.0/linux-gnu/arch/<arch>/subarch/<subarch_profile_name>
+
+For example, you might create this subarch for a new 64-bit AMD processor::
+
+ <repo_path>/profiles/funtoo/1.0/linux-gnu/arch/x86-64bit/subarch/ryzen4000
+
+If you prefer not to use the ``funtoo/1.0/linux-gnu`` prefix, you can adjust the ``profiles/ego.profiles.desc`` as
+desired, and then you would modify the locations of your profiles accordingly.
+
+Remember, as long as you have an entry in ``/etc/portage/repos.conf/<repo_name>`` for your repository, ego will be able
+to see your custom profiles and they will show up in the ``epro list`` or ``ego profile list`` and will be underlined
+for easy identification. Also please note that you should *not* use the ``ego-`` prefix when creating a repository file
+in ``/etc/portage/repos.conf/``, as ``ego-``-prefixed repository files are managed by ego directly.
+
 
 ADDITIONAL DOCUMENTATION
 ========================
