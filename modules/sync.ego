@@ -172,14 +172,15 @@ priority = %s
 			if not os.path.exists(containing_dir):
 				os.makedirs(containing_dir, 0o775)
 			stat_info = os.stat(containing_dir)
-			if stat_info.st_uid != uid and self.config.sync_user != "root":
-				try:
-					run("chown -R %s:%s %s" % (uid, gid, containing_dir), quiet=True)
-				except PermissionError:
-					Output.fatal(
-						"You don't have enough privileges. You should probably run this command as root."
-					)
-
+			try:
+				if stat_info.st_uid != uid and self.config.sync_user != "root":
+					run("chown %s:%s %s" % (uid, gid, containing_dir), quiet=True)
+				if os.path.exists(self.root):
+					stat_info = os.stat(self.root)
+					if stat_info.st_uid != uid and self.config.sync_user != "root":
+						run("chown -R %s:%s %s" % (uid, gid, self.root), quiet=True)
+			except PermissionError:
+				Output.fatal("Not enough privileges to fix permissions. You should probably run this command as root.")
 		# /var/git exists now, and is owned by portage:portage, and is ug=rwx, o=rx. Now we can drop perms and clone:
 		kit_stab_ratings = []
 		pid = os.fork()
@@ -191,9 +192,7 @@ priority = %s
 					os.setgid(gid)
 					os.setuid(uid)
 				except PermissionError:
-					Output.fatal(
-						"You don't have enough privileges. You should probably run this command as root."
-					)
+					Output.fatal("Not enough privileges to switch uid/gid. You should probably run this command as root.")
 			if not self.options.kits_only:
 				repo = GitHelper(self, self.root)
 				Output.log(Color.green("Syncing meta-repo"))
