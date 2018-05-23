@@ -8,6 +8,7 @@ from mediawiki.cli_parser import wikitext_parse
 
 __all__ = ['EgoModule', 'usage']
 
+
 def usage(config):
 	print("Usage: %s [module] [info|options]..." % os.path.basename(sys.argv[0]))
 	Output.header("Available ego modules")
@@ -19,6 +20,7 @@ def usage(config):
 			desc += " (%s%s%s)" % (Color.BOLD, info["shortcut"], Color.END)
 		print("%s%15s%s - %s" % (Color.CYAN, mod, Color.END, desc))
 	print()
+
 
 class EgoModule:
 
@@ -43,7 +45,6 @@ class EgoModule:
 		self.version = VERSION
 		self.options = None
 		self.setup()
-
 
 	def _no_repo_available(self, exit=True):
 		wikitext = "{{Note|Meta-repo has not yet been cloned, so no kit information is available. Type {{c|ego sync}}"

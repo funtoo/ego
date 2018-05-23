@@ -18,7 +18,7 @@ class Module(EgoModule):
 	@property
 	def root(self):
 		if not hasattr(self, '_root'):
-			if self.options.dest != None:
+			if self.options.dest is not None:
 				root = self.options.dest
 			else:
 				root = self.config.meta_repo_root
@@ -30,7 +30,7 @@ class Module(EgoModule):
 	@property
 	def kits_root(self):
 		if not hasattr(self, '_kits_root'):
-			if self.options.dest != None:
+			if self.options.dest is not None:
 				root = self.options.dest + "/kits"
 			else:
 				root = self.config.kits_root
@@ -211,8 +211,7 @@ priority = %s
 				else:
 					Output.fatal("Meta-repo exists but does not appear to be a git repository. Can't sync.")
 			fails = []
-			if self.options.meta_only is None:
-
+			if self.options.meta_only:
 				for kt in self.config.kit_info_metadata["kit_order"]:
 					branch = None
 					if "kits" in self.config.settings:
@@ -261,8 +260,8 @@ priority = %s
 				Output.error("Please run 'epro update' manually as root.")
 		repos_configs = os.listdir("/etc/portage/repos.conf")
 		foreign_repo = False
-		for dir in repos_configs:
-			if not dir.startswith("ego-"):
+		for repoitem in repos_configs:
+			if not repoitem.startswith("ego-"):
 				foreign_repo = True
 				break
 		if foreign_repo:
