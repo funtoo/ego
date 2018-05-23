@@ -211,7 +211,7 @@ priority = %s
 				else:
 					Output.fatal("Meta-repo exists but does not appear to be a git repository. Can't sync.")
 			fails = []
-			if self.options.meta_only:
+			if not self.options.meta_only:
 				for kt in self.config.kit_info_metadata["kit_order"]:
 					branch = None
 					if "kits" in self.config.settings:
