@@ -124,6 +124,13 @@ class Module(EgoModule):
 		if not os.path.exists(self.config.repos_conf_path):
 			os.makedirs(self.config.repos_conf_path)
 		config_files = set(os.listdir(self.config.repos_conf_path))
+		for conf_file in config_files:
+
+			# Clean up any symlinks in here... not a good idea...
+			link_path = os.path.join(self.config.repos_conf_path, conf_file)
+			if os.path.islink(link_path):
+				os.unlink(link_path)
+
 		updated_config_files = set()
 		for kit_name in self.config.kit_info_metadata["kit_order"]:
 			repo_conf_path = os.path.join(self.config.repos_conf_path, "ego-" + kit_name)
