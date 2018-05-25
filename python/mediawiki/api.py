@@ -17,22 +17,48 @@ class Wiki(object):
 		self.tokens = []
 		self.failed_pages = []
 
-	def login(self,user,password):
-		data = { 'format' : 'json', 'action' : 'login', 'lgname' : user, 'lgpassword': password }
-		r = requests.post(self.url, params=data)
+	# Use login2 with MediaWiki earlier than 1.27.
+
+	def login2(self,user,password, lgtoken=None):
+		data = { 'format' : 'json', 'action' : 'login', 'lgname' : user }
+		body_data = { 'lgpassword' : password }
+		if lgtoken is not None:
+			body_data["lgtoken"] = lgtoken
+		r = requests.post(self.url, params=data, data=body_data, cookies=self.cookies)
 		j = r.json()
 		if ('login' in j) and ('result' in j['login']):
 			self.cookies = r.cookies
+			print(j)
 			if j['login']['result'] == "Success":
+				print("Login successful")
 				self.logged_in = True
 			elif j['login']['result'] == "NeedToken":
 				data['lgtoken'] = j['login']['token']
 				r = requests.post(self.url, params=data, cookies=self.cookies)
 				j = r.json()
+				print(j)
 				if j['login']['result'] == "Success":
 					self.cookies.update(r.cookies)
 					self.logged_in = True
+			else:
+				print("login failure", j)
+		else:
+			print("login failed: ", j)
 		return self.logged_in
+
+	# Use login with MediaWiki 1.27 or later.
+
+	def login(self, user, password):
+		data = { 'format' : 'json', 'action' : 'query' , 'meta' : 'tokens', 'type' : 'login' }
+		r = requests.post(self.url, data=data, cookies=self.cookies)
+		j = r.json()
+		try:
+			print(r.cookies)
+			self.cookies.update(r.cookies)
+			return self.login2(user, password, lgtoken=j['query']['tokens']['logintoken'])
+		except KeyError:
+			raise
+			return False
 
 	def show_cookies(self):
 		return dict(self.cookies)
@@ -41,15 +67,19 @@ class Wiki(object):
 		if not self.logged_in:
 			return False
 		data = { 'format' : 'json', 'action' : 'tokens' , 'type' : '|'.join(kinds) }
-		r = requests.post(self.url, params=data, cookies=self.cookies)
+		r = requests.post(self.url, data=data, cookies=self.cookies)
 		j = r.json()
+		print(j)
 		if 'tokens' in j:
 			self.tokens = j['tokens']
 		return self.tokens
 
-	def getAllPages(self, namespace=0, limit=10000):
+	def getAllPages(self, namespace=0, limit=10000, from_page=None):
 		data = { 'format' : 'json', 'action' : 'query', 'list' : 'allpages', 'apnamespace' : namespace, 'aplimit' : limit }
-		r = requests.post(self.url, params=data, cookies=self.cookies)
+		if from_page is not None:
+			data['apfrom'] = from_page
+
+		r = requests.post(self.url, data=data, cookies=self.cookies)
 		j = r.json()
 		if 'query' in j and 'allpages' in j['query']:
 			return j['query']['allpages']
@@ -57,14 +87,14 @@ class Wiki(object):
 	def getRecentChanges(self, args={}):
 		data = { 'format' : 'json', 'action' : 'query', 'list' : 'recentchanges' }
 		data.update(args)
-		r = requests.post(self.url, params=data, cookies=self.cookies)
+		r = requests.post(self.url, data=data, cookies=self.cookies)
 		j = r.json()
 		if 'query' in j and 'recentchanges' in j['query']:
 			return j['query']['recentchanges']
 
 	def getPage(self, title):
 		data = { 'format' : 'json', 'action' : 'query', 'titles' : title, 'prop' : 'revisions', 'rvprop' : 'content' }
-		r = requests.post(self.url, params=data, cookies=self.cookies)
+		r = requests.post(self.url, data=data, cookies=self.cookies)
 		j = r.json()
 		if 'query' in j and 'pages' in j['query']:
 			w = j['query']['pages']
@@ -73,8 +103,13 @@ class Wiki(object):
 		return None
 
 	def putPage(self, title, content):
+		if "edittoken" not in self.tokens:
+			self.getTokens()
+		if "edittoken" not in self.tokens:
+			raise IndexError
 		data = { 'format' : 'json', 'action' : 'edit', 'title' : title, 'text' : content, 'contentformat' : 'text/x-wiki', 'token' : self.tokens["edittoken"]}
-		r = requests.post(self.url, params=data, cookies=self.cookies)
+		r = requests.post(self.url, data=data, cookies=self.cookies)
+		print(r.text)
 		j = r.json()
 		if 'edit' in j and 'result' in j['edit'] and j['edit']['result'] == 'Success':
 			return True
@@ -82,7 +117,7 @@ class Wiki(object):
 
 	def importPage(self, title, interwiki, namespace=0, failcount=3):
 		data = { 'format' : 'json', 'action' : 'import', 'interwikisource' : interwiki, 'interwikipage' : title, 'namespace' : namespace, 'fullhistory' : 'yes', 'token' : self.tokens["importtoken"] }
-		r = requests.post(self.url, params=data, cookies=self.cookies)
+		r = requests.post(self.url, data=data, cookies=self.cookies)
 		j = r.json()
 		if 'import' in j and 'revisions' in j['import'][0]:
 			print("Imported %s" % title)
@@ -102,15 +137,19 @@ class Wiki(object):
 		if ns != None:
 			data["plnamespace"] = ns
 		data['pllimit'] = 1000
-		r = requests.post(self.url, params=data, cookies=self.cookies)
+		r = requests.post(self.url, data=data, cookies=self.cookies)
 		j = r.json()
 		return j
 
 	def getPageImages(self, title):
 		data = { 'format' : 'json', 'action' : 'query', 'titles' : title, 'prop' : 'images' }
 		data['imlimit'] = 1000
-		r = requests.post(self.url, params=data, cookies=self.cookies)
-		j = r.json()
+		r = requests.post(self.url, data=data, cookies=self.cookies)
+		try:
+			j = r.json()
+		except json.decoder.JSONDecodeError:
+			return []
+		# TODO: ^^^^ maybe return None, detect when this call fails so we can re-attempt it
 		if 'query' in j and 'pages' in j['query']:
 			k = j['query']['pages'].keys()
 			if len(k) == 1:
@@ -121,7 +160,7 @@ class Wiki(object):
 
 	def getImageURL(self, title):
 		data = { 'format' : 'json', 'action' : 'query', 'titles' : title, 'prop' : 'imageinfo', 'iiprop' : 'url' }
-		r = requests.post(self.url, params=data, cookies=self.cookies)
+		r = requests.post(self.url, data=data, cookies=self.cookies)
 		j = r.json()
 		if 'query' in j and 'pages' in j['query']:
 			k = j['query']['pages'].keys()
@@ -131,12 +170,18 @@ class Wiki(object):
 					return i['imageinfo'][0]['url']
 		return None
 
-	def importPageImages(self, title, source_wiki, interwiki):
+	def importPageImages(self, title, source_wiki, upload_log=None):
+		if upload_log is None:
+			upload_log = {}
 		"specify a page -- find all image links and upload them into this wiki."
-		print("Attempting to import pags \"%s\" images..." % title)
+		print("Attempting to import page \"%s\" images..." % title)
 		# Attempt to grab images referenced on this page -- even though they may not exist.
 		images = source_wiki.getPageImages(title)
 		for i in images:
+			if i["title"] in upload_log:
+				print("Skipping %s, already uploaded or attempted" % i)
+				continue
+			upload_log[i["title"]] = True
 			print("  Attempting to import image \"%s\" (referenced)..." % i['title'],end='')
 			surl = source_wiki.getImageURL(i['title'])
 			if surl == None:
@@ -150,21 +195,21 @@ class Wiki(object):
 				continue
 			print("Uploaded image!")
 
-	def importPageAndImages(self, title, source_wiki, interwiki, namespace=0, failcount=3):
+	def importPageAndImages(self, title, source_wiki, interwiki, namespace=0, failcount=3, upload_log=None):
 		"specify a page -- import the page, and if successful, also transwiki all image links."
 		result = self.importPage(title, interwiki, namespace, failcount)
 		if result == True:
-			self.importPageImages(title, source_wiki, interwiki)
+			self.importPageImages(title, source_wiki, interwiki, upload_log=upload_log)
 
 	def exportXML(self, title):
 		data = { 'format' : 'json', 'action': 'query' , 'titles' : title, 'export' : 'yes', 'exportnowrap' : 'yes' }
-		r = requests.post(self.url, params=data, cookies=self.cookies)
+		r = requests.post(self.url, data=data, cookies=self.cookies)
 		return r.text
 
 	def uploadFileFromURL(self, filename, url):
 		data = { 'format' : 'json', 'action' : 'upload', 'url' : url, 'filename' : filename, 'token' : self.tokens["edittoken"] }
 		print(data)
-		r = requests.post(self.url, params=data, cookies=self.cookies)
+		r = requests.post(self.url, data=data, cookies=self.cookies)
 		j = r.json()
 		print(j)
 		if ('upload' in j) and ('result' in j['upload']) and (j['upload']['result'] == 'Success'):
@@ -179,7 +224,7 @@ class Wiki(object):
 		data = { 'format' : 'json', 'action' : 'import', 'token' : self.tokens["importtoken"] }
 		if fullhistory:
 			data['fullhistory'] = 'yes'
-		r = requests.post(self.url, params=data, cookies=self.cookies, files={ 'xml' : ('input.xml', xmldata)})
+		r = requests.post(self.url, data=data, cookies=self.cookies, files={ 'xml' : ('input.xml', xmldata)})
 		j = r.json()
 		if 'import' in j and 'revisions' in j['import'][0]:
 			print("Imported XML")

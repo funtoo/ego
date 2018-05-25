@@ -34,6 +34,7 @@ class Module(EgoModule):
 				root = self.options.dest + "/kits"
 			else:
 				root = self.config.kits_root
+			# TODO: make 'kits' if no exist?
 			if not os.path.exists(os.path.dirname(root)):
 				os.makedirs(os.path.dirname(root))
 			self._kits_root = root

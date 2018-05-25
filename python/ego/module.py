@@ -4,7 +4,13 @@ import sys
 import os
 
 from ego.output import Color, Output
-from mediawiki.cli_parser import wikitext_parse
+
+try:
+	has_mw_parser = True
+	from mediawiki.cli_parser import wikitext_parse
+except ImportError:
+	has_mw_parser = False
+	pass
 
 __all__ = ['EgoModule', 'usage']
 
@@ -49,7 +55,10 @@ class EgoModule:
 	def _no_repo_available(self, exit=True):
 		wikitext = "{{Note|Meta-repo has not yet been cloned, so no kit information is available. Type {{c|ego sync}}"
 		wikitext += " to perform an initial clone of meta-repo.}}"
-		wikitext_parse(wikitext, sys.stdout, indent="  ")
+		if has_mw_parser:
+			wikitext_parse(wikitext, sys.stdout, indent="  ")
+		else:
+			sys.stdout.write(wikitext)
 		sys.stdout.write("\n")
 		if exit:
 			sys.exit(1)
