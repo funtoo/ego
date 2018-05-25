@@ -44,6 +44,7 @@ class Module(EgoModule):
 		parser.add_argument('--kits-only', action='store_true', help="Do not sync meta-repo, only kits.")
 		parser.add_argument('--meta-repo-only', dest="meta_only", action='store_true', help="Do not sync kits, only meta-repo.")
 		parser.add_argument('--dest', dest="dest", default=None, help="Manually specify destination of meta-repo")
+		parser.add_argument('--config-only', dest="config_only", action='store_true', help="Update /etc/portage/repos.conf files only.")
 
 	def sync_kit(self, kit_name, kit_root, branch=None):
 		if branch is None:
@@ -152,8 +153,7 @@ priority = %s
 				try:
 					os.unlink(config_file_path)
 				except PermissionError:
-					Output.warning("Unable to remove stale repos.conf file: %s. Please remove manually." %
-					               config_file_path)
+					Output.warning("Unable to remove stale repos.conf file: %s. Please remove manually." % config_file_path)
 
 		# clean up legacy funtoo symlink, if it exists...
 
@@ -165,25 +165,29 @@ priority = %s
 			# git will look here for various things
 			del os.environ["HOME"]
 
-		containing_dir = os.path.dirname(self.root)
-		if self.options.dest is None:
-			pwnam = pwd.getpwnam(self.config.sync_user)
-			uid = pwnam.pw_uid
-			gid = pwnam.pw_gid
-			if not os.path.exists(containing_dir):
-				os.makedirs(containing_dir, 0o775)
-			stat_info = os.stat(containing_dir)
-			try:
-				if stat_info.st_uid != uid and self.config.sync_user != "root":
-					run("chown %s:%s %s" % (uid, gid, containing_dir), quiet=True)
-				if os.path.exists(self.root):
-					stat_info = os.stat(self.root)
+		pwnam = pwd.getpwnam(self.config.sync_user)
+		uid = pwnam.pw_uid
+		gid = pwnam.pw_gid
+
+		if not self.options.config_only:
+			containing_dir = os.path.dirname(self.root)
+			if self.options.dest is None:
+				if not os.path.exists(containing_dir):
+					os.makedirs(containing_dir, 0o775)
+				stat_info = os.stat(containing_dir)
+				try:
 					if stat_info.st_uid != uid and self.config.sync_user != "root":
-						run("chown -R %s:%s %s" % (uid, gid, self.root), quiet=True)
-			except PermissionError:
-				Output.fatal("Not enough privileges to fix permissions. You should probably run this command as root.")
-		# /var/git exists now, and is owned by portage:portage, and is ug=rwx, o=rx. Now we can drop perms and clone:
+						run("chown %s:%s %s" % (uid, gid, containing_dir), quiet=True)
+					if os.path.exists(self.root):
+						stat_info = os.stat(self.root)
+						if stat_info.st_uid != uid and self.config.sync_user != "root":
+							run("chown -R %s:%s %s" % (uid, gid, self.root), quiet=True)
+				except PermissionError:
+					Output.fatal("Not enough privileges to fix permissions. You should probably run this command as root.")
+			# /var/git exists now, and is owned by portage:portage, and is ug=rwx, o=rx. Now we can drop perms and clone:
+
 		kit_stab_ratings = []
+
 		pid = os.fork()
 		if pid == 0:
 			# in child process.
@@ -194,7 +198,9 @@ priority = %s
 					os.setuid(uid)
 				except PermissionError:
 					Output.fatal("Not enough privileges to switch uid/gid. You should probably run this command as root.")
-			if not self.options.kits_only:
+
+
+			if not (self.options.kits_only or self.options.config_only):
 				repo = GitHelper(self, self.root)
 				Output.log(Color.green("Syncing meta-repo"))
 				if repo.is_git_repo():
@@ -212,6 +218,10 @@ priority = %s
 				else:
 					Output.fatal("Meta-repo exists but does not appear to be a git repository. Can't sync.")
 			fails = []
+
+			we_synced = False
+			we_synced_successfully = True
+
 			if not self.options.meta_only:
 				for kt in self.config.kit_info_metadata["kit_order"]:
 					branch = None
@@ -227,11 +237,15 @@ priority = %s
 							# We are not recording a sha1 -- this is not an active kit
 							Output.warning("Kit %s branch %s specified in ego.conf is not currently active; using default kit instead." % (kt, branch))
 							branch = None
-
-					success = self.sync_kit(kt, self.kits_root, branch=branch)
-					if not success:
-						fails.append((kt, branch))
-					else:
+					success = True
+					if not self.options.config_only:
+						success = self.sync_kit(kt, self.kits_root, branch=branch)
+						we_synced = True
+						if not success:
+							we_synced_successfully = False
+							fails.append((kt, branch))
+					if success:
+						# we want to run this in config-only mode:
 						kit_stability = self.config.kit_info_metadata["kit_settings"][kt]['stability']
 						if branch in kit_stability:
 							stab_rating = kit_stability[branch]
@@ -239,18 +253,28 @@ priority = %s
 							stab_rating = "deprecated"
 						if stab_rating not in ["prime"]:
 							kit_stab_ratings.append((kt, branch, stab_rating))
-				if len(fails):
+				if we_synced and not we_synced_successfully:
 					for kt, branch in fails:
 						Output.error("There was an error syncing %s." % kt)
 				# these exit commands get run by the child process
 					sys.exit(1)
 			sys.exit(0)
+
 		# Forked process terminated here - now we are back in the parent:
+
 		if os.waitpid(pid, 0)[1] > 0:
 			return False
-		Output.log(Color.green("Sync successful and kits in alignment! :)"))
+
+		if not self.options.config_only:
+			if self.options.meta_only:
+				Output.log(Color.green("Sync successful! :)"))
+			else:
+				Output.log(Color.green("Sync successful and kits in alignment! :)"))
+
+		# If we are not writing to a special destination for archiving, we want to update our local repos.conf and profile settings automatically, as well
+		# as possibly run emerge --sync:
+
 		if self.options.dest is None:
-			# not manually overridden for archiving...
 			Output.log(Color.darkcyan("Updating repos.conf..."))
 			self.update_repos_conf()
 			Output.log(Color.darkcyan("Updating profiles..."))
