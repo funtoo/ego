@@ -1,7 +1,6 @@
 #!/usr/bin/python3
 
 import os
-from ego.config import getConfig
 from ego.output import Output
 import json
 
@@ -18,7 +17,6 @@ class UpgradeLister:
 
 	def __init__(self):
 
-		self.config = getConfig()
 		self.last_upgrade = None
 
 		try:

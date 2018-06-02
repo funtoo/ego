@@ -8,6 +8,7 @@ import sys
 from cmdtools import run
 from ego.module import EgoModule
 from ego.output import Color, Output
+from ego.config import join_path
 from git_helper import GitHelper
 
 
@@ -111,7 +112,7 @@ class Module(EgoModule):
 		return success
 
 	def update_repos_conf(self):
-
+		Output.log(Color.bold("Updating %s..." % self.config.repos_conf_path))
 		if os.path.islink(self.config.repos_conf_path):
 			try:
 				os.unlink(self.config.repos_conf_path)
@@ -134,7 +135,7 @@ class Module(EgoModule):
 		updated_config_files = set()
 		for kit_name in self.config.kit_info_metadata["kit_order"]:
 			repo_conf_path = os.path.join(self.config.repos_conf_path, "ego-" + kit_name)
-			kit_path = os.path.join(self.config.kits_root, kit_name)
+			kit_path = os.path.join(self.config.unprefixed_kits_root, kit_name)
 			if kit_name == "nokit":
 				kit_priority = -500
 			else:
@@ -164,8 +165,8 @@ priority = %s
 
 		# clean up legacy funtoo symlink, if it exists...
 
-		if os.path.islink("/etc/portage/repos.conf/funtoo"):
-			os.unlink("/etc/portage/repos.conf/funtoo")
+		if os.path.islink(join_path(self.config.root_path, "/etc/portage/repos.conf/funtoo")):
+			os.unlink(join_path(self.config.root_path, "/etc/portage/repos.conf/funtoo"))
 
 	def sync_meta_repo(self):
 		if "HOME" in os.environ:
@@ -282,23 +283,24 @@ priority = %s
 		# as possibly run emerge --sync:
 
 		if self.options.dest is None:
-			Output.log(Color.darkcyan("Updating repos.conf..."))
 			self.update_repos_conf()
-			Output.log(Color.darkcyan("Updating profiles..."))
+
 			try:
 				EgoModule.run_ego_module('profile', self.config, ['update'])
 			except PermissionError:
 				Output.error("Could not update ego profiles automatically due to permissions (code in /root, most likely.)")
 				Output.error("Please run 'epro update' manually as root.")
-		repos_configs = os.listdir("/etc/portage/repos.conf")
-		foreign_repo = False
-		for repoitem in repos_configs:
-			if not repoitem.startswith("ego-"):
-				foreign_repo = True
-				break
-		if foreign_repo:
-			Output.log(Color.darkcyan("Updating non-funtoo repositories..."))
-			run("/usr/bin/emerge --sync", quiet=True)
+
+		if self.config.root_path == "/":
+			repos_configs = os.listdir("/etc/portage/repos.conf")
+			foreign_repo = False
+			for repoitem in repos_configs:
+				if not repoitem.startswith("ego-"):
+					foreign_repo = True
+					break
+			if foreign_repo:
+				Output.log(Color.bold("Updating non-funtoo repositories..."))
+				run("/usr/bin/emerge --sync", quiet=True)
 		if len(kit_stab_ratings):
 			print()
 			Output.log(Color.darkcyan("The following non-prime kits are currently selected:"))

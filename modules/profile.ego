@@ -119,6 +119,11 @@ class Module(EgoModule):
 		Output.log("")
 
 	def handle_write(self):
+		Output.log(Color.bold("Updating profiles at %s..." % self.tree.master_parent_file))
+		outdir = os.path.dirname(self.tree.master_parent_file)
+		if not os.path.exists(outdir):
+			Output.log(Color.bold("%s does not exist; creating..." % outdir))
+			os.makedirs(outdir)
 		try:
 			with open(self.tree.master_parent_file, "w") as outfile:
 				self.tree.write(self.config, outfile)
@@ -201,19 +206,22 @@ class Module(EgoModule):
 			Output.fatal("Profile type of 'other' not valid.")
 
 		available_shortnames = set(self.catalog.list(profile_type))
-		current_setting = list(self.tree.get_children(profile_type))[0]
+		current_settings = list(self.tree.get_children(profile_type))
+		if len(current_settings):
+			current_setting = current_settings[0]
+		else:
+			current_setting = None
 		if profile_type in [ProfileType.BUILD, ProfileType.ARCH]:
 			if newset in available_shortnames and len(action) > 0:
-				Output.warning("Previous value: %s -- typically, user should not change this." % current_setting.name)
+				Output.warning("Previous value: %s -- typically, user should not change this." % current_setting.name if current_setting is not None else None)
 
 		if newset not in available_shortnames:
-			Output.fatal("%s %s is not available. Can't set." % (action, newset))
+			Output.fatal("%s %s is not available. Can't set. Available names: %s" % (action, newset, repr(available_shortnames)))
 		self.writeout = True
-
 		profile_path = self.catalog.find_path(profile_type, newset)
 		if profile_path is None:
 			Output.fatal("Could not find profile path for %s." % newset)
-		self.tree.replace_entry(profile_type, profile_path)
+		self.tree.insert_or_replace_entry(profile_type, profile_path)
 
 		self.short_list()
 		Output.log(">>> Set %s to %s." % (action, newset))
@@ -274,7 +282,7 @@ class Module(EgoModule):
 			Output.log(">>> Added %s mix-in." % mixin)
 
 	def handle(self):
-		self.catalog, self.tree = getProfileCatalogAndTree()
+		self.catalog, self.tree = getProfileCatalogAndTree(self.config)
 
 		# If the profile needs to be written out for any reason, to either update it or fix it, writeout will be set to
 		# true.

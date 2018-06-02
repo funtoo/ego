@@ -1,5 +1,4 @@
 import os
-from ego.config import getConfig
 from ego.output import Output
 
 class ReleaseHandler:
@@ -16,7 +15,6 @@ class ReleaseHandler:
 
 	def __init__(self):
 
-		self.config = getConfig()
 		self.release = None
 
 		try:

@@ -45,6 +45,10 @@ ENVIRONMENT VARIABLES
 ``EGO_CONFIG``
   Use this environment variable to set an alternate path to the configuration file (default is ``/etc/ego.conf``.)
 
+``ROOT``
+  Use this environment variable to set an alternate path for the OS installation. This allows you to use your local
+  ego command to interact with a Funtoo system in a chroot, for example.
+
 LICENSE
 --------
 

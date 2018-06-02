@@ -14,14 +14,26 @@ import configparser
 import os
 import sys
 
-VERSION = "2.4.0_beta1"
+def join_path(x, y):
+	# ignore absolute paths (leading "/") in second component, for convenience...
+	if y.startswith("/"):
+		return os.path.join(x, y[1:])
+	else:
+		return os.path.join(x,y)
+
+VERSION = "2.4.0_beta2"
 
 settings = configparser.ConfigParser()
+
+if "ROOT" in os.environ:
+	root_path = os.environ["ROOT"]
+else:
+	root_path = "/"
 
 if "EGO_CONFIG" in os.environ:
 	settings_path = os.environ["EGO_CONFIG"]
 else:
-	settings_path = '/etc/ego.conf'
+	settings_path = join_path(root_path, '/etc/ego.conf')
 try:
 	settings.read(settings_path)
 except IOError:
@@ -37,6 +49,8 @@ parent_path = os.path.dirname(file_path)
 if os.path.isdir(os.path.join(parent_path, ".git")):
 	# we are being run from a git repository; so run in "dev mode", grab modules, etc from git path...
 	install_path = parent_path
+elif root_path != "/":
+	install_path = join_path(root_path, "/usr/share/ego")
 elif "global" in settings and "install_path" in settings["global"]:
 	install_path = settings["global"]["install_path"]
 else:
@@ -46,10 +60,14 @@ sys.path.insert(0, install_path + "/python")
 
 from ego.config import EgoConfig
 
-econfig = EgoConfig(settings, settings_path, install_path=install_path)
+econfig = EgoConfig(settings, settings_path, root_path=root_path, install_path=install_path)
 
 from ego.output import Color, Output
 from ego.module import EgoModule, usage
+
+if root_path != "/":
+		Output.warning("Using ROOT of %s." % root_path)
+		Output.warning("Using ego configuration file %s (if it exists.)" % settings_path)
 
 if __name__ == "__main__":
 	exec_name = os.path.basename(sys.argv[0])

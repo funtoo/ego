@@ -84,6 +84,22 @@ class Wiki(object):
 		if 'query' in j and 'allpages' in j['query']:
 			return j['query']['allpages']
 
+	def getAllPagesInCategory(self, category, limit=500, cmcontinue=None):
+		data = { 'format' : 'json', 'action' : 'query', 'cmtype' : 'page', 'list' : 'categorymembers', 'cmtitle': "Category:%s" % category, 'cmlimit' : limit }
+		if cmcontinue is not None:
+			data['cmcontinue'] = cmcontinue
+		print(data)
+		r = requests.post(self.url, data=data, cookies=self.cookies)
+		j = r.json()
+		print(j)
+		if 'query' in j and 'categorymembers' in j['query']:
+			if 'continue' in j and 'cmcontinue' in j['continue']:
+				# there's more...
+				return j['continue']['cmcontinue'], j['query']['categorymembers']
+			else:
+				# no more
+				return None, j['query']['categorymembers']
+
 	def getRecentChanges(self, args={}):
 		data = { 'format' : 'json', 'action' : 'query', 'list' : 'recentchanges' }
 		data.update(args)

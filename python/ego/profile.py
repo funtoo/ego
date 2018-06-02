@@ -14,17 +14,18 @@ import os
 from enum import Enum
 import errno
 from collections import OrderedDict, defaultdict
-from ego.config import getConfig
 from ego.output import Output
+from ego.config import join_path
 from configparser import ConfigParser
 import configparser
 
 
-def all_funtoo_repos():
+def all_funtoo_repos(config):
 	dict_out = {}
 	conf_in = ConfigParser()
+	repo_path = join_path(config.root_path, "/etc/portage/repos.conf")
 	try:
-		conf_in.read(map(lambda x: "/etc/portage/repos.conf/" + x, os.listdir("/etc/portage/repos.conf")))
+		conf_in.read(map(lambda x: repo_path + "/" + x, os.listdir(repo_path)))
 	except configparser.Error as e:
 		Output.error("Parse error in /etc/portage/repos.conf: %s" % e.message)
 		raise e
@@ -32,9 +33,9 @@ def all_funtoo_repos():
 		if repo_name == "DEFAULT":
 			continue
 		if "location" not in conf_in[repo_name]:
-			Output.warning("No location specified for '%s' repository in /etc/portage/repos.conf" % repo_name)
+			Output.warning("No location specified for '%s' repository in %s" % (repo_name, repo_path))
 		dict_out[repo_name] = {
-			"has_profiles": os.path.exists(conf_in[repo_name]["location"] + "/profiles/profiles.ego.desc"),
+			"has_profiles": os.path.exists(join_path(config.root_path, conf_in[repo_name]["location"] + "/profiles/profiles.ego.desc")),
 			"config": conf_in[repo_name]
 		}
 	return dict_out
@@ -138,8 +139,8 @@ class MetaProfileCatalog:
 
 	"""
 
-	def __init__(self, funtoo_repos):
-		self.config = getConfig()
+	def __init__(self, config, funtoo_repos):
+		self.config = config
 		self.catalogs = OrderedDict()
 		self.funtoo_repos = funtoo_repos
 		for repo, repo_info in funtoo_repos.items():
@@ -374,7 +375,6 @@ class ProfileSpecifier(object):
 		:return: A ProfileType Enum telling us the type of profile, or None if not recognized as any particular kind.
 
 		"""
-
 		if self._profile_type is not None:
 			return self._profile_type
 		try:
@@ -408,12 +408,13 @@ class ProfileTree(object):
 	original ``ProfileSpecifier`` key.
 	"""
 
-	def __init__(self, catalog, master_repo_name, funtoo_repos, root_parent_dir=None):
+	def __init__(self, catalog, master_repo_name, config, funtoo_repos):
 
 		self.master_catalog = catalog
 		self.master_repo_name = master_repo_name
 		self.funtoo_repos = funtoo_repos
-		self.root_parent_dir = root_parent_dir if root_parent_dir is not None else '/etc/portage/make.profile'
+		self.config = config
+		self.root_parent_dir = join_path(self.config.root_path, '/etc/portage/make.profile')
 		self.parent_map = defaultdict(None)
 		# put variable definitions above this line ^^
 		self.reload()
@@ -501,25 +502,81 @@ class ProfileTree(object):
 
 		self.reload(new_lines)
 
-	def replace_entry(self, profile_type, spec_str):
+	def insert_or_replace_entry(self, profile_type, spec_str):
 
 		"""
-		The ``replace_entry()`` method will replace the first found ProfileSpecifier of type ``profile_type`` with the
+		The ``insert_or_replace_entry()`` method will replace the first found ProfileSpecifier of type ``profile_type`` with the
 		new ProfileSpecifier ``spec_obj``. Use this to change flavors, subarches, etc. (single-use profiles.)
 
+		If the replacement fails, since the profile type does not exist, it will be inserted at the correct position in the file.
+
+		This method will throw a KeyError when a mix-in is specified.
+
 		:param profile_type: The ``ProfileType`` Enum specifying the profile type.
-		:param spec_str: The literal profile line (string) to be used to replace the existing one.
+		:param spec_str: The literal profile line (string) to be used to replace the existing one, or insert.
 		:return: None
 		"""
 
 		new_lines = []
 
+		added = False
+		line_types = []
+
 		for key_spec, odict in self.profile_hier.items():
 			if key_spec.classify() == profile_type:
+				added = True
 				new_lines.append(spec_str)
 			else:
 				new_lines.append(key_spec.spec_str)
+			line_types.append(key_spec)
 
+		if not added:
+			if profile_type == ProfileType.ARCH:
+				insert_pos = 0
+			elif profile_type == ProfileType.FLAVOR:
+				try:
+					insert_pos = next(i for i,v in enumerate(line_types) if v.classify() == ProfileType.BUILD) + 1
+				except StopIteration:
+					try:
+						# before first mix-in
+						insert_pos = next(i for i, v in enumerate(line_types) if v.classify() == ProfileType.MIX_IN)
+					except StopIteration:
+						try:
+							# insert after subarch:
+							insert_pos = next(i for i, v in enumerate(line_types) if v.classify() == ProfileType.SUBARCH) + 1
+						except StopIteration:
+							try:
+								# insert after arch:
+								insert_pos = next(i for i, v in enumerate(line_types) if v.classify() == ProfileType.ARCH) + 1
+							except StopIteration:
+								insert_pos = 0
+			elif profile_type == ProfileType.BUILD:
+				try:
+					# insert before flavor:
+					insert_pos = next(i for i, v in enumerate(line_types) if v.classify() == ProfileType.FLAVOR)
+				except StopIteration:
+					try:
+						# insert after subarch:
+						insert_pos = next(i for i, v in enumerate(line_types) if v.classify() == ProfileType.SUBARCH) + 1
+					except StopIteration:
+						try:
+							# insert after arch:
+							insert_pos = next(i for i, v in enumerate(line_types) if v.classify() == ProfileType.ARCH) + 1
+						except StopIteration:
+							insert_pos = 0
+			elif profile_type == ProfileType.SUBARCH:
+				try:
+					# insert after arch:
+					insert_pos = next(i for i, v in enumerate(line_types) if v.classify() == ProfileType.ARCH) + 1
+				except StopIteration:
+					try:
+						# insert before build:
+						insert_pos = next(i for i, v in enumerate(line_types) if v.classify() == ProfileType.BUILD)
+					except StopIteration:
+						insert_pos = 0
+			else:
+				raise KeyError(message="I do not not support profile type %s" % repr(profile_type))
+			new_lines.insert(insert_pos, spec_str)
 		self.reload(new_lines)
 
 	def get_parent(self, spec_obj):
@@ -624,10 +681,10 @@ class ProfileTree(object):
 				yield line.strip()
 
 
-def getProfileCatalogAndTree():
-	funtoo_repos = all_funtoo_repos()
-	catalog = MetaProfileCatalog(funtoo_repos)
-	tree = ProfileTree(catalog, "core-kit", funtoo_repos)
+def getProfileCatalogAndTree(config):
+	funtoo_repos = all_funtoo_repos(config)
+	catalog = MetaProfileCatalog(config, funtoo_repos)
+	tree = ProfileTree(catalog, "core-kit", config, funtoo_repos)
 	current_arch = tree.get_arch()
 	catalog.set_arch(current_arch.name if current_arch is not None else None)
 	return catalog, tree

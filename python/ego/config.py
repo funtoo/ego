@@ -10,33 +10,12 @@ from pathlib import Path
 import configparser
 from configparser import InterpolationError
 
-def getConfig():
-	settings = configparser.ConfigParser()
-	if "EGO_CONFIG" in os.environ:
-		settings_path = os.environ["EGO_CONFIG"]
+def join_path(x, y):
+	# ignore absolute paths (leading "/") in second component, for convenience...
+	if y.startswith("/"):
+		return os.path.join(x, y[1:])
 	else:
-		settings_path = '/etc/ego.conf'
-	try:
-		settings.read(settings_path)
-	except IOError:
-		print("Config file %s not found." % settings_path)
-		sys.exit(1)
-	except configparser.Error as e:
-		print("Config file error: %s" % e.message)
-		sys.exit(1)
-	file_path = os.path.realpath(__file__)
-	parent_path = os.path.dirname(file_path)
-
-	if os.path.isdir(os.path.join(parent_path, ".git")) and os.path.basename(parent_path) == "ego":
-		# we are being run from a git repository; so run in "dev mode", grab modules, etc from git path...
-		install_path = parent_path
-	elif "global" in settings and "install_path" in settings["global"]:
-		install_path = settings["global"]["install_path"]
-	else:
-		install_path = "/usr/share/ego"
-	sys.path.insert(0, install_path + "/python")
-	return EgoConfig(settings, settings_path, install_path=install_path)
-
+		return os.path.join(x,y)
 
 class EgoConfig(object):
 
@@ -99,10 +78,11 @@ class EgoConfig(object):
 		else:
 			return default
 
-	def __init__(self, settings, settings_path, install_path="/usr/share/ego"):
+	def __init__(self, settings, settings_path, root_path="/", install_path="/usr/share/ego"):
 
 		# TODO: This is a mess and needs some cleaning up
 
+		self.root_path = root_path
 		self.ego_dir = install_path
 		self.ego_mods_dir = "%s/modules" % self.ego_dir
 		self.ego_mods_info_dir = "%s/modules-info" % self.ego_dir
@@ -122,16 +102,20 @@ class EgoConfig(object):
 		self.settings = settings
 		self.settings_path = settings_path
 
-		self.meta_repo_root = self.get_setting("global", "meta_repo_path", "/var/git/meta-repo")
+		self.meta_repo_root = self.get_setting("global", "meta_repo_path", join_path(self.root_path, "/var/git/meta-repo"))
 		self.sync_base_url = self.get_setting("global", "sync_base_url", "https://github.com/funtoo/{repo}")
 		self.meta_repo_branch = self.get_setting("global", "meta_repo_branch", "master")
-		self.repos_conf_path = self.get_setting("global", "repos_conf_path", "/etc/portage/repos.conf")
+		self.repos_conf_path = self.get_setting("global", "repos_conf_path", join_path(self.root_path, "/etc/portage/repos.conf"))
 
 		kit_path = self.get_setting("global", "kits_path", "kits")
 		if kit_path.startswith("/"):
-			self.kits_root = kit_path
+			self.kits_root = join_path(self.root_path, kit_path)
 		else:
 			self.kits_root = os.path.join(self.meta_repo_root, kit_path)
+		r_common = os.path.commonprefix([self.root_path, self.kits_root])
+		self.unprefixed_kits_root = self.kits_root[len(r_common):]
+		if not self.unprefixed_kits_root.startswith("/"):
+			self.unprefixed_kits_root = "/" + self.unprefixed_kits_root
 		self.sync_user = self.get_setting("global", "sync_user", "portage")
 
 		self.kits_depth = self.get_setting("global", "kits_depth", 2)

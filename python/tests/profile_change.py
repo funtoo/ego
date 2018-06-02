@@ -24,7 +24,7 @@ class ProfileTest(unittest.TestCase):
 		flav_list = list(self.pt.get_children(child_types=[ProfileType.FLAVOR]))
 		self.assertEqual(len(flav_list), 1)
 		self.assertEqual(flav_list[0].spec_str, 'core-kit:funtoo/1.0/linux-gnu/flavor/desktop')
-		self.pt.replace_entry(ProfileType.FLAVOR, 'core-kit:funtoo/1.0/linux-gnu/flavor/core')
+		self.pt.insert_or_replace_entry(ProfileType.FLAVOR, 'core-kit:funtoo/1.0/linux-gnu/flavor/core')
 		flav_list = list(self.pt.get_children(child_types=[ProfileType.FLAVOR]))
 		self.assertEqual(len(flav_list), 1)
 		self.assertEqual(flav_list[0].spec_str, 'core-kit:funtoo/1.0/linux-gnu/flavor/core')
