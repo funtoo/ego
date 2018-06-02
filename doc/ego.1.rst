@@ -47,7 +47,8 @@ ENVIRONMENT VARIABLES
 
 ``ROOT``
   Use this environment variable to set an alternate path for the OS installation. This allows you to use your local
-  ego command to interact with a Funtoo system in a chroot, for example.
+  ego command to interact with a Funtoo system in a chroot, for example. Note that when this environment variable is
+  set, ego will not drop permissions to the Portage user.
 
 LICENSE
 --------

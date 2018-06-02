@@ -200,7 +200,7 @@ priority = %s
 		if pid == 0:
 			# in child process.
 			os.chdir('/tmp')  # Make sure we are not in /root or other user-forbidden directory
-			if self.options.dest is None:
+			if self.options.dest is None and self.config.root_path == "/":
 				try:
 					os.setgid(gid)
 					os.setuid(uid)
