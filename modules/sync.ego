@@ -173,25 +173,31 @@ priority = %s
 			# git will look here for various things
 			del os.environ["HOME"]
 
-		pwnam = pwd.getpwnam(self.config.sync_user)
-		uid = pwnam.pw_uid
-		gid = pwnam.pw_gid
+		have_uid = False
+		try:
+			pwnam = pwd.getpwnam(self.config.sync_user)
+			uid = pwnam.pw_uid
+			gid = pwnam.pw_gid
+			have_uid = True
+		except KeyError:
+			Output.warning("Could not find user '%s' -- not dropping permissions." % self.config.sync_user)
 
 		if not self.options.config_only:
 			containing_dir = os.path.dirname(self.root)
 			if self.options.dest is None:
 				if not os.path.exists(containing_dir):
 					os.makedirs(containing_dir, 0o775)
-				stat_info = os.stat(containing_dir)
-				try:
-					if stat_info.st_uid != uid and self.config.sync_user != "root":
-						run("chown %s:%s %s" % (uid, gid, containing_dir), quiet=True)
-					if os.path.exists(self.root):
-						stat_info = os.stat(self.root)
+				if have_uid:
+					stat_info = os.stat(containing_dir)
+					try:
 						if stat_info.st_uid != uid and self.config.sync_user != "root":
-							run("chown -R %s:%s %s" % (uid, gid, self.root), quiet=True)
-				except PermissionError:
-					Output.fatal("Not enough privileges to fix permissions. You should probably run this command as root.")
+							run("chown %s:%s %s" % (uid, gid, containing_dir), quiet=True)
+						if os.path.exists(self.root):
+							stat_info = os.stat(self.root)
+							if stat_info.st_uid != uid and self.config.sync_user != "root":
+								run("chown -R %s:%s %s" % (uid, gid, self.root), quiet=True)
+					except PermissionError:
+						Output.fatal("Not enough privileges to fix permissions. You should probably run this command as root.")
 			# /var/git exists now, and is owned by portage:portage, and is ug=rwx, o=rx. Now we can drop perms and clone:
 
 		kit_stab_ratings = []
@@ -200,7 +206,7 @@ priority = %s
 		if pid == 0:
 			# in child process.
 			os.chdir('/tmp')  # Make sure we are not in /root or other user-forbidden directory
-			if self.options.dest is None and self.config.root_path == "/":
+			if self.options.dest is None and self.config.root_path == "/" and have_uid:
 				try:
 					os.setgid(gid)
 					os.setuid(uid)
