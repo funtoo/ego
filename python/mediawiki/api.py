@@ -14,7 +14,7 @@ class Wiki(object):
 		self.url = url
 		self.cookies = {}
 		self.logged_in = False
-		self.tokens = []
+		self.tokens = {}
 		self.failed_pages = []
 
 	# Use login2 with MediaWiki earlier than 1.27.
@@ -74,11 +74,12 @@ class Wiki(object):
 			self.tokens = j['tokens']
 		return self.tokens
 
-	def getAllPages(self, namespace=0, limit=10000, from_page=None):
+	def getAllPages(self, namespace=0, limit=10000, from_page=None, page_filter=None):
 		data = { 'format' : 'json', 'action' : 'query', 'list' : 'allpages', 'apnamespace' : namespace, 'aplimit' : limit }
 		if from_page is not None:
 			data['apfrom'] = from_page
-
+		if page_filter is not None:
+			data['apfilterredir'] = page_filter
 		r = requests.post(self.url, data=data, cookies=self.cookies)
 		j = r.json()
 		if 'query' in j and 'allpages' in j['query']:
@@ -99,6 +100,22 @@ class Wiki(object):
 			else:
 				# no more
 				return None, j['query']['categorymembers']
+
+	def getAllRedirectsToPage(self, page, rdcontinue=None):
+		data = { 'format' : 'json', 'action' : 'query', 'prop' : 'redirects', 'titles': page, 'rdprop': 'title|fragment'}
+		if rdcontinue is not None:
+			data['rdcontinue'] = rdcontinue
+		r = requests.post(self.url, data=data, cookies=self.cookies)
+		j = r.json()
+		print(j)
+		if 'query' in j and 'pages' in j['query']:
+			if 'continue' in j and 'rdcontinue' in j['continue']:
+				# there's more...
+				return j['continue']['rdcontinue'], j['query']
+			else:
+				# no more
+				return None, j['query']
+		return None, None
 
 	def getRecentChanges(self, args={}):
 		data = { 'format' : 'json', 'action' : 'query', 'list' : 'recentchanges' }
@@ -125,7 +142,6 @@ class Wiki(object):
 			raise IndexError
 		data = { 'format' : 'json', 'action' : 'edit', 'title' : title, 'text' : content, 'contentformat' : 'text/x-wiki', 'token' : self.tokens["edittoken"]}
 		r = requests.post(self.url, data=data, cookies=self.cookies)
-		print(r.text)
 		j = r.json()
 		if 'edit' in j and 'result' in j['edit'] and j['edit']['result'] == 'Success':
 			return True
@@ -157,6 +173,17 @@ class Wiki(object):
 		j = r.json()
 		return j
 
+	def getImages(self, from_img=None):
+		data = { 'format' : 'json', 'action' : 'query', 'list' : 'allimages', 'ailimit' : '1000' }
+		if from_img is not None:
+			data["aifrom"] = from_img
+		r = requests.post(self.url, data=data, cookies=self.cookies)
+		j = r.json()
+		if 'continue' in j:
+			return j['continue']['aicontinue'], map(lambda x: x['name'], j['query']['allimages'])
+		else:
+			return None, map(lambda x: x['name'], j['query']['allimages'])
+
 	def getPageImages(self, title):
 		data = { 'format' : 'json', 'action' : 'query', 'titles' : title, 'prop' : 'images' }
 		data['imlimit'] = 1000
@@ -186,18 +213,19 @@ class Wiki(object):
 					return i['imageinfo'][0]['url']
 		return None
 
-	def importPageImages(self, title, source_wiki, upload_log=None):
+	def importPageImages(self, title, source_wiki, upload_log: set = None):
 		if upload_log is None:
-			upload_log = {}
+			upload_log = set()
 		"specify a page -- find all image links and upload them into this wiki."
 		print("Attempting to import page \"%s\" images..." % title)
 		# Attempt to grab images referenced on this page -- even though they may not exist.
 		images = source_wiki.getPageImages(title)
 		for i in images:
+			print("PROCESS IMG", i)
 			if i["title"] in upload_log:
 				print("Skipping %s, already uploaded or attempted" % i)
 				continue
-			upload_log[i["title"]] = True
+			upload_log.add(i["title"])
 			print("  Attempting to import image \"%s\" (referenced)..." % i['title'],end='')
 			surl = source_wiki.getImageURL(i['title'])
 			if surl == None:
@@ -224,17 +252,18 @@ class Wiki(object):
 
 	def uploadFileFromURL(self, filename, url):
 		data = { 'format' : 'json', 'action' : 'upload', 'url' : url, 'filename' : filename, 'token' : self.tokens["edittoken"] }
-		print(data)
+		print("Uploading file %s from url %s to wiki %s" % (filename, url, self.url))
 		r = requests.post(self.url, data=data, cookies=self.cookies)
 		j = r.json()
-		print(j)
-		if ('upload' in j) and ('result' in j['upload']) and (j['upload']['result'] == 'Success'):
-			print("Upload successful")
-			return True
+		if ('upload' in j) and ('result' in j['upload']):
+			if (j['upload']['result'] == 'Success'):
+				return True, {}
+			elif j['upload']['result'] == 'Warning':
+				self.failed_pages.append(filename)
+				return False, j['upload']['warnings']
 		else:
-			print("Failed to upload file")
 			self.failed_pages.append(filename)
-			return False
+			return False, {}
 			
 	def importXML(self, xmldata, failcount=3, fullhistory=True):
 		data = { 'format' : 'json', 'action' : 'import', 'token' : self.tokens["importtoken"] }

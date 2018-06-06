@@ -112,6 +112,9 @@ class Module(EgoModule):
 		return success
 
 	def update_repos_conf(self):
+		if "kit_order" not in self.config.kit_info_metadata:
+			Output.warning(Color.bold("Cannot update repos.conf as meta-repo does not exist."))
+			return
 		Output.log(Color.bold("Updating %s..." % self.config.repos_conf_path))
 		if os.path.islink(self.config.repos_conf_path):
 			try:
@@ -236,7 +239,7 @@ priority = %s
 			we_synced = False
 			we_synced_successfully = True
 
-			if not self.options.meta_only:
+			if not self.options.meta_only and "kit_order" in self.config.kit_info_metadata:
 				for kt in self.config.kit_info_metadata["kit_order"]:
 					branch = None
 					if "kits" in self.config.settings:
