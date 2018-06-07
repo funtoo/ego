@@ -1,6 +1,6 @@
 .\" Man page generated from reStructuredText.
 .
-.TH EGO 1 "" "2.4.0_beta1" "Funtoo Linux Core System"
+.TH EGO 1 "" "2.4.0" "Funtoo Linux Core System"
 .SH NAME
 ego \- Funtoo Linux System Management Meta-Command
 .
@@ -58,6 +58,17 @@ Ego configuration module to allow changing \fB/etc/ego.conf\fP from the command\
 You can invoke the relevant module by using the calling convention \fBego module [arg1...]\fP\&. For example, to view the
 Funtoo Linux Installation Guide, type \fBego doc Install | less\fP\&. Alternatively, you can use the module shortcut if
 one exists, such as \fBedoc install | less\fP\&.
+.SH ENVIRONMENT VARIABLES
+.INDENT 0.0
+.TP
+.B \fBEGO_CONFIG\fP
+Use this environment variable to set an alternate path to the configuration file (default is \fB/etc/ego.conf\fP\&.)
+.TP
+.B \fBROOT\fP
+Use this environment variable to set an alternate path for the OS installation. This allows you to use your local
+ego command to interact with a Funtoo system in a chroot, for example. Note that when this environment variable is
+set, ego will not drop permissions to the Portage user.
+.UNINDENT
 .SH LICENSE
 .sp
 Copyright 2015\-2017 Funtoo Solutions, Inc. and contributors.

@@ -1,6 +1,6 @@
 .\" Man page generated from reStructuredText.
 .
-.TH EGO PROFILE 1 "" "2.4.0_beta1" "Funtoo Linux Core System"
+.TH EGO PROFILE 1 "" "2.4.0" "Funtoo Linux Core System"
 .SH NAME
 ego profile \- Funtoo Linux Ego Profile Module
 .
@@ -155,6 +155,95 @@ Output profile settings in standard JSON format, suitable for embedding.
 .B \fBepro get flavor\fP
 Show current setting for flavor in plain\-text format, suitable for scripting.
 .UNINDENT
+.SH USING PROFILES IN YOUR OWN REPOSITORIES
+.sp
+Ego now supports profiles that are defined in your own repositories. When using the \fBepro list\fP command, profiles
+from overlays will be underlined and prefixed with \fBoverlayname:\fP\&.
+.INDENT 0.0
+.TP
+.B \fBepro mix\-ins +my_repo:foobar\fP
+Add the \fBfoobar\fP mix\-in defined in \fBmy_repo\fP\&.
+.UNINDENT
+.SH DEFINING YOUR OWN PROFILES IN OVERLAYS
+.sp
+Creating your own subarches, mix\-ins and flavors is now possible and easy to do in an existing overlay. First, add
+a file \fBprofiles/ego.profiles.desc\fP which should include JSON similar to the following. You can use this exact
+configuration if you like:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+{
+    "mix\-ins" : "funtoo/1.0/linux\-gnu/mix\-ins",
+    "flavor" : "funtoo/1.0/linux\-gnu/flavor",
+    "arch" : "funtoo/1.0/linux\-gnu/arch",
+    "build" : "funtoo/1.0/linux\-gnu/build"
+}
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+This file defines locations for mix\-ins, flavors, subarches and builds of Funtoo Linux in your overlay. Note that
+currently, it is not possible to define arches in your overlay, just subarches, but it is still necessary to define
+an "arch" path in the JSON as this is used as a starting point to find subarch profiles.
+.sp
+Using the above config, you are now ready to create your own profile settings. You would then place your mix\-ins in:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+<repo_path>/profiles/funtoo/1.0/linux\-gnu/mix\-ins/my_custom_mixin
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+Or you could place new flavors in:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+<repo_path>/profiles/funtoo/1.0/linux\-gnu/flavor/my_new_flavor
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+When adding subarches, you will want to use the following path format:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+<repo_path>/profiles/funtoo/1.0/linux\-gnu/arch/<arch>/subarch/<subarch_profile_name>
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+For example, you might create this subarch for a new 64\-bit AMD processor:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+<repo_path>/profiles/funtoo/1.0/linux\-gnu/arch/x86\-64bit/subarch/ryzen4000
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+If you prefer not to use the \fBfuntoo/1.0/linux\-gnu\fP prefix, you can adjust the \fBprofiles/ego.profiles.desc\fP as
+desired, and then you would modify the locations of your profiles accordingly.
+.sp
+Remember, as long as you have an entry in \fB/etc/portage/repos.conf/<repo_name>\fP for your repository, ego will be able
+to see your custom profiles and they will show up in the \fBepro list\fP or \fBego profile list\fP and will be underlined
+for easy identification. Also please note that you should \fInot\fP use the \fBego\-\fP prefix when creating a repository file
+in \fB/etc/portage/repos.conf/\fP, as \fBego\-\fP\-prefixed repository files are managed by ego directly.
 .SH ADDITIONAL DOCUMENTATION
 .sp
 Please see \fI\%http://www.funtoo.org/Funtoo_Profiles\fP (\fBedoc "Funtoo Profiles" | less\fP) for more detailed documentation,
