@@ -40,6 +40,14 @@ class Module(EgoModule):
 				os.makedirs(os.path.dirname(root))
 			self._kits_root = root
 		return self._kits_root
+	
+	def _do_package_moves(self):
+		import portage
+		from portage._global_updates import _global_updates
+		portage.proxy.lazyimport.lazyimport(globals(), '_emerge.actions:adjust_configs,load_emerge_config', )
+		emerge_config = load_emerge_config(action='sync')
+		_global_updates(emerge_config.trees, emerge_config.target_config.mtimedb["updates"], quiet=False)
+		emerge_config.target_config.mtimedb.commit()
 
 	def add_arguments(self, parser):
 		parser.add_argument('--kits-only', action='store_true', help="Do not sync meta-repo, only kits.")
@@ -309,7 +317,9 @@ priority = %s
 					break
 			if foreign_repo:
 				Output.log(Color.bold("Updating non-funtoo repositories..."))
-				run("/usr/bin/emerge --sync", quiet=True)
+				run("/usr/bin/emerge --sync --package-moves=n", quiet=True)
+			# do package moves and slotmoves...
+			self._do_package_moves()
 		if len(kit_stab_ratings):
 			print()
 			Output.log(Color.darkcyan("The following non-prime kits are currently selected:"))
