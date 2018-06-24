@@ -630,7 +630,7 @@ def parse(nodes, wrap=False, indent="", article_title=None):
 				# below, we are essentially saying: "a bug template can be processed by pretending we immediately encounter an external link in the wikitext that is formatted like so:"
 				nodes = [ mwparserfromhell.nodes.external_link.ExternalLink(url="https://bugs.funtoo.org/browse/" + str(node.params[0]), title="Bug " + str(node.params[0])) ] + nodes
 			elif tmp_name == "createaccount":
-				nodes = [ mwparserfromhell.nodes.external_link.ExternalLink(url="http://auth.funtoo.org:9093/new", title="Create a Funtoo Account") ] + nodes
+				nodes = [ mwparserfromhell.nodes.external_link.ExternalLink(url="http://auth.funtoo.org/new", title="Create a Funtoo Account") ] + nodes
 			elif tmp_name == "console":
 				yield accum_text.flush()
 				yield console_render(str(node.get("body").value).split("\n"))

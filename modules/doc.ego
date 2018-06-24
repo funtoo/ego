@@ -1,11 +1,10 @@
 #!/usr/bin/python3
 import sys
+import requests
+import urllib.parse
 
 from ego.module import EgoModule
-from ego.output import Output
-from mediawiki.api import Wiki
 from mediawiki.cli_parser import wikitext_parse
-
 
 class Module(EgoModule):
 
@@ -13,12 +12,10 @@ class Module(EgoModule):
 		parser.add_argument('wiki_page', help="The name of a wiki page")
 
 	def handle(self):
-		miwiki = Wiki("http://www.funtoo.org/api.php")
-		Output.log((
-			"Fetching doc \"%s\" from wiki... (http://www.funtoo.org/{wiki_page})"
-		) % self.options.wiki_page)
 		try:
-			wikitext_page = miwiki.getPage(self.options.wiki_page)
+			url = "https://www.funtoo.org/api.php?action=query&prop=revisions&rvprop=content&format=json&formatversion=2&titles=%s" % urllib.parse.quote(self.options.wiki_page)
+			print(url)
+			wikitext_page = requests.get(url).json()["query"]["pages"][0]["revisions"][0]["content"]
 			wikitext_parse(wikitext_page, sys.stdout)
 		except BrokenPipeError:
 			# this gets rid of ugly broken pipe message from python:
