@@ -10,11 +10,13 @@ from ego.module import EgoModule
 from ego.output import Color, Output
 from ego.config import join_path
 from git_helper import GitHelper
+from pathlib import Path
 
 
 class Module(EgoModule):
 
 	hex_re = re.compile('[0-9a-fA-F]+')
+	read_only = False
 
 	@property
 	def root(self):
@@ -184,14 +186,29 @@ priority = %s
 			# git will look here for various things
 			del os.environ["HOME"]
 
-		have_uid = False
-		try:
-			pwnam = pwd.getpwnam(self.config.sync_user)
-			uid = pwnam.pw_uid
-			gid = pwnam.pw_gid
-			have_uid = True
-		except KeyError:
-			Output.warning("Could not find user '%s' -- not dropping permissions." % self.config.sync_user)
+		have_uid = True
+		if os.path.exists(self.root)
+			meta_repo_path = Path(self.root + "/.touch")
+			try:
+				meta_repo_path.touch()
+			except PermissionError:
+				self.read_only = True
+				have_uid = False
+				if not self.options.config_only:
+					self.options.config_only = True
+					Output.warning("Meta-repo is read-only -- running in config-only mode.")
+			finally:
+				if meta_repo_path.exists():
+					meta_repo_path.unlink()
+
+		if have_uid:
+			try:
+				pwnam = pwd.getpwnam(self.config.sync_user)
+				uid = pwnam.pw_uid
+				gid = pwnam.pw_gid
+				have_uid = True
+			except KeyError:
+				Output.warning("Could not find user '%s' -- not dropping permissions." % self.config.sync_user)
 
 		if not self.options.config_only:
 			containing_dir = os.path.dirname(self.root)
@@ -247,7 +264,7 @@ priority = %s
 			we_synced = False
 			we_synced_successfully = True
 
-			if not self.options.meta_only and "kit_order" in self.config.kit_info_metadata:
+			if not self.options.meta_only and "kit_order" in self.config.kit_info_metadata and not self.read_only:
 				for kt in self.config.kit_info_metadata["kit_order"]:
 					branch = None
 					if "kits" in self.config.settings:
