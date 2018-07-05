@@ -187,7 +187,7 @@ priority = %s
 			del os.environ["HOME"]
 
 		have_uid = True
-		if os.path.exists(self.root)
+		if os.path.exists(self.root):
 			meta_repo_path = Path(self.root + "/.touch")
 			try:
 				meta_repo_path.touch()
