@@ -87,7 +87,8 @@ class EgoConfig(object):
 
 	def kit_branch_is_deprecated(self, kit, branch):
 		try:
-			return self.kit_info_metadata["kit_settings"][kit]["stability"][branch] != "deprecated"
+			print(self.kit_info_metadata["kit_settings"][kit]["stability"][branch])
+			return self.kit_info_metadata["kit_settings"][kit]["stability"][branch] == "deprecated"
 		except KeyError:
 			return True
 		return True
