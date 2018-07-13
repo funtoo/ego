@@ -4,6 +4,7 @@ import sys
 import os
 
 from ego.output import Color, Output
+from ego.config import EgoConfig
 
 try:
 	has_mw_parser = True
@@ -44,7 +45,7 @@ class EgoModule:
 		# Easy method for modules to perform constructor-related things.
 		pass
 
-	def __init__(self, name, config, VERSION=None):
+	def __init__(self, name, config: EgoConfig, VERSION=None):
 		self.name = name
 		self.config = config
 		self.info = config.ego_mods_info[name]

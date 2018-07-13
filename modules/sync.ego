@@ -8,10 +8,9 @@ import sys
 from cmdtools import run
 from ego.module import EgoModule
 from ego.output import Color, Output
-from ego.config import join_path
+from ego.config import join_path, EgoConfig
 from git_helper import GitHelper
 from pathlib import Path
-
 
 class Module(EgoModule):
 
@@ -57,13 +56,10 @@ class Module(EgoModule):
 		parser.add_argument('--dest', dest="dest", default=None, help="Manually specify destination of meta-repo")
 		parser.add_argument('--config-only', dest="config_only", action='store_true', help="Update /etc/portage/repos.conf files only.")
 
-	def sync_kit(self, kit_name, kit_root, branch=None):
-		if branch is None:
-			# use default
-			branch = self.config.kit_info_metadata["kit_settings"][kit_name]["default"]
+	def sync_kit(self, kit_name, kit_root, branch, default_branch):
 		if branch is None:
 			Output.fatal("Fatal: branch cannot be None.")
-		if branch == self.config.kit_info_metadata["kit_settings"][kit_name]["default"]:
+		if branch == default_branch:
 			Output.log(Color.purple("Syncing %s branch %s" % (kit_name, branch)))
 		else:
 			# highlight non-default branches in green for convenience
@@ -266,33 +262,23 @@ priority = %s
 
 			if not self.options.meta_only and "kit_order" in self.config.kit_info_metadata and not self.read_only:
 				for kt in self.config.kit_info_metadata["kit_order"]:
-					branch = None
-					if "kits" in self.config.settings:
-						if kt in self.config.settings["kits"]:
-							branch = self.config.settings["kits"][kt]
-
-					# Let's now check to make sure that the kit specified in settings is a valid kit, still present in
-					# metadata. If not, we should inform the user and fall back to the default kit.
-
-					if branch is not None:
-						if branch not in self.config.kit_sha1_metadata[kt]:
-							# We are not recording a sha1 -- this is not an active kit
-							Output.warning("Kit %s branch %s specified in ego.conf is not currently active; using default kit instead." % (kt, branch))
-							branch = None
+					branch, default_branch = self.config.get_configured_kit(kt)
+					if branch is None:
+						Output.warning("Could not find %s branch %s; using default kit %s instead." % (kt, branch, default_branch))
+						branch = default_branch
+					elif self.config.kit_branch_is_deprecated(kt, branch):
+						Output.warning("Specified %s branch %s has been deprecated; using default kit %s instead." % (kt, branch, default_branch))
+						branch = default_branch
 					success = True
 					if not self.options.config_only:
-						success = self.sync_kit(kt, self.kits_root, branch=branch)
+						success = self.sync_kit(kt, self.kits_root, branch, default_branch)
 						we_synced = True
 						if not success:
 							we_synced_successfully = False
 							fails.append((kt, branch))
 					if success:
 						# we want to run this in config-only mode:
-						kit_stability = self.config.kit_info_metadata["kit_settings"][kt]['stability']
-						if branch in kit_stability:
-							stab_rating = kit_stability[branch]
-						else:
-							stab_rating = "deprecated"
+						stab_rating = self.config.kit_branch_stability(kt, branch)
 						if stab_rating not in ["prime"]:
 							kit_stab_ratings.append((kt, branch, stab_rating))
 				if we_synced and not we_synced_successfully:

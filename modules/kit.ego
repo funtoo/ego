@@ -44,7 +44,7 @@ class Module(EgoModule):
 			if kit not in kit_sha1:
 				continue
 
-			kit_branch, kit_default_branch = self.config.get_configured_kit(kit, True)
+			kit_branch, kit_default_branch = self.config.get_configured_kit(kit)
 
 			if kit_branch == None:
 				kit_branch = kit_default_branch
@@ -110,7 +110,7 @@ class Module(EgoModule):
 
 		print("  " + Color.UNDERLINE + "kit".ljust(20), "active branch".ljust(20), "default".ljust(20), "stability".ljust(9) + Color.END)
 		for kit in self.config.kit_info_metadata["kit_order"]:
-			kit_branch, kit_default_branch = self.config.get_configured_kit(kit, True)
+			kit_branch, kit_default_branch = self.config.get_configured_kit(kit)
 			if kit_branch == None:
 				kit_branch = kit_default_branch
 			if 'stability' in self.config.kit_info_metadata["kit_settings"][kit] and kit_branch in \

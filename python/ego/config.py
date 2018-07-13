@@ -65,18 +65,55 @@ class EgoConfig(object):
 	def kit_sha1_metadata(self):
 		return self.load_kit_metadata('sha1')
 
-	def get_configured_kit(self, kit, show_default=False):
+	@property
+	def default_release(self):
+		try:
+			return self.kit_info_metadata["release_info"]["default"]
+		except KeyError:
+			return None
+
+	@property
+	def release(self):
+		try:
+			return self.settings["global"]["release"]
+		except KeyError:
+			return self.default_release
+
+	def get_kit_version_of_release(self, release, kit):
+		try:
+			return self.kit_info_metadata["release_defs"][release][kit][0]
+		except KeyError:
+			return None
+
+	def kit_branch_is_deprecated(self, kit, branch):
+		try:
+			return self.kit_info_metadata["kit_settings"][kit]["stability"][branch] != "deprecated"
+		except KeyError:
+			return True
+		return True
+
+	def kit_branch_stability(self, kit, branch):
+		try:
+			return self.kit_info_metadata["kit_settings"][kit]["stability"][branch]
+		except KeyError:
+			pass
+		return "deprecated"
+
+	def get_configured_kit(self, kit):
 		if "kits" in self.settings and kit in self.settings["kits"]:
-			branch = self.settings["kits"][kit]
+			kit_branch = self.settings["kits"][kit]
 		else:
-			branch = None
-		if branch and not show_default:
-			return branch
-		default = self.kit_info_metadata["kit_settings"][kit]["default"]
-		if show_default:
-			return (branch, default)
-		else:
-			return default
+			kit_branch = None
+
+		release = self.release
+
+		default_kit_branch = None
+		if release is not None:
+			default_kit_branch = self.get_kit_version_of_release(self.release, kit)
+		if default_kit_branch is None:
+			default_kit_branch = self.kit_info_metadata["kit_settings"][kit]["default"]
+		return kit_branch, default_kit_branch
+
 
 	def __init__(self, settings, settings_path, root_path="/", install_path="/usr/share/ego"):
 
