@@ -113,6 +113,8 @@ class EgoConfig(object):
 			default_kit_branch = self.get_kit_version_of_release(self.release, kit)
 		if default_kit_branch is None:
 			default_kit_branch = self.kit_info_metadata["kit_settings"][kit]["default"]
+		if kit_branch is None:
+			kit_branch = default_kit_branch
 		return kit_branch, default_kit_branch
 
 

@@ -446,7 +446,7 @@ class ProfileTree(object):
 
 	def write(self, config, outfile):
 
-		python_kit_branch = config.get_configured_kit("python-kit")
+		python_kit_branch, default_branch = config.get_configured_kit("python-kit")
 
 		# TODO: it's possible to get blank lines in the profile file, and the specifier doesn't like this...
 

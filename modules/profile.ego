@@ -66,8 +66,9 @@ class Module(EgoModule):
 
 	def python_info(self):
 		Output.header("Python kit")
+		branch, default_branch = self.config.get_configured_kit("python-kit")
 		Output.log("%s%12s%s: %s%s%s" % (
-			Color.BOLD, "branch", Color.END, Color.CYAN, self.config.get_configured_kit("python-kit"), Color.END))
+			Color.BOLD, "branch", Color.END, Color.CYAN, branch, Color.END))
 
 	def short_list(self):
 		Output.header("Enabled Profiles")
