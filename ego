@@ -118,7 +118,12 @@ if __name__ == "__main__":
 	if action:
 		try:
 			EgoModule.run_ego_module(action, econfig, args, VERSION)
+		except PermissionError:
+			Output.fatal("Permissions error -- please make sure you are running this command as the correct user.")
 		except KeyboardInterrupt:
 			Output.fatal("Interrupted -- exiting.")
+		except Exception as e:
+			Output.fatal("Ego encountered an unexpected error: " + repr(e) + '\n\n' + repr(e.args))
+			
 
 # vim: ts=4 sw=4 noexpandtab
