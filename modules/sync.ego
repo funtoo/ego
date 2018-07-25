@@ -182,21 +182,24 @@ priority = %s
 			# git will look here for various things
 			del os.environ["HOME"]
 
-		have_uid = True
+		have_uid = False
 		if os.path.exists(self.root):
 			meta_repo_path = Path(self.root + "/.touch")
 			try:
 				meta_repo_path.touch()
+				have_uid = True
 			except PermissionError:
 				self.read_only = True
-				have_uid = False
 				if not self.options.config_only:
 					self.options.config_only = True
 					Output.warning("Meta-repo is read-only -- running in config-only mode.")
 			finally:
 				if meta_repo_path.exists():
 					meta_repo_path.unlink()
-
+		
+		uid = None
+		gid = None
+		
 		if have_uid:
 			try:
 				pwnam = pwd.getpwnam(self.config.sync_user)

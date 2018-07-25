@@ -123,7 +123,15 @@ if __name__ == "__main__":
 		except KeyboardInterrupt:
 			Output.fatal("Interrupted -- exiting.")
 		except Exception as e:
-			Output.fatal("Ego encountered an unexpected error: " + repr(e) + '\n\n' + repr(e.args))
-			
-
+			Output.error("Ego encountered an unexpected error: " + e.__class__.__name__)
+			try:
+				outfile = '/tmp/ego-traceback-%s.txt' % os.getpid()
+				with open(outfile, 'w') as f:
+					import traceback
+					f.write(str(e))
+					f.write(traceback.format_exc())
+				Output.error("Full traceback written to %s." % outfile)
+			except (PermissionError, IOError):
+				Output.error("Unable to write full traceback.")
+			sys.exit(1)
 # vim: ts=4 sw=4 noexpandtab
