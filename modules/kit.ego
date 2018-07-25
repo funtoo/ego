@@ -119,8 +119,7 @@ class Module(EgoModule):
 				print("  " + kit.ljust(20), Color.BLUE + kit_default_branch.ljust(20), "(same)".ljust(20), str(kit_stability).ljust(10) + Color.END)
 			else:
 				kb_out = kit_default_branch if kit_default_branch else "(None)"
-				print("  " + kit.ljust(20), Color.CYAN + kit_branch.ljust(20), kb_out.ljust(20),
-				      str(kit_stability).ljust(10) + Color.END)
+				print("  " + kit.ljust(20), Color.CYAN + kit_branch.ljust(20), kb_out.ljust(20), str(kit_stability).ljust(10) + Color.END)
 		self._output_footer()
 
 	def handle(self):

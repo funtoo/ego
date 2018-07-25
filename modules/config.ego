@@ -4,11 +4,16 @@ import sys
 from ego.module import EgoModule
 from ego.output import Color, Output
 
+
 class Module(EgoModule):
 
 	valid_sections = ["kits", "profiles", "global"]
 
+	def noop(self):
+		self.parser.print_usage()
+
 	def handle_get_action(self):
+		print(self.options.action)
 		val = self.config.get_setting(self.options.section[0], self.options.key[0], default="")
 		print(val)
 
@@ -62,7 +67,7 @@ class Module(EgoModule):
 		print(self.config)
 
 	def handle(self):
-		handler = getattr(self.options, 'handler', self.handle_get_action)
+		handler = getattr(self.options, 'handler', self.noop)
 		handler()
 
 # vim: ts=4 noexpandtab sw=4

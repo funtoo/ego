@@ -81,7 +81,7 @@ class EgoModule:
 		options = parser.parse_args(args)
 		self.options = options
 		options = vars(options)
-		options["parser"] = parser
+		options["parser"] = self.parser = parser
 		Output.verbosity = options.pop('verbosity') + options.pop('v') - options.pop('q')
 
 		self.handle()
