@@ -46,10 +46,13 @@ class Module(EgoModule):
 		import portage
 		from portage._global_updates import _global_updates
 		portage.proxy.lazyimport.lazyimport(globals(), '_emerge.actions:adjust_configs,load_emerge_config', )
-		emerge_config = load_emerge_config(action='sync')
-		_global_updates(emerge_config.trees, emerge_config.target_config.mtimedb["updates"], quiet=False)
-		emerge_config.target_config.mtimedb.commit()
-
+		try:
+			emerge_config = load_emerge_config(action='sync')
+			_global_updates(emerge_config.trees, emerge_config.target_config.mtimedb["updates"], quiet=False)
+			emerge_config.target_config.mtimedb.commit()
+		except portage.exception.ParseError as e:
+			Output.warning("Unable to perform package moves due to the following parse error: " + str(e))
+			
 	def add_arguments(self, parser):
 		parser.add_argument('--kits-only', action='store_true', help="Do not sync meta-repo, only kits.")
 		parser.add_argument('--meta-repo-only', dest="meta_only", action='store_true', help="Do not sync kits, only meta-repo.")
