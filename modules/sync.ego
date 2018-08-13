@@ -243,7 +243,6 @@ priority = %s
 				except PermissionError:
 					Output.fatal("Not enough privileges to switch uid/gid. You should probably run this command as root.")
 
-
 			if not (self.options.kits_only or self.options.config_only):
 				repo = GitHelper(self, self.root)
 				Output.log(Color.green("Syncing meta-repo"))
