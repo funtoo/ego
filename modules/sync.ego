@@ -273,8 +273,7 @@ priority = %s
 						Output.warning("Could not find %s branch %s; using default kit %s instead." % (kt, branch, default_branch))
 						branch = default_branch
 					elif self.config.kit_branch_is_deprecated(kt, branch):
-						Output.warning("Specified %s branch %s has been deprecated; using default kit %s instead." % (kt, branch, default_branch))
-						branch = default_branch
+						Output.warning("Specified %s branch %s has been deprecated." % (kt, branch))
 					success = True
 					if not self.options.config_only:
 						success = self.sync_kit(kt, self.kits_root, branch, default_branch)
