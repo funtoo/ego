@@ -1,20 +1,26 @@
 #!/usr/bin/python3
 
-
 # Ego Helpers module.
 #
-# Copyright 2017 Daniel Robbins and Funtoo Solutions, Inc.
+# Copyright 2017-2018 Funtoo Solutions, Inc., Daniel Robbins and contributors.
 # See LICENSE.txt for terms of distribution.
 
 import sys
+import textwrap
+import shutil
 if sys.stdout.isatty():
 	is_tty = True
 else:
 	is_tty = False
 
+term_size = shutil.get_terminal_size((80, 20))
+
+
 def ago(diff):
 
-	"Return a English string specifying how long ago something happened for a timedelta."
+	"""
+	Return a English string specifying how long ago something happened for a timedelta.
+	"""
 
 	out = ""
 	if diff.days == 1:
@@ -42,14 +48,17 @@ def ago(diff):
 		out = "just now"
 	return out
 
-def depluralize(str):
-	if str[-1] == "s":
-		return str[:-1]
+
+def depluralize(s):
+	if s[-1] == "s":
+		return s[:-1]
 	else:
-		return str
+		return s
+
 
 class ColorType(str):
 	pass
+
 
 class Color(object):
 	PURPLE = ColorType('\033[95m' if is_tty else "")
@@ -127,12 +136,34 @@ class Color(object):
 		return self + self.default(' ' * (width - len(self)))
 
 
+def mesg(msgtype, msg):
+	global term_size
+	""" prints different types of messages to the console """
+	outstr = None
+	if msgtype == "debug":
+		outstr = None
+	elif msgtype in ["norm", "info"]:
+		outstr = "{G} *{O} {m}".format(G=Color.GREEN, O=Color.END, m=msg)
+	elif msgtype == "boot":
+		outstr = "           {m}".format(m=msg)
+	elif msgtype == "defboot":
+		outstr = "{C} DEFAULT > {G}{m}{O}".format(C=Color.CYAN, G=Color.GREEN, m=msg, O=Color.END)
+	elif msgtype == "note":
+		outstr = "{R} * NOTE:{O} {m}".format(R=Color.CYAN, O=Color.END, m=msg)
+	elif msgtype == "warn":
+		outstr = "{R} * WARN:{O} {m}".format(R=Color.RED, O=Color.END, m=msg)
+	elif msgtype == "fatal" or True:
+		outstr = "{R} * ERR :{O} {m}".format(R=Color.RED, O=Color.END, m=msg)
+	if outstr:
+		print(textwrap.fill(outstr, term_size[0], initial_indent=" ", subsequent_indent="          "))
+
+
 class Output:
 
 	verbosity = 1
 
 	@classmethod
-	def header(self, info):
+	def header(cls, info):
 		print("\n=== " + Color.BOLD + Color.GREEN + info + Color.END + ": ===\n")
 
 	@classmethod
@@ -180,6 +211,7 @@ class Output:
 		"""Output error message to stderr and exit. Auto-append newline if missing."""
 		cls.error(message)
 		sys.exit(exit_code)
+
 
 class Table:
 

@@ -70,4 +70,4 @@ class Module(EgoModule):
 		handler = getattr(self.options, 'handler', self.noop)
 		handler()
 
-# vim: ts=4 noexpandtab sw=4
+# vim: ts=4 sw=4 noet

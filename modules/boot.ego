@@ -1,0 +1,195 @@
+#!/usr/bin/python3
+
+import os
+import sys
+from ego.module import EgoModule
+from ego.output import Output, mesg
+
+import funtoo.boot.helper
+import funtoo.boot.extensions
+
+from funtoo.boot.config import BootConfigFile
+from funtoo.core.config import ConfigFileError
+from funtoo.boot.extension import ExtensionError
+
+
+class Module(EgoModule):
+	
+	boot_config_file = "/etc/boot.conf"
+	
+	def get_boot_config(self):
+		# Load /etc/boot.conf master configuration file:
+		
+		try:
+			config = BootConfigFile(self.boot_config_file)
+			if not config.fileExists():
+				Output.fatal("Master configuration file %s does not exist." % self.boot_config_file)
+			else:
+				return config
+		except ConfigFileError as e:
+			Output.fatal("Error reading %s: %s." % (self.boot_config_file, str(e)))
+	
+	def setup(self):
+		
+		# self.msgs: accumulated messages that will be output at the end of the ego boot/boot-update command.
+		self.msgs = []
+		self.boot_config = self.get_boot_config()
+		# TODO: check for None ^^
+	
+	def cleanup(self, success, ext=None, quiet=False):
+		""" prints accumulated errors and warnings and exits appropriately """
+		print()
+		msgs = self.msgs
+		if ext is not None:
+			# unmounts any non-/boot filesystems we may have mounted for scanning.
+			# /boot unmounting is handled via another process.
+			ext.r.UnmountIfNecessary()
+			msgs += ext.msgs
+		warnings = False
+		for msgtype, msg in msgs:
+			if msgtype == "warn":
+				warnings = True
+			if not quiet:
+				mesg(msgtype, msg)
+		if not success:
+			mesg("fatal", "Did not complete successfully.")
+			print()
+			sys.exit(1)
+		else:
+			outstr = "Completed successfully"
+			if warnings:
+				outstr += " with warnings."
+			else:
+				outstr += "."
+			mesg("norm", outstr)
+			print()
+			sys.exit(0)
+			
+	def update_action(self, check=False, quiet=False):
+		"""
+		Perform traditional boot-update action of updating boot-loader configuration based on /etc/boot.conf.
+		:return:
+		"""
+		
+		for invalid in self.boot_config.validate():
+			self.msgs.append(["warn", "invalid config setting \"{iv}\"; ignored.".format(iv=invalid)])
+		
+		success = True
+		generate = self.boot_config["boot/generate"]
+		
+		if generate == "":
+			success = False
+			self.msgs.append(["fatal", "boot/generate does not specify a valid boot loader to generate a config for."])
+		
+		if generate not in funtoo.boot.extensions.__all__:
+			success = False
+			self.msgs.append(["fatal", "extension for boot loader \"%s\" (specified in boot/generate) not found." % generate])
+	
+		if check is True:
+			self.msgs.append(["norm", "Configuration file {cf} checked.".format(cf=self.boot_config_file)])
+			self.cleanup(success)
+		
+		if os.geteuid() != 0:
+			Output.fatal("Updating boot configuration requires root privileges.")
+		
+		mesg("norm", "Generating config for {gen}...".format(gen=generate))
+		print()
+		
+		if not success:
+			self.cleanup(success)
+		
+		# Before loading extension, we want to auto-mount boot if it isn't
+		# already mounted:
+		
+		imountedit = False
+		
+		fstabinfo = funtoo.boot.helper.fstabInfo()
+		
+		if fstabinfo.hasEntry("/boot"):
+			if not os.path.ismount("/boot"):
+				mesg("debug", "Mounting filesystem /boot...")
+				os.system("mount /boot")
+				imountedit = True
+		else:
+			mesg("info", "No /etc/fstab entry for /boot; not mounting.")
+		
+		# Dynamically import the proper extension module (ie. grub.py,
+		# grub-legacy.py, lilo.py):
+		extname = "funtoo.boot.extensions.{gen}".format(gen=generate)
+		__import__(extname)
+		extmodule = sys.modules[extname]
+		# Create Boot Loader Extension object: and regenerate config file
+		ext = None
+		try:
+			ext = extmodule.getExtension(self.boot_config)
+			ext.mesg = mesg
+			success = ext.regenerate()[1:]
+		except ExtensionError as e:
+			success = False
+			self.msgs.append(["fatal", e])
+		
+		if success and not quiet:
+			pos = 0
+			while pos < len(ext.bootitems):
+				if pos == ext.defpos:
+					mesg("defboot", ext.bootitems[pos])
+				else:
+					mesg("boot", ext.bootitems[pos])
+				pos += 1
+		print()
+		# If we mounted /boot, we should unmount it:
+		if imountedit:
+			mesg("debug", "Unmounting /boot")
+			os.system("umount /boot")
+		
+		self.cleanup(success, ext=ext)
+	
+	def handle_show_action(self):
+		"""Perform boot-update --show action -- show a specific boot.conf configuration setting."""
+		print(self.boot_config[self.options.show])
+
+	def handle_show_defaults_action(self):
+		"""Perform boot-update --show-defaults action."""
+		print("# These are the default settings that can be overridden by")
+		print("# the /etc/boot.conf file.")
+		print("")
+		for line in self.boot_config.parent.dump():
+			if not line.startswith("#"):
+				sys.stdout.write(line)
+				
+	def set_default_action(self):
+		"""Perform the boot-update --set-default action to set a default kernel."""
+		if os.geteuid() != 0:
+			Output.fatal("Updating the default kernel requires root privileges.")
+		success = self.boot_config.idmapper.set_default_kname(sys.argv[2])
+		if success:
+			self.msgs.append(["info", "%s set to default kernel." % sys.argv[2]])
+			self.update_action(quiet=True)
+			
+	def add_arguments(self, parser):
+		parser.add_argument("--show-defaults", "--showdefaults", action="store_true", help="Show default settings for /etc/boot.conf.")
+		parser.add_argument("--show", default=None, metavar="sect/val", help="Echo a specific configuration setting.")
+		parser.add_argument("--set-default", default=None, metavar="path-to-kernel-img", help="Set a default kernel image to boot using /etc/boot.d.")
+		parser.add_argument("--check", action="store_true", help="Check the validity of the %s file." % self.boot_config_file)
+		
+		subparsers = parser.add_subparsers(title="actions", dest="action")
+		update_parser = subparsers.add_parser('update', help="Update boot loader configuration based on /etc/boot.conf.")
+		update_parser.set_defaults(handler=self.update_action)
+	
+	def handle(self):
+		handler = getattr(self.options, 'handler', None)
+		if handler is not None:
+			# an action was specified:
+			handler()
+		else:
+			# no action -- just an option. Call the right one:
+			if self.options.show_defaults:
+				self.handle_show_defaults_action()
+			elif self.options.show is not None:
+				self.handle_show_action()
+			elif self.options.set_default is not None:
+				self.set_default_action()
+			elif self.options.check is not None:
+				self.update_action(check=True)
+		
+# vim: ts=4 sw=4 noet

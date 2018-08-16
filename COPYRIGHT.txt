@@ -1,10 +1,6 @@
-Copyright 2015-2017 Funtoo Solutions, Inc. and contributors.
+Copyright 2015-2018 Funtoo Solutions, Inc. and contributors.
 
-This program is free software; you can redistribute and/or modify it under the
-terms of the GNU General Public License version 2. Alternatively you may (at
-your option) use any other license that has been publicly approved for use
-with this program by Funtoo Solutions, Inc. (or its successors, if any.)
+This program is free software; you can redistribute and/or modify it under the terms of the GNU General Public License
+version 2 or GNU General Public License version 3. Alternatively you may (at your option) use any other license that has
+been publicly approved for use with this program by Funtoo Solutions, Inc. (or its successors, if any.)
 
-At this time (October 2017), no other licenses other than the default license
-(GNU General Public License version 2) have been approved by Funtoo Solutions,
-Inc. for use with this program.
