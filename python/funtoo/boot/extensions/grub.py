@@ -33,6 +33,18 @@ class GRUBExtension(Extension):
 		else:
 			self.uefiboot = False
 	
+	def attemptKernel(self, identifier) -> bool:
+		cmd = "/usr/sbin/grub-set-default"
+		cmdobj = Popen([cmd, identifier], bufsize=-1, stdout=PIPE, stderr=PIPE, shell=False)
+		output = cmdobj.communicate()
+		retval = cmdobj.poll()
+		if retval != 0:
+			self.msgs.append(["fatal", "Unable to set next-attempted kernel to entry \"%s\"." % identifier])
+			return False
+		else:
+			self.msgs.append(["info", "Next-attempted kernel set to entry \"%s\"." % identifier])
+			return True
+	
 	def grubProbe(self):
 		gprobe = "/usr/sbin/grub-probe"
 		if not os.path.exists(gprobe):

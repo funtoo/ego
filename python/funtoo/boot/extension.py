@@ -21,7 +21,9 @@ class Extension:
 		self.msgs = []
 		self.r = Resolver(config, self.msgs)
 
-
+	def attemptKernel(self, identifier) -> bool:
+		self.msgs.append(["fatal", "This extension does not support kernel attempt/fallback."])
+		return False
 
 	def APIVersion(self) -> int:
 		""" Returns API version, a monotonically increasing integer. """

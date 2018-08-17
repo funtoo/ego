@@ -201,7 +201,7 @@ class Module(EgoModule):
 		action = self.options.action
 		newset = self.options.new_value
 		profile_type = ProfileType.from_string(action)
-		if profile_type == None:
+		if profile_type is None:
 			Output.fatal("Unknown profile type: %s" % action)
 		elif profile_type == ProfileType.OTHER:
 			Output.fatal("Profile type of 'other' not valid.")

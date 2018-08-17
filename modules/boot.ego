@@ -35,16 +35,19 @@ class Module(EgoModule):
 		self.msgs = []
 		self.boot_config = self.get_boot_config()
 		# TODO: check for None ^^
-	
-	def cleanup(self, success, ext=None, quiet=False):
+		self._ext = None
+		self.ext_name = None
+		self.ext_module = None
+
+	def cleanup(self, success, quiet=False):
 		""" prints accumulated errors and warnings and exits appropriately """
 		print()
 		msgs = self.msgs
-		if ext is not None:
+		
+		if self._ext is not None:
 			# unmounts any non-/boot filesystems we may have mounted for scanning.
 			# /boot unmounting is handled via another process.
-			ext.r.UnmountIfNecessary()
-			msgs += ext.msgs
+			self._ext.r.UnmountIfNecessary()
 		warnings = False
 		for msgtype, msg in msgs:
 			if msgtype == "warn":
@@ -65,7 +68,7 @@ class Module(EgoModule):
 			print()
 			sys.exit(0)
 			
-	def update_action(self, check=False, quiet=False):
+	def update_action(self, check=False, quiet=False, cleanup=True) -> bool:
 		"""
 		Perform traditional boot-update action of updating boot-loader configuration based on /etc/boot.conf.
 		:return:
@@ -74,35 +77,21 @@ class Module(EgoModule):
 		for invalid in self.boot_config.validate():
 			self.msgs.append(["warn", "invalid config setting \"{iv}\"; ignored.".format(iv=invalid)])
 		
-		success = True
-		generate = self.boot_config["boot/generate"]
-		
-		if generate == "":
-			success = False
-			self.msgs.append(["fatal", "boot/generate does not specify a valid boot loader to generate a config for."])
-		
-		if generate not in funtoo.boot.extensions.__all__:
-			success = False
-			self.msgs.append(["fatal", "extension for boot loader \"%s\" (specified in boot/generate) not found." % generate])
-	
 		if check is True:
 			self.msgs.append(["norm", "Configuration file {cf} checked.".format(cf=self.boot_config_file)])
-			self.cleanup(success)
+			self.cleanup(True)
 		
 		if os.geteuid() != 0:
 			Output.fatal("Updating boot configuration requires root privileges.")
 		
-		mesg("norm", "Generating config for {gen}...".format(gen=generate))
+		extension = self.get_extension()
+		mesg("norm", "Generating config for {gen}...".format(gen=self.ext_name))
 		print()
-		
-		if not success:
-			self.cleanup(success)
 		
 		# Before loading extension, we want to auto-mount boot if it isn't
 		# already mounted:
 		
 		imountedit = False
-		
 		fstabinfo = funtoo.boot.helper.fstabInfo()
 		
 		if fstabinfo.hasEntry("/boot"):
@@ -113,36 +102,59 @@ class Module(EgoModule):
 		else:
 			mesg("info", "No /etc/fstab entry for /boot; not mounting.")
 		
-		# Dynamically import the proper extension module (ie. grub.py,
-		# grub-legacy.py, lilo.py):
-		extname = "funtoo.boot.extensions.{gen}".format(gen=generate)
-		__import__(extname)
-		extmodule = sys.modules[extname]
-		# Create Boot Loader Extension object: and regenerate config file
-		ext = None
+		# regenerate config:
 		try:
-			ext = extmodule.getExtension(self.boot_config)
-			ext.mesg = mesg
-			success = ext.regenerate()[1:]
+			success = extension.regenerate()[1:]
 		except ExtensionError as e:
 			success = False
 			self.msgs.append(["fatal", e])
-		
+			
 		if success and not quiet:
-			pos = 0
-			while pos < len(ext.bootitems):
-				if pos == ext.defpos:
-					mesg("defboot", ext.bootitems[pos])
-				else:
-					mesg("boot", ext.bootitems[pos])
-				pos += 1
-		print()
+			self.show_bootmenu()
+			
 		# If we mounted /boot, we should unmount it:
 		if imountedit:
 			mesg("debug", "Unmounting /boot")
 			os.system("umount /boot")
 		
-		self.cleanup(success, ext=ext)
+		if cleanup:
+			self.cleanup(success)
+		return success
+	
+	def show_bootmenu(self, attempt_id=None):
+		extension = self.get_extension()
+		pos = 0
+		while pos < len(extension.bootitems):
+			if attempt_id and (attempt_id == str(pos) or attempt_id == extension.bootitems[pos]):
+				mesg("attemptboot", extension.bootitems[pos], entry=pos)
+			elif pos == extension.defpos:
+				mesg("defboot", extension.bootitems[pos], entry=pos)
+			else:
+				mesg("boot", extension.bootitems[pos], entry=pos)
+			pos += 1
+		print()
+	
+	def get_extension(self):
+		if self._ext is None:
+			success = True
+			self.ext_name = self.boot_config["boot/generate"]
+			if self.ext_name == "":
+				success = False
+				self.msgs.append(["fatal", "boot/generate does not specify a valid boot loader to generate a config for."])
+			if self.ext_name not in funtoo.boot.extensions.__all__:
+				success = False
+				self.msgs.append(["fatal", "extension for boot loader \"%s\" (specified in boot/generate) not found." % self.ext_name])
+			if not success:
+				self.cleanup(False)
+			# Dynamically import the proper extension module (ie. grub.py,
+			# grub-legacy.py, lilo.py):
+			extname = "funtoo.boot.extensions.{gen}".format(gen=self.ext_name)
+			__import__(extname)
+			self.ext_module = sys.modules[extname]
+			self._ext = self.ext_module.getExtension(self.boot_config)
+			# link extension's messages list to ours so we have easy access to extension's user messages:
+			self._ext.msgs = self.msgs
+		return self._ext
 	
 	def handle_show_action(self):
 		"""Perform boot-update --show action -- show a specific boot.conf configuration setting."""
@@ -165,7 +177,46 @@ class Module(EgoModule):
 		if success:
 			self.msgs.append(["info", "%s set to default kernel." % sys.argv[2]])
 			self.update_action(quiet=True)
+		
+	def success_action(self):
+		# Update our record of the last kernel booted:
+		self.boot_config.idmapper.update_last_id()
+		# If a kernel is waiting to be promoted to default, then do it:
+		promoted, kname = self.boot_config.idmapper.promote_kernel()
+		if promoted:
+			success = self.update_action(cleanup=False)
 			
+			# trigger cleanup ourselves:
+			if success:
+				self.msgs.append(["info", "Boot success -- %s promoted to default kernel." % kname])
+			else:
+				self.msgs.append(["warn", "An error was encountered promoting %s to the default kernel." % kname])
+			self.cleanup(success)
+		else:
+			self.msgs.append(["warn", "Unable to find a kernel to promote."])
+			self.cleanup(False)
+		
+	def attempt_action(self):
+		success = self.update_action(quiet=True, cleanup=False)
+		if not success:
+			self.cleanup(False)
+		identifier = self.options.identifier
+		extension = self.get_extension()
+		success = extension.attemptKernel(identifier)
+		if success:
+			self.show_bootmenu(attempt_id=identifier)
+		self.cleanup(success, quiet=False)
+		
+		# TODO: set kernel ID to promote. This requires modding the extension to return kname for each menuentry,
+		# which is a good thing to do anyway... this way we can map menu entry -> kname -> rand_id.
+	
+	def show_action(self):
+		if 'bootmenu' in self.options.sub_action:
+			self.show_bootmenu()
+		else:
+			print(self.options.sub_action)
+			print("ARGH!")
+		
 	def add_arguments(self, parser):
 		parser.add_argument("--show-defaults", "--showdefaults", action="store_true", help="Show default settings for /etc/boot.conf.")
 		parser.add_argument("--show", default=None, metavar="sect/val", help="Echo a specific configuration setting.")
@@ -175,6 +226,15 @@ class Module(EgoModule):
 		subparsers = parser.add_subparsers(title="actions", dest="action")
 		update_parser = subparsers.add_parser('update', help="Update boot loader configuration based on /etc/boot.conf.")
 		update_parser.set_defaults(handler=self.update_action)
+		success_parser = subparsers.add_parser('success', help="Record a successful boot.")
+		success_parser.set_defaults(handler=self.success_action)
+		attempt_parser = subparsers.add_parser('attempt', help="Attempt to boot a new kernel without actually changing default.")
+		attempt_parser.set_defaults(handler=self.attempt_action)
+		attempt_parser.add_argument("identifier")
+		
+		show_parser = subparsers.add_parser('show', help="Show boot menu or other settings.")
+		show_parser.add_argument('sub_action', nargs=1, choices=["bootmenu", "defaults"], help="Item to show.")
+		show_parser.set_defaults(handler=self.show_action)
 	
 	def handle(self):
 		handler = getattr(self.options, 'handler', None)

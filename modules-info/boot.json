@@ -2,5 +2,5 @@
 	"description" : "Boot features (boot-update)",
 	"author" : "Daniel Robbins",
 	"version" : "1.0",
-	"actions" : [ "update" ]
+	"actions" : [ "update", "success" ]
 }

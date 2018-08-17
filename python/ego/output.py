@@ -136,7 +136,7 @@ class Color(object):
 		return self + self.default(' ' * (width - len(self)))
 
 
-def mesg(msgtype, msg):
+def mesg(msgtype, msg, entry=None):
 	global term_size
 	""" prints different types of messages to the console """
 	outstr = None
@@ -145,9 +145,17 @@ def mesg(msgtype, msg):
 	elif msgtype in ["norm", "info"]:
 		outstr = "{G} *{O} {m}".format(G=Color.GREEN, O=Color.END, m=msg)
 	elif msgtype == "boot":
-		outstr = "           {m}".format(m=msg)
+		if entry is None:
+			outstr = "           {m}".format(m=msg)
+		else:
+			outstr = "          {entry:2d} {m}".format(entry=entry, m=msg)
+	elif msgtype == "attemptboot":
+		outstr = "{Y} ATTEMPT >{entry:2d} {B}{G}{m}{O}".format(entry=entry, B=Color.BOLD, Y=Color.YELLOW, G=Color.GREEN, m=msg, O=Color.END)
 	elif msgtype == "defboot":
-		outstr = "{C} DEFAULT > {G}{m}{O}".format(C=Color.CYAN, G=Color.GREEN, m=msg, O=Color.END)
+		if entry is None:
+			outstr = "{C} DEFAULT > {G}{m}{O}".format(C=Color.CYAN, G=Color.GREEN, m=msg, O=Color.END)
+		else:
+			outstr = "{C} DEFAULT >{entry:2d} {G}{m}{O}".format(entry=entry, C=Color.CYAN, G=Color.GREEN, m=msg, O=Color.END)
 	elif msgtype == "note":
 		outstr = "{R} * NOTE:{O} {m}".format(R=Color.CYAN, O=Color.END, m=msg)
 	elif msgtype == "warn":
