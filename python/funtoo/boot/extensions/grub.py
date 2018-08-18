@@ -6,8 +6,8 @@ from subprocess import PIPE
 from subprocess import Popen
 from subprocess import STDOUT
 
-from funtoo.boot.extension import Extension
-from funtoo.boot.extension import ExtensionError
+from funtoo.boot.menu import BootLoaderMenu, BootLoaderEntryType
+from funtoo.boot.extension import Extension, ExtensionError
 
 
 def getExtension(config):
@@ -53,9 +53,8 @@ class GRUBExtension(Extension):
 			raise ExtensionError("couldn't find grub-probe")
 		return gprobe
 	
-	def generateOtherBootEntry(self, l, sect):
+	def generateOtherBootEntry(self, boot_menu: BootLoaderMenu, sect) -> bool:
 		""" Generates the boot entry for other systems """
-		ok = True
 		mytype = self.config["{s}/type".format(s=sect)].lower()
 		if mytype in ["dos", "msdos"]:
 			mytype = "dos"
@@ -81,40 +80,41 @@ class GRUBExtension(Extension):
 		mychainloader = self.r.GetParam(params, "chainloader=")
 		myname = sect
 		# TODO check for valid root entry
-		l.append("")
-		l.append("menuentry \"{mn}\" {{".format(mn=myname))
+		boot_menu.lines.append("")
+		boot_menu.lines.append("menuentry \"{mn}\" {{".format(mn=myname))
 		if mytype in ["linux16"]:
 			k = self.r.StripMountPoint(self.config[sect + "/kernel"])
 			if not os.path.exists(self.config["boot/path"] + "/" + k):
 				self.msgs.append(["warn", "Image for section {sect} not found - {k}".format(sect=sect, k=k)])
 			else:
 				self.bootitems.append(myname)
-				l.append("  linux16 " + k)
+				boot_menu.lines.append("  linux16 " + k)
 		else:
-			self.PrepareGRUBForDevice(myroot, l)
+			# TODO: add entry to boot_menu object
+			self.PrepareGRUBForDevice(myroot, boot_menu.lines)
 			self.bootitems.append(myname)
 			self.DeviceGRUB(myroot)
 			if mytype in ["win7", "win8"] or mytype == "win10" and self.uefiboot is False:
-				l.append("  chainloader " + mychainloader) if mychainloader else l.append("  chainloader +4")
+				boot_menu.lines.append("  chainloader " + mychainloader) if mychainloader else boot_menu.lines.append("  chainloader +4")
 			elif mytype in ["vista", "dos", "winxp", "haiku"]:
-				l.append("  chainloader " + mychainloader) if mychainloader else l.append("  chainloader +1")
+				boot_menu.lines.append("  chainloader " + mychainloader) if mychainloader else boot_menu.lines.append("  chainloader +1")
 			elif mytype in ["win10"]:
-				l.append("  chainloader " + mychainloader) if mychainloader else l.append("  chainloader /EFI/Microsoft/Boot/bootmgfw.efi")
-		l.append("}")
+				boot_menu.lines.append("  chainloader " + mychainloader) if mychainloader else boot_menu.lines.append("  chainloader /EFI/Microsoft/Boot/bootmgfw.efi")
+		boot_menu.lines.append("}")
+		boot_menu.addBootEntry(BootLoaderEntryType.OTHER, label=myname)
 		return True
 	
-	def generateBootEntry(self, l, sect, k_full_path, kext):
+	def generateBootEntry(self, boot_menu: BootLoaderMenu, sect: str, k_full_path: str, kext: str) -> bool:
 		""" Generates the boot entry """
-		ok = True
 		mytype = self.config["{s}/type".format(s=sect)]
-		l.append("")
+		boot_menu.lines.append("")
 		label = self.r.GetBootEntryString(sect, k_full_path)
-		l.append("menuentry \"{l}\" {{".format(l=label))
+		boot_menu.lines.append("menuentry \"{l}\" {{".format(l=label))
 		
 		# self.bootitems records all our boot items
 		self.bootitems.append(label)
 		
-		self.PrepareGRUBForFilesystem(self.config["{s}/scan".format(s=sect)], l)
+		self.PrepareGRUBForFilesystem(self.config["{s}/scan".format(s=sect)], boot_menu.lines)
 		
 		k_sub_path = self.r.StripMountPoint(k_full_path)
 		c = self.config
@@ -155,15 +155,15 @@ class GRUBExtension(Extension):
 		params.append("rand_id=%s" % self.r.idmapper.get(k_full_path))
 		# Append kernel lines based on type
 		if mytype == "xen":
-			l.append("  multiboot {xker} {xparams}".format(xker=xenpath, xparams=" ".join(xenparams)))
-			l.append("  module {ker} {params}".format(ker=k_sub_path, params=" ".join(params)))
+			boot_menu.lines.append("  multiboot {xker} {xparams}".format(xker=xenpath, xparams=" ".join(xenparams)))
+			boot_menu.lines.append("  module {ker} {params}".format(ker=k_sub_path, params=" ".join(params)))
 			for initrd in initrds:
-				l.append("  module {initrd}".format(initrd=self.r.StripMountPoint(initrd)))
+				boot_menu.lines.append("  module {initrd}".format(initrd=self.r.StripMountPoint(initrd)))
 		else:
-			l.append("  {t} {k} {par}".format(t=mytype, k=k_sub_path, par=" ".join(params)))
+			boot_menu.lines.append("  {t} {k} {par}".format(t=mytype, k=k_sub_path, par=" ".join(params)))
 			if initrds:
 				initrds = (self.r.StripMountPoint(initrd) for initrd in initrds)
-				l.append("  initrd {rds}".format(rds=" ".join(initrds)))
+				boot_menu.lines.append("  initrd {rds}".format(rds=" ".join(initrds)))
 		
 		# Append graphics line
 		if self.config.hasItem("{s}/gfxmode".format(s=sect)):
@@ -173,9 +173,9 @@ class GRUBExtension(Extension):
 					skipgfx = True
 					break
 			if not skipgfx:
-				l.append("  set gfxpayload=keep")
-		l.append("}")
-		
+				boot_menu.lines.append("  set gfxpayload=keep")
+		boot_menu.lines.append("}")
+		boot_menu.addBootEntry(BootLoaderEntryType.LINUX, label=label, image_path=k_full_path)
 		return ok
 	
 	def sanitizeDisplayMode(self, dm):
@@ -185,29 +185,32 @@ class GRUBExtension(Extension):
 		else:
 			return dm
 	
-	def generateConfigFile(self):
-		l = []
-		c = self.config
+	def generateConfigFile(self) -> BootLoaderMenu:
+		boot_menu = BootLoaderMenu()
 		if self.uefiboot:
 			self.msgs.append(["note", "Detected UEFI boot. Configuring for UEFI booting."])
 		else:
 			self.msgs.append(["note", "Detected MBR boot. Configuring for Legacy MBR booting."])
-		l.append(c.condFormatSubItem("boot/timeout", "set timeout={s}"))
+		boot_menu.lines.append(self.config.condFormatSubItem("boot/timeout", "set timeout={s}"))
 		# pass our boot entry generator function to GenerateSections,
 		# and everything is taken care of for our boot entries
-		if c.hasItem("boot/terminal") and c["boot/terminal"] == "serial":
+		if self.config.hasItem("boot/terminal") and self.config["boot/terminal"] == "serial":
 			self.msgs.append(["warn", "Configured for SERIAL input/output."])
-			l += [
+			boot_menu.lines += [
 				"serial --unit=%s --speed=%s --word=%s --parity=%s --stop=%s" % (
-				c["serial/unit"], c["serial/speed"], c["serial/word"], c["serial/parity"], c["serial/stop"]),
+					self.config["serial/unit"],
+					self.config["serial/speed"],
+					self.config["serial/word"],
+					self.config["serial/parity"],
+					self.config["serial/stop"]),
 				"terminal_input serial",
 				"terminal_output serial"
 			]
-		elif c.hasItem("display/gfxmode"):
-			l.append("")
-			self.PrepareGRUBForFilesystem(c["boot/path"], l)
-			if c.hasItem("display/font"):
-				font = c["display/font"]
+		elif self.config.hasItem("display/gfxmode"):
+			boot_menu.lines.append("")
+			self.PrepareGRUBForFilesystem(self.config["boot/path"], boot_menu.lines)
+			if self.config.hasItem("display/font"):
+				font = self.config["display/font"]
 			else:
 				font = None
 			
@@ -229,7 +232,7 @@ class GRUBExtension(Extension):
 			
 			if dst_font is None:
 				# font does not exist at destination... so we will need to find it somewhere and copy into /boot/grub
-				for fontpath in c["grub/font_src"].split():
+				for fontpath in self.config["grub/font_src"].split():
 					if dst_font is not None:
 						break
 					for font in fonts:
@@ -247,24 +250,22 @@ class GRUBExtension(Extension):
 					self.msgs.append(["fatal", "specified font \"{ft}\" not found at {dst}; aborting.".format(ft=font, dst=dst_font)])
 				else:
 					self.msgs.append(["fatal", "Could not find one of %s to copy into boot directory; aborting." % ",".join(fonts)])
-				return False, l
+				boot_menu.success = False
+				return boot_menu
+
 			
-			l += ["if loadfont {dst}; then".format(dst=self.r.RelativePathTo(dst_font, c["boot/path"])),
-				  "   set gfxmode={gfx}".format(gfx=self.sanitizeDisplayMode(c["display/gfxmode"])),
+			boot_menu.lines += ["if loadfont {dst}; then".format(dst=self.r.RelativePathTo(dst_font, self.config["boot/path"])),
+				  "   set gfxmode={gfx}".format(gfx=self.sanitizeDisplayMode(self.config["display/gfxmode"])),
 				  "   insmod all_video",
 				  "   terminal_output gfxterm"]
-			bg = c.item("display", "background").split()
+			bg = self.config.item("display", "background").strip()
 			if len(bg):
-				if len(bg) == 1:
-					bgimg = bg[0]
-					bgext = bg[0].rsplit(".")[-1].lower()
-				elif len(bg) == 2:
-					bgimg, bgext = bg
+				bgimg = bg[0]
+				bgext = bg[0].rsplit(".")[-1].lower()
 				if bgext == "jpg":
 					bgext = "jpeg"
 				if bgext in ["jpeg", "png", "tga"]:
-					
-					rel_cfgpath = "{path}/{img}".format(path=c["boot/path"], img=bgimg)
+					rel_cfgpath = "{path}/{img}".format(path=self.config["boot/path"], img=bgimg)
 					
 					# first, look for absolute path, because our relative path
 					# can eval to "/boot/boot/foo.png" which
@@ -272,39 +273,39 @@ class GRUBExtension(Extension):
 					
 					if bgimg[0] == "/" and os.path.exists(bgimg):
 						# user specified absolute path to file on disk:
-						l += [
+						boot_menu.lines += [
 							"   insmod {bg}".format(bg=bgext),
-							"   background_image {img}".format(img=self.r.RelativePathTo(bgimg, c["boot/path"]))
+							"   background_image {img}".format(img=self.r.RelativePathTo(bgimg, self.config["boot/path"]))
 						]
 					elif os.path.exists(rel_cfgpath):
 						# user specified path relative to /boot:
-						l += [
+						boot_menu.lines += [
 							"   insmod {ext}".format(ext=bgext),
-							"   background_image {img}".format(img=self.r.RelativePathTo(rel_cfgpath, c["boot/path"]))
+							"   background_image {img}".format(img=self.r.RelativePathTo(rel_cfgpath, self.config["boot/path"]))
 						]
 					else:
 						self.msgs.append(["warn", "background image \"{img}\" does not exist - skipping.".format(img=bgimg)])
 				else:
 					self.msgs.append(["warn", "background image \"{img}\" (format \"{ext}\") not recognized - skipping.".format(img=bgimg, ext=bgext)])
-			l += ["fi",
-				  "",
-				  c.condFormatSubItem("color/normal", "set menu_color_normal={s}"),
-				  c.condFormatSubItem("color/highlight", "set menu_color_highlight={s}"),
-				  ]
+			boot_menu.lines += ["fi",
+								"",
+								self.config.condFormatSubItem("color/normal", "set menu_color_normal={s}"),
+								self.config.condFormatSubItem("color/highlight", "set menu_color_highlight={s}"),
+								]
 		else:
-			if c.hasItem("display/background"):
-				self.msgs.append(["warn", "display/gfxmode not provided - display/background \"{bg}\" will not be displayed.".format(bg=c["display/background"])])
+			if self.config.hasItem("display/background"):
+				self.msgs.append(["warn", "display/gfxmode not provided - display/background \"{bg}\" will not be displayed.".format(bg=self.config["display/background"])])
 		
-		ok, self.defpos, self.defname = self.r.GenerateSections(l, self.generateBootEntry, self.generateOtherBootEntry)
-		if not ok:
-			return ok, l
+		self.r.GenerateSections(boot_menu, self.generateBootEntry, self.generateOtherBootEntry)
+		if not boot_menu.success:
+			return boot_menu
 		
-		l += [
+		boot_menu.lines += [
 			""
-			"set default={pos}".format(pos=self.defpos)
+			"set default={pos}".format(pos=boot_menu.default_position)
 		]
 		
-		return ok, l
+		return boot_menu
 	
 	def GuppyMap(self):
 		""" Creates the device map """

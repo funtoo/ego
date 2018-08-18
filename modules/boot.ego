@@ -4,13 +4,14 @@ import os
 import sys
 from ego.module import EgoModule
 from ego.output import Output, mesg
+from typing import Optional
 
 import funtoo.boot.helper
 import funtoo.boot.extensions
 
 from funtoo.boot.config import BootConfigFile
 from funtoo.core.config import ConfigFileError
-from funtoo.boot.extension import ExtensionError
+from funtoo.boot.extension import ExtensionError, BootLoaderMenu
 
 
 class Module(EgoModule):
@@ -68,7 +69,7 @@ class Module(EgoModule):
 			print()
 			sys.exit(0)
 			
-	def update_action(self, check=False, quiet=False, cleanup=True) -> bool:
+	def update_action(self, check=False, quiet=False, cleanup=True) -> Optional[BootLoaderMenu]:
 		"""
 		Perform traditional boot-update action of updating boot-loader configuration based on /etc/boot.conf.
 		:return:
@@ -104,33 +105,36 @@ class Module(EgoModule):
 		
 		# regenerate config:
 		try:
-			success = extension.regenerate()[1:]
+			boot_menu = extension.regenerate()
+			if boot_menu.success and not quiet:
+				self.show_bootmenu(boot_menu)
+			
+			# If we mounted /boot, we should unmount it:
+			if imountedit:
+				mesg("debug", "Unmounting /boot")
+				os.system("umount /boot")
+			
+			if cleanup:
+				self.cleanup(boot_menu.success)
+			return boot_menu
 		except ExtensionError as e:
-			success = False
 			self.msgs.append(["fatal", e])
+			if cleanup:
+				self.cleanup(False)
+				return None
 			
-		if success and not quiet:
-			self.show_bootmenu()
-			
-		# If we mounted /boot, we should unmount it:
-		if imountedit:
-			mesg("debug", "Unmounting /boot")
-			os.system("umount /boot")
-		
-		if cleanup:
-			self.cleanup(success)
-		return success
-	
-	def show_bootmenu(self, attempt_id=None):
-		extension = self.get_extension()
+	def show_bootmenu(self, boot_menu: BootLoaderMenu):
 		pos = 0
-		while pos < len(extension.bootitems):
-			if attempt_id and (attempt_id == str(pos) or attempt_id == extension.bootitems[pos]):
-				mesg("attemptboot", extension.bootitems[pos], entry=pos)
-			elif pos == extension.defpos:
-				mesg("defboot", extension.bootitems[pos], entry=pos)
+		attempt_kname = self.boot_config.idmapper.get_attempted_kname()
+		for item in boot_menu.boot_entries:
+			label = item["label"]
+			kname = item["image_path"]
+			if attempt_kname == kname:
+				mesg("attemptboot", label, entry=pos)
+			elif pos == boot_menu.default_position:
+				mesg("defboot", label, entry=pos)
 			else:
-				mesg("boot", extension.bootitems[pos], entry=pos)
+				mesg("boot", label, entry=pos)
 			pos += 1
 		print()
 	
@@ -184,35 +188,43 @@ class Module(EgoModule):
 		# If a kernel is waiting to be promoted to default, then do it:
 		promoted, kname = self.boot_config.idmapper.promote_kernel()
 		if promoted:
-			success = self.update_action(cleanup=False)
+			boot_menu = self.update_action(cleanup=False)
 			
 			# trigger cleanup ourselves:
-			if success:
+			if boot_menu.success:
 				self.msgs.append(["info", "Boot success -- %s promoted to default kernel." % kname])
 			else:
 				self.msgs.append(["warn", "An error was encountered promoting %s to the default kernel." % kname])
-			self.cleanup(success)
+			self.cleanup(boot_menu.success)
 		else:
 			self.msgs.append(["warn", "Unable to find a kernel to promote."])
 			self.cleanup(False)
+	
 		
 	def attempt_action(self):
-		success = self.update_action(quiet=True, cleanup=False)
-		if not success:
+		boot_menu = self.update_action(quiet=True, cleanup=False)
+		if boot_menu is None or not boot_menu.success:
 			self.cleanup(False)
 		identifier = self.options.identifier
 		extension = self.get_extension()
-		success = extension.attemptKernel(identifier)
-		if success:
-			self.show_bootmenu(attempt_id=identifier)
-		self.cleanup(success, quiet=False)
-		
-		# TODO: set kernel ID to promote. This requires modding the extension to return kname for each menuentry,
-		# which is a good thing to do anyway... this way we can map menu entry -> kname -> rand_id.
+		kname = boot_menu.get_kname_of_identifier(identifier)
+		if kname is not None:
+			success = extension.attemptKernel(identifier)
+			if success:
+				self.boot_config.idmapper.update_promote_kname(kname)
+				self.show_bootmenu(boot_menu)
+			else:
+				self.msgs.append(["fatal", "Encountered an unexpected error when setting attempted kernel."])
+				self.cleanup(False)
+		else:
+			self.msgs.append(["fatal", "Encountered an unexpected error when attempting to promote kernel."])
+			self.cleanup(False)
+		self.cleanup(True)
+
 	
 	def show_action(self):
 		if 'bootmenu' in self.options.sub_action:
-			self.show_bootmenu()
+			self.show_bootmenu(boot_menu)
 		else:
 			print(self.options.sub_action)
 			print("ARGH!")

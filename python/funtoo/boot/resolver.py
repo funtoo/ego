@@ -1,4 +1,4 @@
-# -*- coding: ascii -*-
+#!/usr/bin/python3
 """ The resolver provides various mechanisms for doing things automatically
 that might be found in the configuration file. For example, it handles matching
 the [-v] in a file path to the various files it can match. """
@@ -9,8 +9,10 @@ from subprocess import PIPE
 from subprocess import Popen
 from subprocess import STDOUT
 from subprocess import getstatusoutput, getoutput
+from typing import Callable
 
 from funtoo.boot.helper import fstabInfo
+from funtoo.boot.menu import BootLoaderMenu
 
 def bracketzap(instr, wild=True):
 	""" Removes various bracket types from the input string. """
@@ -42,10 +44,9 @@ class Resolver:
 		self.config = config
 		self.mounted = {}
 		self.fstabinfo = fstabInfo()
-		# The following 4 variables are for use in generating sections:
+		# The following 3 variables are for use in generating sections:
 		# a position counter -- if 0, we processed no kernels...
 		self._pos = 0
-		self._defpos = None
 		self._defnames = []
 		self._default, self._default_mode = self.config.get_default_boot_setting()
 		self.rootarg = None
@@ -299,11 +300,13 @@ class Resolver:
 				if cmdobj.poll() != 0:
 					self.msgs.append(["warn", "Error unmounting {mp}, Output was :\n{out}".format(mp=mountpoint, out=output[0].decode())])
 	
-	def _GenerateLinuxSection(self, l, sect, sfunc) -> bool:
+	def _GenerateLinuxSection(self,
+							  boot_menu: BootLoaderMenu,
+							  sect: str,
+							  sfunc: Callable[[BootLoaderMenu, str, str, str], bool]) -> bool:
 		"""Generates section for Linux systems"""
 		ok = True
 
-		
 		# Process a section, such as "genkernel" section.
 		
 		findlist, skiplist = self.config.flagItemList("{s}/kernel".format(s=sect))
@@ -337,10 +340,10 @@ class Resolver:
 		
 		if self._default_mode == "autopick: mtime":
 			# pick newest kernel by mtime, which happens to be top-of-list
-			self._defpos = 0
+			boot_menu.default_position = 0
 			for kname, kext, mtime in findmatch:
 				self._defnames.append(kname)
-				ok = sfunc(l, sect, kname, kext)
+				ok = sfunc(boot_menu, sect, kname, kext)
 				self._pos += 1
 
 		else:
@@ -348,17 +351,17 @@ class Resolver:
 			for kname, kext, mtime in findmatch:
 				if (self._default == sect) or (self._default == kname) or (self._default == os.path.basename(kname)):
 					# default match
-					if self._defpos is not None:
+					if boot_menu.default_position is not None:
 						found_multi = True
 						if mtime > def_mtime:
 							# this kernel is newer, use it instead
-							self._defpos = self._pos
+							boot_menu.default_position = self._pos
 							def_mtime = mtime
 					else:
-						self._defpos = self._pos
+						boot_menu.default_position = self._pos
 						def_mtime = os.stat(kname)[8]
 				self._defnames.append(kname)
-				ok = sfunc(l, sect, kname, kext)
+				ok = sfunc(boot_menu, sect, kname, kext)
 				if not ok:
 					break
 				self._pos += 1
@@ -368,30 +371,32 @@ class Resolver:
 
 		return ok
 	
-	def _GenerateOtherSection(self, l, sect, ofunc) -> bool:
+	def _GenerateOtherSection(self, boot_menu: BootLoaderMenu,
+							  sect: str,
+							  ofunc: Callable[[BootLoaderMenu, str], bool]) -> bool:
 		"""Generate section for non-Linux systems"""
 		
-		ok = ofunc(l, sect)
+		ok = ofunc(boot_menu, sect)
 		self._defnames.append(sect)
 		if self._default == sect:
-			if self._defpos is not None:
+			if boot_menu.default_position is not None:
 				self.msgs.append(["warn", "multiple matches found for default boot entry \"{name}\" - first match used.".format(name=self._default)])
 			else:
-				self._defpos = self._pos
+				boot_menu.default_position = self._pos
 		self._pos += 1
 		return ok
 	
-	def GenerateSections(self, l, sfunc, ofunc=None) -> (bool, object, object):
+	def GenerateSections(self, boot_menu: BootLoaderMenu,
+						 sfunc: Callable[[BootLoaderMenu, str, str], bool],
+						 ofunc: Callable[[BootLoaderMenu, str], bool] = None) -> BootLoaderMenu:
 		"""Generates sections using passed in extension-supplied functions"""
-		
-		ok = True
 		
 		try:
 			timeout = int(self.config["boot/timeout"])
 		except ValueError:
 			ok = False
-			self.msgs.append(["fatal", "Invalid value \"{t}\" for boot/timeout.".format(t=timeout)])
-			return ok, None, None
+			self.msgs.append(["fatal", "Invalid value for boot/timeout."])
+			return boot_menu
 		
 		if timeout == 0:
 			self.msgs.append(["warn", "boot/timeout value is zero - boot menu will not appear!"])
@@ -408,8 +413,8 @@ class Resolver:
 		# explicit.
 		if len(sections) == 0:
 			self.msgs.append(["fatal", "No boot entries are defined in /etc/boot.conf."])
-			ok = False
-			return ok, None, None
+			boot_menu.success = False
+			return boot_menu
 		
 		# Warn if there are no linux entries
 		has_linux = False
@@ -423,21 +428,20 @@ class Resolver:
 		# Generate sections
 		for sect in sections:
 			if self.config["{s}/type".format(s=sect)] in ["linux", "xen"]:
-				ok = self._GenerateLinuxSection(l, sect, sfunc)
+				ok = self._GenerateLinuxSection(boot_menu, sect, sfunc)
 			elif ofunc:
-				ok = self._GenerateOtherSection(l, sect, ofunc)
+				ok = self._GenerateOtherSection(boot_menu, sect, ofunc)
 		
 		if self._pos == 0:
 			# this means we processed no kernels -- so we have nothing to boot!
-			ok = False
 			self.msgs.append(["fatal", "No matching kernels or boot entries found in /etc/boot.conf."])
-			self._defpos = None
-			return ok, self._defpos, None
-		elif self._defpos is None:
+			boot_menu.success = False
+			return boot_menu
+		elif boot_menu.default_position is None:
 			# this means we didn't pick a default kernel to boot!
 			self.msgs.append(["warn", "Had difficulty finding a default kernel -- using first one. (report this error.)"])
 			# If we didn't find a specified default, use the first one
-			self._defpos = 0
+			boot_menu.default_position = 0
 		else:
 			self.msgs.append(["note", "Default kernel selected via: %s." % self._default_mode])
 		if self._default_mode == "autopick: mtime" and self.config.item("boot", "autopick") == "last":
@@ -448,7 +452,7 @@ class Resolver:
 			else:
 				self.msgs.append(["note", "Intel microcode will be loaded at boot-time."])
 		
-		return ok, self._defpos, self._defnames[self._defpos]
+		return boot_menu
 	
 	def RelativePathTo(self, imagepath, mountpath):
 		# we expect /boot to be mounted if it is available when this is run

@@ -1,8 +1,10 @@
-# -*- coding: ascii -*-
+#!/usr/bin/python3
 
 import os
-
 from funtoo.boot.resolver import Resolver
+from funtoo.boot.menu import BootLoaderMenu
+from typing import Optional
+
 
 class ExtensionError(Exception):
 	def __init__(self, *args):
@@ -14,12 +16,14 @@ class ExtensionError(Exception):
 		else:
 			return "(no message)"
 
+
 class Extension:
 	def __init__(self,config):
 		# initialization should always succeed.
 		self.config = config
 		self.msgs = []
 		self.r = Resolver(config, self.msgs)
+		self.fn = None
 
 	def attemptKernel(self, identifier) -> bool:
 		self.msgs.append(["fatal", "This extension does not support kernel attempt/fallback."])
@@ -33,9 +37,9 @@ class Extension:
 		""" Checks to ensure boot loader is available for use and all required local dependencies are satisfied. True = OK, False = not OK """
 		return True
 
-	def generateConfigFile(self) -> (bool, list):
+	def generateConfigFile(self) -> BootLoaderMenu:
 		""" Generate new config file based on config data. Returns a list of all lines of the config file, without trailing newlines. """
-		return True, []
+		return BootLoaderMenu()
 
 	def writeConfigFile(self, lines) -> bool:
 		"""
@@ -77,30 +81,31 @@ class Extension:
 		""" This method should be overridden. For LILO, run it to update the boot loader map. For grub, probably do nothing. """
 		return True
 
-	def regenerate(self) -> (str, bool):
+	def regenerate(self) -> Optional[BootLoaderMenu]:
 		""" This method performs the main loop that calls all our sub-steps - you should not need to override this method. If you do, an API upgrade is probably in order. """
 
 		# CHECK DEPENDENCIES
 
 		ok = self.isAvailable()
 		if not ok:
-			return "dependency check", False
+			return None
 
 		# TRY GENERATING CONFIG FILE - in memory, not yet written to disk
 
-		ok, l = self.generateConfigFile()
-		if not ok:
-			return "config generation", False
+		boot_menu = self.generateConfigFile()
+		if not boot_menu.success:
+			return boot_menu
 
-		self.msgs.append(["info","Configuration file {name} generated - {num} lines.".format(name=self.fn, num=len(l))])
+		self.msgs.append(["info", "Configuration file {name} generated - {num} lines.".format(name=self.fn, num=len(boot_menu.lines))])
 
 		# TRY VALIDATING CONFIG FILE
 
-		self.mesg("debug","Validating config file {name}".format(name=self.fn))
+		self.mesg("debug", "Validating config file {name}".format(name=self.fn))
 
-		ok = self.validateConfigFile(l)
+		ok = self.validateConfigFile(boot_menu.lines)
 		if not ok:
-			return "validation", False
+			boot_menu.success = False
+			return boot_menu
 
 		# TRY BACKING UP CONFIG FILE
 
@@ -108,22 +113,25 @@ class Extension:
 
 		ok = self.backupConfigFile()
 		if not ok:
-			return "config file backup", False
+			boot_menu.success = False
+			return boot_menu
 			
 		# TRY WRITING CONFIG FILE
 
-		self.mesg("debug","Writing new config file to {name}".format(name=self.fn))
+		self.mesg("debug", "Writing new config file to {name}".format(name=self.fn))
 
-		ok = self.writeConfigFile(l)
+		ok = self.writeConfigFile(boot_menu.lines)
 		if not ok:
-			return "config file write", False
+			boot_menu.success = False
+			return boot_menu
 
 		# TRY UPDATING BOOT LOADER
 
 		ok = self.updateBootLoader()
 		if not ok:
-			return "boot loader update", False
+			boot_menu.success = False
+			return boot_menu
 
-		return "complete", True
+		return boot_menu
 
 # vim: ts=4 sw=4 noet

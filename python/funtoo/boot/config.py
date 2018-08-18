@@ -51,6 +51,11 @@ class KernelIDMapper:
 		if current_id is not None:
 			self.record_rand_id_to_file(current_id, self.last_path)
 	
+	def update_promote_kname(self, promote_kname):
+		"""Set an id to promote on next successful boot. In other words, set the special file that tells us that we are attempting a particular kernel."""
+		rand_id = self.get(promote_kname)
+		self.record_rand_id_to_file(rand_id, self.promote_path)
+	
 	def promote_kernel(self) -> (bool, str):
 		"""If a rand_id is in the promote file, this method tells us to set it as the default. Used for fallback."""
 		promote_id = self.load_promote_rand_id()
@@ -76,6 +81,16 @@ class KernelIDMapper:
 	
 	def load_promote_rand_id(self) -> str:
 		return self.load_id_file(self.promote_path)
+	
+	def get_attempted_kname(self) -> object:
+		"""Return None if no default set in attempted path, else the default kname."""
+		attempt_rand_id = self.load_promote_rand_id()
+		if attempt_rand_id is None:
+			return None
+		if attempt_rand_id in self.rand_to_kernel_map.keys():
+			return self.rand_to_kernel_map[attempt_rand_id]
+		else:
+			return None
 	
 	def get_default_kname(self) -> object:
 		"""Return None if no default set in default_path, else the default kname."""
