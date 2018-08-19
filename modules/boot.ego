@@ -136,7 +136,6 @@ class Module(EgoModule):
 			else:
 				mesg("boot", label, entry=pos)
 			pos += 1
-		print()
 	
 	def get_extension(self):
 		if self._ext is None:
