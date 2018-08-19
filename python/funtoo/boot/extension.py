@@ -38,7 +38,7 @@ class Extension:
 		""" Checks to ensure boot loader is available for use and all required local dependencies are satisfied. True = OK, False = not OK """
 		return True
 
-	def generateConfigFile(self) -> BootLoaderMenu:
+	def generateConfigFile(self, boot_menu: BootLoaderMenu):
 		""" Generate new config file based on config data. Returns a list of all lines of the config file, without trailing newlines. """
 		return BootLoaderMenu()
 
@@ -78,20 +78,20 @@ class Extension:
 		""" This method should be overridden. For LILO, run it to update the boot loader map. For grub, probably do nothing. """
 		return True
 
-	def regenerate(self) -> Optional[BootLoaderMenu]:
+	def regenerate(self, boot_menu: BootLoaderMenu) -> bool:
 		""" This method performs the main loop that calls all our sub-steps - you should not need to override this method. If you do, an API upgrade is probably in order. """
 
 		# CHECK DEPENDENCIES
 
 		ok = self.isAvailable()
 		if not ok:
-			return None
+			return False
 
 		# TRY GENERATING CONFIG FILE - in memory, not yet written to disk
 
-		boot_menu = self.generateConfigFile()
+		self.generateConfigFile(boot_menu)
 		if not boot_menu.success:
-			return boot_menu
+			return False
 
 		self.msgs.append(["info", "Configuration file {name} generated - {num} lines.".format(name=self.fn, num=len(boot_menu.lines))])
 
@@ -101,8 +101,7 @@ class Extension:
 
 		ok = self.validateConfigFile(boot_menu.lines)
 		if not ok:
-			boot_menu.success = False
-			return boot_menu
+			return False
 
 		# TRY BACKING UP CONFIG FILE
 
@@ -110,8 +109,7 @@ class Extension:
 
 		ok = self.backupConfigFile()
 		if not ok:
-			boot_menu.success = False
-			return boot_menu
+			return False
 			
 		# TRY WRITING CONFIG FILE
 
@@ -119,16 +117,14 @@ class Extension:
 
 		ok = self.writeConfigFile(boot_menu.lines)
 		if not ok:
-			boot_menu.success = False
-			return boot_menu
+			return False
 
 		# TRY UPDATING BOOT LOADER
 
 		ok = self.updateBootLoader()
 		if not ok:
-			boot_menu.success = False
-			return boot_menu
+			return False
 
-		return boot_menu
+		return True
 
 # vim: ts=4 sw=4 noet

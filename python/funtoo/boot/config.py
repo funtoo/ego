@@ -214,7 +214,7 @@ class BootConfigFile(config.ConfigFile):
 			"boot": ["path", "generate", "timeout", "default", "bootdev", "terminal", "autopick"],
 			"display": ["gfxmode", "background", "font"],
 			"color": ["normal", "highlight"],
-			"default": ["scan", "gfxmode", "kernel", "initrd", "params", "type", "xenkernel", "xenparams"],
+			"default": ["scan", "gfxmode", "kernel", "initrd", "params", "type", "xenkernel", "xenparams", "attemptparams"],
 			"grub": ["dir", "file", "grub-mkdevicemap", "grub-probe", "font_src"],
 			"grub-legacy": ["dir", "file"],
 			"lilo": ["file", "bin", "gparams"],
