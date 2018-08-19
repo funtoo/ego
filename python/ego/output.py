@@ -137,11 +137,14 @@ class Color(object):
 
 
 def mesg(msgtype, msg, entry=None):
-	global term_size
+	global term_size, Output
 	""" prints different types of messages to the console """
 	outstr = None
 	if msgtype == "debug":
-		outstr = None
+		if Output.verbosity > 1:
+			outstr = "{G} *{O} {m}".format(G=Color.GREEN, O=Color.END, m=msg)
+		else:
+			return
 	elif msgtype in ["norm", "info"]:
 		outstr = "{G} *{O} {m}".format(G=Color.GREEN, O=Color.END, m=msg)
 	elif msgtype == "boot":

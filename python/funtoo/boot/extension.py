@@ -4,6 +4,7 @@ import os
 from funtoo.boot.resolver import Resolver
 from funtoo.boot.menu import BootLoaderMenu
 from typing import Optional
+from ego.output import mesg
 
 
 class ExtensionError(Exception):
@@ -53,10 +54,6 @@ class Extension:
 		out.close()
 		return True
 
-	def mesg(self, type, line) -> None:
-		""" This used for all informational messages, and can be overridden (as we do in boot-update to unify the output)"""
-		print("*", type, line)
-
 	def backupConfigFile(self) -> bool:
 		""" Create backup as necessary """
 		oldfn = self.fn+".old"
@@ -100,7 +97,7 @@ class Extension:
 
 		# TRY VALIDATING CONFIG FILE
 
-		self.mesg("debug", "Validating config file {name}".format(name=self.fn))
+		mesg("debug", "Validating config file {name}".format(name=self.fn))
 
 		ok = self.validateConfigFile(boot_menu.lines)
 		if not ok:
@@ -109,7 +106,7 @@ class Extension:
 
 		# TRY BACKING UP CONFIG FILE
 
-		self.mesg("debug", "Backing up original config file to {name}.old".format(name=self.fn))
+		mesg("debug", "Backing up original config file to {name}.old".format(name=self.fn))
 
 		ok = self.backupConfigFile()
 		if not ok:
@@ -118,7 +115,7 @@ class Extension:
 			
 		# TRY WRITING CONFIG FILE
 
-		self.mesg("debug", "Writing new config file to {name}".format(name=self.fn))
+		mesg("debug", "Writing new config file to {name}".format(name=self.fn))
 
 		ok = self.writeConfigFile(boot_menu.lines)
 		if not ok:
