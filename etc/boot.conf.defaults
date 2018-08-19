@@ -1,0 +1,54 @@
+# *** DO NOT MODIFY THIS FILE ***
+# These are the defaults for boot-update.
+# User settings go in /etc/boot.conf which overrides this file.
+# `man boot.conf` for more info.
+
+boot {
+	path /boot
+	generate grub
+	timeout 5
+	terminal video
+	autopick mtime
+}
+
+color {
+	normal cyan/blue
+	highlight blue/cyan
+}
+
+default {
+	type linux
+	scan /boot
+	kernel bzImage[-v] kernel[-v] vmlinuz[-v] vmlinux[-v]
+	params root=auto rootfstype=auto
+	xenkernel /boot/xen.gz
+	gfxmode text
+	attemptparams panic=10
+}
+
+serial {
+	unit 0
+	speed 115200
+	word 8
+	parity no
+	stop 1
+}
+
+grub {
+	dir grub
+	file grub.cfg
+	grub-probe /sbin/grub-probe
+	grub-mkdevicemap /sbin/grub-mkdevicemap
+	font_src /usr/share/grub /usr/share/grub/fonts
+}
+
+grub-legacy {
+	dir grub-legacy
+	file grub.conf
+}
+
+lilo {
+	file /etc/lilo.conf
+	bin /sbin/lilo
+	gparams install=menu prompt
+}
