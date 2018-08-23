@@ -41,7 +41,7 @@ class GRUBExtension(Extension):
 		if identifier is None:
 			self.msgs.append(["fatal", "Unable to find next-attempted kernel entry."])
 			return False
-		cmd = "/usr/sbin/grub-set-default"
+		cmd = "/usr/sbin/grub-reboot"
 		cmdobj = Popen([cmd, str(identifier)], bufsize=-1, stdout=PIPE, stderr=PIPE, shell=False)
 		output = cmdobj.communicate()
 		retval = cmdobj.poll()
@@ -328,7 +328,11 @@ class GRUBExtension(Extension):
 				self.msgs.append(["error", "Unable to find a matching boot entry for attempted kernel you specified."])
 		
 		boot_menu.lines += [
-			""
+			"",
+			"if [ -s $prefix/grubenv ]; then",
+			"    load_env",
+			"fi",
+			"",
 			"if [ \"${next_entry}\" ] ; then",
 			"    set default=\"${next_entry}\"",
 			"    set next_entry=",
