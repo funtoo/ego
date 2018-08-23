@@ -361,7 +361,7 @@ class GRUBExtension(Extension):
 			"    save_env next_entry",
 			"    set boot_once=true",
 			"elif [ ! \"${saved_entry}\" = \"\" ]; then",
-			"    set default=\"{saved_entry}\"",
+			"    set default=\"${saved_entry}\"",
 			"else",
 			"    set default={pos}".format(pos=boot_menu.default_position),
 			"fi"
