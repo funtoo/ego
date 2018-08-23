@@ -162,6 +162,8 @@ class GRUBExtension(Extension):
 			# Add special boot parameters for a kernel we are attempting to boot (usually panic=10 or similar to force a reboot)
 			params += self.config["{s}/attemptparams".format(s=sect)].split()
 		
+		# TODO: turn off panic setting after successful boot? (ego boot success?)
+		
 		ok, myroot = self.r.calculate_rootfs_for_section(params)
 		if not ok:
 			return False
