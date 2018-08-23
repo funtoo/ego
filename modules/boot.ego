@@ -55,7 +55,7 @@ class Module(EgoModule):
 				warnings = True
 			if not quiet:
 				mesg(msgtype, msg)
-		if not success:
+		if not success or "error" in map(lambda x: x[0], msgs):
 			mesg("fatal", "Did not complete successfully.")
 			print()
 			sys.exit(1)
@@ -107,7 +107,7 @@ class Module(EgoModule):
 		try:
 			success = extension.regenerate(boot_menu)
 			if success and boot_menu.success and not quiet:
-				self.show_bootmenu(boot_menu)
+				boot_menu.show()
 			
 			# If we mounted /boot, we should unmount it:
 			if imountedit:
@@ -122,20 +122,6 @@ class Module(EgoModule):
 			if cleanup:
 				self.cleanup(False)
 				return None
-			
-	def show_bootmenu(self, boot_menu: BootLoaderMenu):
-		pos = 0
-		attempt_kname = self.boot_config.idmapper.get_attempted_kname()
-		for item in boot_menu.boot_entries:
-			label = item["label"]
-			kname = item["image_path"]
-			if attempt_kname == kname:
-				mesg("attemptboot", label, entry=pos)
-			elif pos == boot_menu.default_position:
-				mesg("defboot", label, entry=pos)
-			else:
-				mesg("boot", label, entry=pos)
-			pos += 1
 	
 	def get_extension(self):
 		if self._ext is None:

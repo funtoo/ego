@@ -6,7 +6,7 @@ from subprocess import PIPE
 from subprocess import Popen
 from subprocess import STDOUT
 
-from funtoo.boot.menu import BootLoaderMenu, BootLoaderEntryType
+from funtoo.boot.menu import BootLoaderMenu, BootLoaderEntryType, BootMenuFlag
 from funtoo.boot.extension import Extension, ExtensionError
 from funtoo.boot.config import BootConfigFile
 
@@ -35,7 +35,7 @@ class GRUBExtension(Extension):
 	
 	def _attempt_kernel(self, identifier) -> bool:
 		cmd = "/usr/sbin/grub-set-default"
-		cmdobj = Popen([cmd, identifier], bufsize=-1, stdout=PIPE, stderr=PIPE, shell=False)
+		cmdobj = Popen([cmd, str(identifier)], bufsize=-1, stdout=PIPE, stderr=PIPE, shell=False)
 		output = cmdobj.communicate()
 		retval = cmdobj.poll()
 		if retval != 0:
@@ -129,21 +129,9 @@ class GRUBExtension(Extension):
 		# Logic here to see if we are processing a boot entry that is a kernel we should "attempt" to boot. It gets special parameters added to its boot
 		# entry. It may be tagged by the user on this call to ego boot (user_specified_attempt_identifier) or we may simply have boot_menu.attempt_kname
 		# set due to an attempted kernel having been selected previously:
-		
-		attempted = False
-		if boot_menu.attempt_success is not True:
-			# This means we haven't already tagged a boot entry to be attempted, so we'll check this boot entry to see if it qualifies:
-			if boot_menu.user_specified_attempt_identifier:
-				# User has provided an identifier to us via "ego boot attempt" -- which may have been an integer menu position:
-				if boot_menu.attempt_position is not None and boot_menu.nextEntryPosition() == boot_menu.attempt_position:
-					boot_menu.attempt_kname = k_full_path
-					boot_menu.attempt_success = attempted = True
-			elif boot_menu.attempt_kname is not None and k_full_path == boot_menu.attempt_kname:
-				# possibly, the user specified a kname to promote this run, or maybe one is already set from a prior run of "ego boot attempt":
-				boot_menu.attempt_position = boot_menu.nextEntryPosition()
-				boot_menu.attempt_success = attempted = True
-			
-		if attempted is True:
+
+		entry = boot_menu.addBootEntry(BootLoaderEntryType.LINUX, label=label, image_path=k_full_path)
+		if BootMenuFlag.ATTEMPT in entry["flags"]:
 			# Add special boot parameters for a kernel we are attempting to boot (usually panic=10 or similar to force a reboot)
 			params += self.config["{s}/attemptparams".format(s=sect)].split()
 		
@@ -196,7 +184,7 @@ class GRUBExtension(Extension):
 			if not skipgfx:
 				boot_menu.lines.append("  set gfxpayload=keep")
 		boot_menu.lines.append("}")
-		boot_menu.addBootEntry(BootLoaderEntryType.LINUX, label=label, image_path=k_full_path)
+
 		return ok
 	
 	def sanitizeDisplayMode(self, dm):
@@ -319,14 +307,14 @@ class GRUBExtension(Extension):
 		
 		# User specified a kernel to attempt using "ego boot attempt"
 		if boot_menu.user_specified_attempt_identifier:
-			# We successfully found a boot entry to tag as "attempt"
-			if boot_menu.attempt_success:
+			if boot_menu.attempt_kname is not None and boot_menu.attempt_position is not None:
+				# This condition indicates that we successfully found the boot entry in the boot menu:
 				# Record entry on-disk as a kernel to promote to default if we succeed booting...
-				self.config.idmapper.update_promote_kname(boot_menu.attempt_kname)
+				self.config.idmapper.update_promote_kname(boot_menu._attempt_kname)
 				# Call the proper grub command to tell the system to try to boot this kernel ONLY ONCE... (this uses boot entry position...)
 				self._attempt_kernel(boot_menu.attempt_position)
 			else:
-				self.msgs.append(["warn", "Unable to find a matching boot entry for attempted kernel you specified."])
+				self.msgs.append(["error", "Unable to find a matching boot entry for attempted kernel you specified."])
 		
 		boot_menu.lines += [
 			""

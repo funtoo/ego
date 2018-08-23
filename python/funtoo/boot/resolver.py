@@ -12,7 +12,7 @@ from subprocess import getstatusoutput, getoutput
 from typing import Callable
 
 from funtoo.boot.helper import fstabInfo
-from funtoo.boot.menu import BootLoaderMenu
+from funtoo.boot.menu import BootLoaderMenu, BootMenuFlag
 
 def bracketzap(instr, wild=True):
 	""" Removes various bracket types from the input string. """
@@ -444,6 +444,8 @@ class Resolver:
 			boot_menu.default_position = 0
 		else:
 			self.msgs.append(["note", "Default kernel selected via: %s." % self._default_mode])
+			# Tag the boot menu as being default for display:
+			boot_menu.boot_entries[boot_menu.default_position]["flags"].append(BootMenuFlag.DEFAULT)
 		if self._default_mode == "autopick: mtime" and self.config.item("boot", "autopick") == "last":
 				self.msgs.append(["warn", "Falling back to last modification time booting due to lack of last-booted info."])
 		if self.is_intel:

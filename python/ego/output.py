@@ -160,11 +160,11 @@ def mesg(msgtype, msg, entry=None):
 		else:
 			outstr = "{C} DEFAULT >{entry:2d} {G}{m}{O}".format(entry=entry, C=Color.CYAN, G=Color.GREEN, m=msg, O=Color.END)
 	elif msgtype == "note":
-		outstr = "{R} * NOTE:{O} {m}".format(R=Color.CYAN, O=Color.END, m=msg)
+		outstr = "{R} * NOTE:  {O} {m}".format(R=Color.CYAN, O=Color.END, m=msg)
 	elif msgtype == "warn":
-		outstr = "{R} * WARN:{O} {m}".format(R=Color.RED, O=Color.END, m=msg)
+		outstr = "{R} * WARN:  {O} {m}".format(R=Color.RED, O=Color.END, m=msg)
 	elif msgtype == "fatal" or True:
-		outstr = "{R} * ERR :{O} {m}".format(R=Color.RED, O=Color.END, m=msg)
+		outstr = "{R} * ERROR: {O} {m}".format(R=Color.RED, O=Color.END, m=msg)
 	if outstr:
 		print(textwrap.fill(outstr, term_size[0], initial_indent=" ", subsequent_indent="          "))
 
