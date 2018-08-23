@@ -95,7 +95,8 @@ class BootLoaderMenu:
 			"type": boot_type,
 			"label": label,
 			"image_path": image_path,
-			"flags": []
+			"flags": [],
+			"pos": len(self.boot_entries)
 		}
 		self.boot_entries.append(entry)
 

@@ -33,7 +33,14 @@ class GRUBExtension(Extension):
 		else:
 			self.uefiboot = False
 	
-	def _attempt_kernel(self, identifier) -> bool:
+	def _attempt_kernel(self, boot_menu) -> bool:
+		identifier = None
+		for item in boot_menu.boot_entries:
+			if BootMenuFlag.ATTEMPT in item["flags"]:
+				identifier = item["pos"]
+		if identifier is None:
+			self.msgs.append(["fatal", "Unable to find next-attempted kernel entry."])
+			return False
 		cmd = "/usr/sbin/grub-set-default"
 		cmdobj = Popen([cmd, str(identifier)], bufsize=-1, stdout=PIPE, stderr=PIPE, shell=False)
 		output = cmdobj.communicate()
@@ -305,20 +312,31 @@ class GRUBExtension(Extension):
 		
 		self.r.GenerateSections(boot_menu, self.generateBootEntry, self.generateOtherBootEntry)
 		
+		
+		
 		# User specified a kernel to attempt using "ego boot attempt"
 		if boot_menu.user_specified_attempt_identifier:
 			if boot_menu.attempt_kname is not None and boot_menu.attempt_position is not None:
+				boot_menu.lines += [
+
+				]
 				# This condition indicates that we successfully found the boot entry in the boot menu:
 				# Record entry on-disk as a kernel to promote to default if we succeed booting...
 				self.config.idmapper.update_promote_kname(boot_menu._attempt_kname)
-				# Call the proper grub command to tell the system to try to boot this kernel ONLY ONCE... (this uses boot entry position...)
-				self._attempt_kernel(boot_menu.attempt_position)
+				self._attempt_kernel(boot_menu)
 			else:
 				self.msgs.append(["error", "Unable to find a matching boot entry for attempted kernel you specified."])
 		
 		boot_menu.lines += [
 			""
-			"set default={pos}".format(pos=boot_menu.default_position)
+			"if [ \"${next_entry}\" ] ; then",
+			"    set default=\"${next_entry}\"",
+			"    set next_entry=",
+			"    save_env next_entry",
+			"    set boot_once=true",
+			"else",
+			"    set default={pos}".format(pos=boot_menu.default_position),
+			"fi"
 		]
 	
 	def GuppyMap(self):
