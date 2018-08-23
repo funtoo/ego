@@ -162,10 +162,20 @@ class Module(EgoModule):
 		"""Perform the boot-update --set-default action to set a default kernel."""
 		if os.geteuid() != 0:
 			Output.fatal("Updating the default kernel requires root privileges.")
-		success = self.boot_config.idmapper.set_default_kname(sys.argv[2])
-		if success:
+		# Record default selection in /etc/boot.d...
+		found = self.boot_config.idmapper.set_default_kname(sys.argv[2])
+		if found:
+			# That was successful. Now regenerate our config...
+			boot_menu = self.update_action(quiet=True)
+			ext = self.get_extension()
+			if hasattr(ext, "_set_default"):
+				# our extension has a built-in method to set a default boot setting -- use it, to keep it in sync.
+				# (Generally, only benefit of doing this is to overwrite an existing setting that may have been set
+				# by the user using grub-reboot since last boot-update was run.)
+				ext._set_default(boot_menu)
 			self.msgs.append(["info", "%s set to default kernel." % sys.argv[2]])
-			self.update_action(quiet=True)
+		else:
+			self.msgs.append(["error", "Could not find specified kernel image."])
 		
 	def success_action(self):
 		# Update our record of the last kernel booted:
@@ -189,9 +199,10 @@ class Module(EgoModule):
 		boot_menu = BootLoaderMenu(self.get_extension(), self.boot_config, user_specified_attempt_identifier=self.options.identifier)
 		self.update(boot_menu, quiet=False, cleanup=True)
 	
-	def update_action(self, check=False, quiet=False):
+	def update_action(self, check=False, quiet=False) -> BootLoaderMenu:
 		boot_menu = BootLoaderMenu(self.get_extension(), self.boot_config)
 		self.update(boot_menu, quiet=quiet, cleanup=True, check=check)
+		return boot_menu
 	
 	def show_action(self):
 		if 'defaults' in self.options.sub_action:

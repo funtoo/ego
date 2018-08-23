@@ -52,6 +52,26 @@ class GRUBExtension(Extension):
 			self.msgs.append(["info", "Next-attempted kernel set to entry \"%s\"." % identifier])
 			return True
 	
+	def _set_default(self, boot_menu) -> bool:
+		identifier = None
+		for item in boot_menu.boot_entries:
+			if BootMenuFlag.DEFAULT in item["flags"]:
+				identifier = item["pos"]
+				label = item["label"]
+		if identifier is None:
+			self.msgs.append(["fatal", "Unable to find default kernel entry."])
+			return False
+		cmd = "/usr/sbin/grub-set-default"
+		cmdobj = Popen([cmd, str(identifier)], bufsize=-1, stdout=PIPE, stderr=PIPE, shell=False)
+		output = cmdobj.communicate()
+		retval = cmdobj.poll()
+		if retval != 0:
+			self.msgs.append(["fatal", "Unable to set default kernel to %s." % label])
+			return False
+		else:
+			self.msgs.append(["info", "Default kernel set to entry %s." % label])
+			return True
+	
 	def grubProbe(self):
 		gprobe = "/usr/sbin/grub-probe"
 		if not os.path.exists(gprobe):
@@ -312,9 +332,6 @@ class GRUBExtension(Extension):
 		
 		self.r.GenerateSections(boot_menu, self.generateBootEntry, self.generateOtherBootEntry)
 		
-		
-		
-		# User specified a kernel to attempt using "ego boot attempt"
 		if boot_menu.user_specified_attempt_identifier:
 			if boot_menu.attempt_kname is not None and boot_menu.attempt_position is not None:
 				boot_menu.lines += [
@@ -327,6 +344,11 @@ class GRUBExtension(Extension):
 			else:
 				self.msgs.append(["error", "Unable to find a matching boot entry for attempted kernel you specified."])
 		
+		# The following lines load the GRUB env data. Then we see if "$next_entry" is set, which specifies a to-be-attempted kernel.
+		# If so, it becomes the default (for one boot.) Otherwise, we look and see if "$saved_entry" is set, which is the grub env
+		# variable set by "grub-set-default". If this specifies a default kernel, we'll use it. Otherwise, fall back to a hard-
+		# coded value from boot-update config itself, pointing to the default kernel.
+		
 		boot_menu.lines += [
 			"",
 			"if [ -s $prefix/grubenv ]; then",
@@ -338,6 +360,8 @@ class GRUBExtension(Extension):
 			"    set next_entry=",
 			"    save_env next_entry",
 			"    set boot_once=true",
+			"elif [ \"${saved_entry\" ]; then",
+			"    set default=\"{saved_entry}\"",
 			"else",
 			"    set default={pos}".format(pos=boot_menu.default_position),
 			"fi"
