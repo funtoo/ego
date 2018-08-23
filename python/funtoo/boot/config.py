@@ -64,9 +64,8 @@ class KernelIDMapper:
 				# we've booted the to-be-promoted kernel -- let's make it default:
 				self.record_rand_id_to_file(promote_id, self.default_path)
 				return True, self.get_kname_of_rand_id(promote_id)
-			else:
-				# remove promote file -- promote didn't appear to work
-				os.unlink(self.promote_path)
+			# Whether promoting or not, we want to remove the promote_id:
+			os.unlink(self.promote_path)
 		return False, None
 	
 	def get_kname_of_rand_id(self, rand_id) -> str:

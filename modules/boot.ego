@@ -178,6 +178,8 @@ class Module(EgoModule):
 			self.msgs.append(["error", "Could not find specified kernel image."])
 		
 	def success_action(self):
+		if os.geteuid() != 0:
+			Output.fatal("This action requires root privileges.")
 		# Update our record of the last kernel booted:
 		self.boot_config.idmapper.update_last_id()
 		
