@@ -138,6 +138,9 @@ class GRUBExtension(Extension):
 		label = self.r.GetBootEntryString(sect, k_full_path)
 		boot_menu.lines.append("menuentry \"{l}\" {{".format(l=label))
 		
+		if self.config["boot"]["autopick"] == "last-booted":
+			boot_menu.lines.append("    savedefault")
+		
 		# self.bootitems records all our boot items
 		self.bootitems.append(label)
 		
@@ -231,6 +234,21 @@ class GRUBExtension(Extension):
 		boot_menu.lines.append(self.config.condFormatSubItem("boot/timeout", "set timeout={s}"))
 		# pass our boot entry generator function to GenerateSections,
 		# and everything is taken care of for our boot entries
+		
+		boot_menu.lines += [
+			"",
+			"if [ -s $prefix/grubenv ]; then",
+			"    load_env",
+			"fi",
+			"",
+			"function savedefault {",
+			"    if [ -z \"{boot_once}\" ]; then",
+			"        saved_entry=\"${chosen}\"",
+			"        save_env saved_entry",
+			"    fi",
+			"}"
+		]
+		
 		if self.config.hasItem("boot/terminal") and self.config["boot/terminal"] == "serial":
 			self.msgs.append(["warn", "Configured for SERIAL input/output."])
 			boot_menu.lines += [
@@ -352,10 +370,6 @@ class GRUBExtension(Extension):
 		# coded value from boot-update config itself, pointing to the default kernel.
 		
 		boot_menu.lines += [
-			"",
-			"if [ -s $prefix/grubenv ]; then",
-			"    load_env",
-			"fi",
 			"",
 			"if [ ! \"${next_entry}\" = \"\" ] ; then",
 			"    set default=\"${next_entry}\"",
