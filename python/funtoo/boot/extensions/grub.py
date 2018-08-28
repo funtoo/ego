@@ -110,7 +110,7 @@ class GRUBExtension(Extension):
 		boot_menu.lines.append("")
 		boot_menu.lines.append("menuentry \"{mn}\" {{".format(mn=myname))
 		if mytype in ["linux16"]:
-			k = self.r.StripMountPoint(self.config[sect + "/kernel"])
+			k = self.r.strip_mount_point(self.config[sect + "/kernel"])
 			if not os.path.exists(self.config["boot/path"] + "/" + k):
 				self.msgs.append(["warn", "Image for section {sect} not found - {k}".format(sect=sect, k=k)])
 			else:
@@ -146,7 +146,7 @@ class GRUBExtension(Extension):
 		
 		self.PrepareGRUBForFilesystem(self.config["{s}/scan".format(s=sect)], boot_menu.lines)
 		
-		k_sub_path = self.r.StripMountPoint(k_full_path)
+		k_sub_path = self.r.strip_mount_point(k_full_path)
 		c = self.config
 		params = []
 		if c.hasItem("boot/terminal") and c["boot/terminal"] == "serial":
@@ -175,7 +175,7 @@ class GRUBExtension(Extension):
 			return False
 		
 		initrds = self.config.item(sect, "initrd")
-		initrds = self.r.FindInitrds(initrds, k_full_path, kext)
+		initrds = self.r.find_initrds(initrds, k_full_path, kext)
 		if myroot and ('root=' + myroot) in params and 0 == len(initrds):
 			params.remove('root=' + myroot)
 			params.append('root=' + self.r.resolvedev(myroot))
@@ -189,7 +189,7 @@ class GRUBExtension(Extension):
 			# Add leading / if needed
 			if not xenkernel.startswith("/"):
 				xenkernel = "/{xker}".format(xker=xenkernel)
-			xenpath = self.r.StripMountPoint(xenkernel)
+			xenpath = self.r.strip_mount_point(xenkernel)
 			xenparams = self.config["{s}/xenparams".format(s=sect)].split()
 		
 		# Add unique identifier that can be used to determine if kernel booted.
@@ -199,11 +199,11 @@ class GRUBExtension(Extension):
 			boot_menu.lines.append("  multiboot {xker} {xparams}".format(xker=xenpath, xparams=" ".join(xenparams)))
 			boot_menu.lines.append("  module {ker} {params}".format(ker=k_sub_path, params=" ".join(params)))
 			for initrd in initrds:
-				boot_menu.lines.append("  module {initrd}".format(initrd=self.r.StripMountPoint(initrd)))
+				boot_menu.lines.append("  module {initrd}".format(initrd=self.r.strip_mount_point(initrd)))
 		else:
 			boot_menu.lines.append("  {t} {k} {par}".format(t=mytype, k=k_sub_path, par=" ".join(params)))
 			if initrds:
-				initrds = (self.r.StripMountPoint(initrd) for initrd in initrds)
+				initrds = (self.r.strip_mount_point(initrd) for initrd in initrds)
 				boot_menu.lines.append("  initrd {rds}".format(rds=" ".join(initrds)))
 		
 		# Append graphics line

@@ -50,16 +50,12 @@ class Resolver:
 		self._defnames = []
 		self._default, self._default_mode = self.config.get_default_boot_setting()
 		self.rootarg = None
-		self.intel_cpio = False
-		self.is_intel = self.isIntel()
-		if self.is_intel:
-			if os.path.exists("/lib/firmware/intel-ucode"):
-				self.intel_cpio = self.generateIntelInitramfs()
 		self.msgs = msgs
 		self.idmapper = self.config.idmapper
-	
+		self.has_microcode = self.microcode_initialize()
+
 	def resolvedev(self, dev):
-		if ((dev[0:5] == "UUID=") or (dev[0:6] == "LABEL=")):
+		if (dev[0:5] == "UUID=") or (dev[0:6] == "LABEL="):
 			cmdobj = Popen(["/sbin/findfs", dev], bufsize=-1, stdout=PIPE, stderr=PIPE, shell=False)
 			output = cmdobj.communicate()
 			return output[0].decode()
@@ -93,22 +89,55 @@ class Resolver:
 						found.append([match, match[len(scanpath) + 1 + pattern.find("["):], os.path.getmtime(match)])
 		return found
 	
+	def microcode_initialize(self):
+		if not self.isIntel():
+			self.msgs.append(["warn", "No CPU microcode available for non-Intel systems."])
+			return True
+		if not os.path.exists("/lib/firmware/intel-ucode"):
+			self.msgs.append(["warn", "Intel system detected - please emerge sys-firmware/intel-microcode and sys-apps/iucode_tool and run boot-update " +
+							  "again; boot-update will then patch your system with the latest Intel CPU and chipset microcode patches at boot-time, " +
+							  "protecting you against important vulnerabilities and errata."])
+			return False
+		self.msgs.append(["note", "Intel microcode will be loaded at boot-time."])
+		return True
+	
+	def microcode_regenerate(self):
+		"""This is a stand-alone microcode regeneration method, for updating microcode only."""
+		
+		# We aren't generating a config file, just updating microcode -- so do the main loop ourselves, and just update microcode:
+		if self.has_microcode:
+			sections = self.config.getSections()
+			scanpaths = set()
+			for sect in sections:
+				paths = set(self.config.item(sect, "scan").split())
+				scanpaths |= paths
+			
+			# mount paths we may need to update
+			for path in scanpaths:
+				self.mount_if_necessary(scanpath=path)
+				self.generate_cpu_microcode_initramfs(path)
+			
+			self.unmount_if_necessary()
+			return True
+		else:
+			return False
+	
 	def isIntel(self):
 		a = getoutput("/usr/bin/lscpu | grep ^Vendor")
 		return a.endswith("GenuineIntel")
 	
-	def generateIntelInitramfs(self):
+	def generate_cpu_microcode_initramfs(self, scanpath="/boot"):
 		s, o = getstatusoutput(
-			"rm -f /boot/early_ucode.cpio; /usr/sbin/iucode_tool --write-earlyfw=/boot/early_ucode.cpio /lib/firmware/intel-ucode/* >/dev/null 2>&1")
+			"rm -f %s/early_ucode.cpio; /usr/sbin/iucode_tool --write-earlyfw=%s/early_ucode.cpio /lib/firmware/intel-ucode/* >/dev/null 2>&1" % (scanpath, scanpath))
 		if s == 0:
-			return self.StripMountPoint("/boot/early_ucode.cpio")
+			return self.strip_mount_point("/boot/early_ucode.cpio")
 		return False
 	
-	def FindInitrds(self, initrds, kernel, kext):
+	def find_initrds(self, initrds, scanpath, kernel, kext):
 		found = []
 		base_path = os.path.dirname(kernel)
-		if self.intel_cpio is not False:
-			found.append(self.intel_cpio)
+		if self.has_microcode:
+			found.append(self.generate_cpu_microcode_initramfs(scanpath=scanpath))
 		for initrd in initrds.split():
 			# Split up initrd at bracket and replace glob with kernel version string if brackets exists.
 			head1, sep1, tail1 = initrd.rpartition("[")
@@ -129,10 +158,9 @@ class Resolver:
 	def GetBootEntryString(self, sect, kname):
 		return "{s} - {k}".format(s=sect, k=os.path.basename(kname))
 	
-	single_flags = set(
-		["async", "atime", "noatime", "auto", "noauto", "defaults", "rw", "ro", "suid", "nosuid", "dev", "nodev", "exec", "noexec", "nouser", "diratime",
+	single_flags = {"async", "atime", "noatime", "auto", "noauto", "defaults", "rw", "ro", "suid", "nosuid", "dev", "nodev", "exec", "noexec", "nouser", "diratime",
 		 "nodiratime", "dirsync", "group", "iversion", "noiversion", "mand", "nomand", "_netdev", "relatime", "norelatime", "strictatime", "nostrictatime",
-		 "lazytime", "silent", "loud", "owner", "remount", "sync", "user", "nouser", "users", "user_xattr", "nouser_xattr"])
+		 "lazytime", "silent", "loud", "owner", "remount", "sync", "user", "nouser", "users", "user_xattr", "nouser_xattr"}
 	arg_flags = ["context", "fscontext", "defcontext", "rootcontext"]
 	
 	def filterRootFlags(self, flags):
@@ -259,7 +287,7 @@ class Resolver:
 				# If we made it here, strip off last dir and try again
 				mountpoint = os.path.dirname(mountpoint)
 	
-	def MountIfNecessary(self, scanpath):
+	def mount_if_necessary(self, scanpath):
 		
 		if os.path.normpath(scanpath) == "/boot":
 			# /boot mounting is handled via another process, so skip:
@@ -290,7 +318,7 @@ class Resolver:
 			# No mountpoint, just return
 			return
 	
-	def UnmountIfNecessary(self) -> None:
+	def unmount_if_necessary(self) -> None:
 		for mountpoint, we_mounted in iter(self.mounted.items()):
 			if we_mounted is False:
 				continue
@@ -320,7 +348,7 @@ class Resolver:
 		scanpaths = self.config.item(sect, "scan").split()
 		
 		for scanpath in scanpaths:
-			self.MountIfNecessary(scanpath)
+			self.mount_if_necessary(scanpath)
 			if len(skiplist):
 				# find kernels to skip...
 				matches = self.GetMatchingKernels(scanpath, skiplist)
@@ -448,11 +476,7 @@ class Resolver:
 			boot_menu.boot_entries[boot_menu.default_position]["flags"].append(BootMenuFlag.DEFAULT)
 		if self._default_mode == "autopick: mtime" and self.config.item("boot", "autopick") == "last":
 				self.msgs.append(["warn", "Falling back to last modification time booting due to lack of last-booted info."])
-		if self.is_intel:
-			if not self.intel_cpio:
-				self.msgs.append(["warn", "Intel system detected - please emerge sys-firmware/intel-microcode and sys-apps/iucode_tool and run boot-update again; boot-update will then patch your system with the latest Intel CPU and chipset microcode patches at boot-time, protecting you against important vulnerabilities and errata."])
-			else:
-				self.msgs.append(["note", "Intel microcode will be loaded at boot-time."])
+
 		
 		return boot_menu
 	
@@ -463,21 +487,21 @@ class Resolver:
 		else:
 			return os.path.normpath(imagepath)
 	
-	def StripMountPoint(self, scanpath):
-		"""Strips mount point from scanpath"""
+	def strip_mount_point(self, file_path):
+		"""Strips mount point from file_path"""
 		
-		mountpoint = self.GetMountPoint(scanpath)
+		mountpoint = self.GetMountPoint(file_path)
 		
 		if mountpoint:
-			split_path = scanpath.split(mountpoint, 1)
+			split_path = file_path.split(mountpoint, 1)
 			if len(split_path) != 2:
 				# TODO Handle error better
-				# Couldn't strip mount point, just return original scanpath
-				return scanpath
+				# Couldn't strip mount point, just return original file_path
+				return file_path
 			else:
 				return os.path.normpath(split_path[1])
 		else:
-			# No mount point, just return scanpath
-			return scanpath
+			# No mount point, just return file_path
+			return file_path
 
 # vim: ts=4 sw=4 noet

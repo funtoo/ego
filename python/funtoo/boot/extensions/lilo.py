@@ -105,7 +105,7 @@ class LILOExtension(Extension):
 			"	append=\"{par}\"".format(par=" ".join(params))
 		]
 		initrds = self.config.item(sect, "initrd")
-		initrds = self.r.FindInitrds(initrds, kname, kext)
+		initrds = self.r.find_initrds(initrds, kname, kext)
 		for initrd in initrds:
 			l.append("  initrd={rd}".format(self.r.RelativePathTo(initrd, "/boot")))
 		

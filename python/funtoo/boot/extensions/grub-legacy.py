@@ -112,7 +112,7 @@ class GRUBLegacyExtension(Extension):
 		self.bootitems.append(label)
 		
 		# Get kernel and params
-		kpath = self.r.StripMountPoint(kname)
+		kpath = self.r.strip_mount_point(kname)
 		params = []
 		c = self.config
 		if c.hasItem("boot/terminal") and c["boot/terminal"] == "serial":
@@ -138,7 +138,7 @@ class GRUBLegacyExtension(Extension):
 
 		# Get initrds
 		initrds = self.config.item(sect, "initrd")
-		initrds = self.r.FindInitrds(initrds, kname, kext)
+		initrds = self.r.find_initrds(initrds, kname, kext)
 		
 		xenpath = None
 		xenparams = []
@@ -148,7 +148,7 @@ class GRUBLegacyExtension(Extension):
 			# Add leading / if needed
 			if not xenkernel.startswith("/"):
 				xenkernel = "/{xker}".format(xker=xenkernel)
-			xenpath = self.r.StripMountPoint(xenkernel)
+			xenpath = self.r.strip_mount_point(xenkernel)
 			xenparams = self.config["{s}/xenparams".format(s=sect)].split()
 
 		# Append kernel lines based on type
@@ -157,11 +157,11 @@ class GRUBLegacyExtension(Extension):
 			l.append("  kernel {xker} {xparams}".format(xker=xenpath, xparams=" ".join(xenparams)))
 			l.append("  module {ker} {params}".format(ker=kpath, params=" ".join(params)))
 			for initrd in initrds:
-				l.append("  module {initrd}".format(initrd = self.r.StripMountPoint(initrd)))
+				l.append("  module {initrd}".format(initrd = self.r.strip_mount_point(initrd)))
 		else :
 			l.append("  kernel {k} {par}".format(k=kpath, par=" ".join(params)))
 			for initrd in initrds:
-				l.append("  initrd {rd}".format(rd=self.r.StripMountPoint(initrd)))
+				l.append("  initrd {rd}".format(rd=self.r.strip_mount_point(initrd)))
 
 		l.append("")
 

@@ -29,4 +29,6 @@ class fstabInfo:
 	def getRootMountFlags(self):
 		return self.mountpoints['/'][3] if '/' in self.mountpoints else ""
 
+
+
 # vim: ts=4 sw=4 noet

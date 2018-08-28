@@ -48,7 +48,7 @@ class Module(EgoModule):
 		if self._ext is not None:
 			# unmounts any non-/boot filesystems we may have mounted for scanning.
 			# /boot unmounting is handled via another process.
-			self._ext.r.UnmountIfNecessary()
+			self._ext.r.unmount_if_necessary()
 		warnings = False
 		for msgtype, msg in msgs:
 			if msgtype == "warn":
@@ -157,7 +157,13 @@ class Module(EgoModule):
 		for line in self.boot_config.parent.dump():
 			if not line.startswith("#"):
 				sys.stdout.write(line)
-				
+	
+	def microcode_action(self):
+		from funtoo.boot.resolver import Resolver
+		resolver = Resolver(self.boot_config, self.msgs)
+		success = resolver.microcode_regenerate()
+		self.cleanup(success=success)
+			
 	def set_default_action(self):
 		"""Perform the boot-update --set-default action to set a default kernel."""
 		if os.geteuid() != 0:
@@ -227,7 +233,9 @@ class Module(EgoModule):
 		attempt_parser = subparsers.add_parser('attempt', help="Attempt to boot a new kernel without actually changing default.")
 		attempt_parser.set_defaults(handler=self.attempt_action)
 		attempt_parser.add_argument("identifier")
-		
+		microcode_parser = subparsers.add_parser('microcode', help="Regenerate microcode without actually (re)generating boot loader files..")
+		microcode_parser.set_defaults(handler=self.microcode_action)
+
 		show_parser = subparsers.add_parser('show', help="Show boot menu or other settings.")
 		show_parser.add_argument('sub_action', nargs=1, choices=["defaults"], help="Item to show.")
 		show_parser.set_defaults(handler=self.show_action)
