@@ -144,7 +144,9 @@ class GRUBExtension(Extension):
 		# self.bootitems records all our boot items
 		self.bootitems.append(label)
 		
-		self.PrepareGRUBForFilesystem(self.config["{s}/scan".format(s=sect)], boot_menu.lines)
+		scanpath = self.config.item(sect, "scan")
+		
+		self.PrepareGRUBForFilesystem(scanpath, boot_menu.lines)
 		
 		k_sub_path = self.r.strip_mount_point(k_full_path)
 		c = self.config
@@ -175,7 +177,7 @@ class GRUBExtension(Extension):
 			return False
 		
 		initrds = self.config.item(sect, "initrd")
-		initrds = self.r.find_initrds(initrds, k_full_path, kext)
+		initrds = self.r.find_initrds(initrds, scanpath, k_full_path, kext)
 		if myroot and ('root=' + myroot) in params and 0 == len(initrds):
 			params.remove('root=' + myroot)
 			params.append('root=' + self.r.resolvedev(myroot))
