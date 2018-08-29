@@ -203,10 +203,12 @@ class BootConfigFile(config.ConfigFile):
 			return default_in_boot_d, "boot.d"
 		elif default_in_boot_conf:
 			return self.deburr(self.item("boot", "default")), "boot.conf"
-		elif autopick_setting == "last" and last_booted is not None:
+		elif autopick_setting == "last-booted" and last_booted is not None:
 			return self.idmapper.get_last_booted_kname(), "autopick: last-booted"
 		else:
 			return None, "autopick: mtime"
+		
+		# TODO: add last-selected, which is different from last-booted.
 	
 	def validate(self):
 		invalid = []

@@ -138,8 +138,9 @@ class GRUBExtension(Extension):
 		label = self.r.GetBootEntryString(sect, k_full_path)
 		boot_menu.lines.append("menuentry \"{l}\" {{".format(l=label))
 		
-		if self.config["boot/autopick"] == "last-booted":
-			boot_menu.lines.append("    savedefault")
+		# TODO: add last-selected, which is different than last-booted.
+		#if self.config["boot/autopick"] == "last-booted":
+		#	boot_menu.lines.append("    savedefault")
 		
 		# self.bootitems records all our boot items
 		self.bootitems.append(label)

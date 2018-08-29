@@ -313,18 +313,32 @@ syntax used is *root=device*.
 
 Users can manually set the chainloader option if they require a special value 
 other than the normal default set by boot.conf::
-        "Windows 10" {
-                type win10
-                params root=/dev/sda6
-		params += chainloader=+4
-        }
 
+    "Windows 10" {
+        type win10
+        params root=/dev/sda6
+        params += chainloader=+4
+    }
 
 *boot* Section
-----------------
+--------------
+
+
+*boot :: autopick*
+~~~~~~~~~~~~~~~~~~
+
+Specifies the strategy that is used to select the default kernel when no
+explicit default is selected via the *boot :: default* option below.
+This option defaults to *mtime*, which means that the matching kernel with the most
+recent modification time will be selected as a default kernel for booting.
+
+Other possibilities for this option are *last-booted*, which will automatically
+update the default kernel boot selection to match the last kernel booted. Note
+that this option requires running *ego boot success* after the system has
+successfully booted, typically from */etc/local.d*.
 
 *boot :: generate*
-~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~
 
 Specifies the boot loader that *boot-update* should generate a configuration
 files for. This setting should be a single string, set to one of *grub*,
@@ -332,12 +346,12 @@ files for. This setting should be a single string, set to one of *grub*,
 
 
 *boot :: timeout*
-~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~
 
 Specifies the boot loader timeout, in seconds. Defaults to *5*.
 
 *boot :: default*
-~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~
 
 Use this setting to specify the boot entry to boot by default. There are two
 ways to use this setting.

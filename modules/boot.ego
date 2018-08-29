@@ -4,7 +4,6 @@ import os
 import sys
 from ego.module import EgoModule
 from ego.output import Output, mesg
-from typing import Optional
 
 import funtoo.boot.helper
 import funtoo.boot.extensions
@@ -182,6 +181,7 @@ class Module(EgoModule):
 			self.msgs.append(["info", "%s set to default kernel." % sys.argv[2]])
 		else:
 			self.msgs.append(["error", "Could not find specified kernel image."])
+		self.cleanup(success=found)
 		
 	def success_action(self):
 		if os.geteuid() != 0:
@@ -235,10 +235,6 @@ class Module(EgoModule):
 		attempt_parser.add_argument("identifier")
 		microcode_parser = subparsers.add_parser('microcode', help="Regenerate microcode without actually (re)generating boot loader files..")
 		microcode_parser.set_defaults(handler=self.microcode_action)
-
-		show_parser = subparsers.add_parser('show', help="Show boot menu or other settings.")
-		show_parser.add_argument('sub_action', nargs=1, choices=["defaults"], help="Item to show.")
-		show_parser.set_defaults(handler=self.show_action)
 	
 	def handle(self):
 		handler = getattr(self.options, 'handler', None)

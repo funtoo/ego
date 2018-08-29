@@ -474,7 +474,7 @@ class Resolver:
 			self.msgs.append(["note", "Default kernel selected via: %s." % self._default_mode])
 			# Tag the boot menu as being default for display:
 			boot_menu.boot_entries[boot_menu.default_position]["flags"].append(BootMenuFlag.DEFAULT)
-		if self._default_mode == "autopick: mtime" and self.config.item("boot", "autopick") == "last":
+		if self._default_mode == "autopick: mtime" and self.config.item("boot", "autopick") == "last-booted":
 				self.msgs.append(["warn", "Falling back to last modification time booting due to lack of last-booted info."])
 
 		
