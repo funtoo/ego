@@ -21,7 +21,7 @@ def join_path(x, y):
 	else:
 		return os.path.join(x,y)
 
-VERSION = "2.5.0.1"
+VERSION = "2.5.0.2"
 
 settings = configparser.ConfigParser()
 

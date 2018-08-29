@@ -130,14 +130,16 @@ class Resolver:
 		s, o = getstatusoutput(
 			"rm -f %s/early_ucode.cpio; /usr/sbin/iucode_tool --write-earlyfw=%s/early_ucode.cpio /lib/firmware/intel-ucode/* >/dev/null 2>&1" % (scanpath, scanpath))
 		if s == 0:
-			return self.strip_mount_point("/boot/early_ucode.cpio")
-		return False
+			return True, "%s/early_ucode.cpio" % scanpath
+		return False, "%s/early_ucode.cpio" % scanpath
 	
 	def find_initrds(self, initrds, scanpath, kernel, kext):
 		found = []
 		base_path = os.path.dirname(kernel)
 		if self.has_microcode:
-			found.append(self.generate_cpu_microcode_initramfs(scanpath=scanpath))
+			success, initramfs = self.generate_cpu_microcode_initramfs(scanpath=scanpath)
+			if success or os.path.exists(os.path.join(scanpath, initramfs)):
+				found.append(initramfs)
 		for initrd in initrds.split():
 			# Split up initrd at bracket and replace glob with kernel version string if brackets exists.
 			head1, sep1, tail1 = initrd.rpartition("[")
