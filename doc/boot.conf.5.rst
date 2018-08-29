@@ -539,7 +539,7 @@ Specifies the menu highlight colors in *fg/bg* format. Defaults to *blue/cyan*.
 **HINT**: a *black* background will be transparent when a background image is
 specified.
 
-.. include:: ../LICENSE
+.. include:: ../COPYRIGHT.txt
 
 SEE ALSO
 --------

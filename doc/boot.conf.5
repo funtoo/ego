@@ -1,0 +1,720 @@
+.\" Man page generated from reStructuredText.
+.
+.TH BOOT.CONF 5 "" "2.5.0.1" "Funtoo Linux Core System"
+.SH NAME
+boot.conf \- Funtoo global boot loader configuration file
+.
+.nr rst2man-indent-level 0
+.
+.de1 rstReportMargin
+\\$1 \\n[an-margin]
+level \\n[rst2man-indent-level]
+level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
+-
+\\n[rst2man-indent0]
+\\n[rst2man-indent1]
+\\n[rst2man-indent2]
+..
+.de1 INDENT
+.\" .rstReportMargin pre:
+. RS \\$1
+. nr rst2man-indent\\n[rst2man-indent-level] \\n[an-margin]
+. nr rst2man-indent-level +1
+.\" .rstReportMargin post:
+..
+.de UNINDENT
+. RE
+.\" indent \\n[an-margin]
+.\" old: \\n[rst2man-indent\\n[rst2man-indent-level]]
+.nr rst2man-indent-level -1
+.\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
+.in \\n[rst2man-indent\\n[rst2man-indent-level]]u
+..
+.SH SYNOPSIS
+.INDENT 0.0
+.INDENT 3.5
+\fI/etc/boot.conf\fP
+.UNINDENT
+.UNINDENT
+.SH DESCRIPTION
+.sp
+The data in \fI/etc/boot.conf\fP is used by \fIego\-boot(8)\fP to generate specific
+configuration files for various boot loaders as necessary.
+.sp
+The benefit of \fI/etc/boot.conf\fP is that it provides a single location to
+store all boot\-related information. It also provides a single, consistent file
+format and feature set for configuring all boot loaders.
+.sp
+For MBR booting, GRUB, GRUB (legacy) and LILO boot loaders are supported. For
+UEFI booting, GRUB is supported. When using GRUB, boot\-update will auto\-enable
+UEFI boot configuration if it sees that your system has been booted in UEFI mode.
+Otherwise, MBR (legacy) boot mode will be used.
+.sp
+\fIboot\-update(8)\fP utilizes \fI/etc/boot.conf\fP to provide a consistent process for
+updating boot loader configuration, regardless of the actual boot loader used.
+.sp
+Here is a sample \fI/etc/boot.conf\fP configuration file:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+boot {
+        generate grub
+        # "generate grub\-legacy" if you are using grub\-legacy\-0.97
+
+        # Below, you can specify the kernel image to boot by default,
+        # or the default boot entry name
+
+        default bzImage
+        # default Windows 7
+}
+
+display {
+        # gfxmode 1440x900
+        # background /boot/background.jpg
+}
+
+"All my kernels" {
+        #
+        # This entry use reasonable defaults to find all matching kernels.  An
+        # "All my kernels \- <kernel name>" boot entry will be generated for
+        # *each* kernel found.
+        #
+        # type "boot\-update \-\-showdefaults" to see default settings.
+}
+
+"Funtoo Linux console" {
+        kernel bzImage
+}
+
+"Funtoo Linux with uvesafb" {
+        kernel bzImage\-RHEL5\-uvesafb[\-v]
+        params += video=uvesafb:1440x900\-8,mtrr:2
+}
+
+"Xen" {
+        type xen
+        xenkernel xen\-4.1.1.gz
+        xenparams loglvl=all guest_loglvl=all
+        kernel bzImage[\-v]
+        initrd initramfs[\-v]
+}
+
+"Windows 7" {
+        type win7
+        params root=/dev/sda1
+}
+
+"Windows XP" {
+        type winxp
+        params root=/dev/sda4
+}
+
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS Sections
+.sp
+Sections are specified by an alphanumeric name, followed by a space and a \fI{\fP\&.
+A section ends when a single \fI}\fP appears on a line.
+.sp
+There are special \fIbuilt\-in\fP sections that are expected to be found by the
+framework and used for configuation settings. You can not use the name of
+a \fIbuilt\-in\fP section as the name of a boot entry.
+Currently these are all \fIbuilt\-in\fP sections:
+\fIboot\fP, \fIcolor\fP, \fIdefault\fP, \fIgrub\fP, \fIgrub\-legacy\fP, \fIlilo\fP, \fIserial\fP
+.sp
+In addition, other sections can be created. Any sections with non\-builtin names
+are recognized as boot entry definitions. For example, the sections \fI"Funtoo
+Linux"\fP and \fI"Funtoo Linux genkernel"\fP define boot entries. Due to
+\fI/etc/boot.conf\fP\(aqs wildcard support, a single boot entry section in the
+configuration file may generate multiple actual boot entries for the boot
+loader, depending on how many matches are found. Wildcard support will be
+explained later in this document.
+.SS Default Section
+.sp
+In addition, there is a special section named \fIdefault\fP which is used to
+specify default settings for the boot entry sections. \fIboot\-update\fP has several
+reasonable default built\-in settings that can be overridden. For example, if
+you leave out the \fIboot/timeout\fP setting, the boot menu timeout will default to
+5 seconds. To see all built\-in settings, type \fIboot\-update \-\-showdefaults\fP\&.
+.SS Linux Boot Entries
+.sp
+There are four critical parameters that are used in boot entry and \fIdefault\fP
+sections \-\- \fItype\fP, \fIkernel\fP, \fIinitrd\fP and \fIparams\fP\&. \fItype\fP defaults
+to "linux" and informs \fIboot\-update\fP that we are specifying a Linux boot
+entry.  It can be set to other values to tell \fIboot\-update\fP that we are
+specifying a Microsoft Windows 7 boot entry, for example.
+.SS Linux Kernel Wildcards
+.sp
+The \fIkernel\fP variable specifies one or more kernels, using exact kernel file
+names or wildcards. Again, note that it is possible for one boot entry in
+\fI/etc/boot.conf\fP to generate \fImultiple\fP boot entries for your boot loader if
+wildcards are used or multiple kernels are listed \-\- one boot entry will be
+generated for each matching kernel found.
+.sp
+So, for example, the following
+\fI/etc/boot.conf\fP could generate two boot entries named "Funtoo Linux \-
+bzImage" and "Funtoo Linux \- bzImage\-new":
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+"Funtoo Linux" {
+        kernel bzImage bzImage\-new
+}
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+The \fI[\-v]\fP wildcard, which can only appear once per filename, can be used at
+the end of a kernel image name to match the base name, or any combination of
+the base name, plus a hypen and any additional text:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+"Funtoo Linux" {
+        kernel bzImage[\-v]
+}
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+Above, \fIbzImage[\-v]\fP will match \fIbzImage\fP as well as \fIbzImage\-*\fP\&.
+.sp
+In addition, \fIboot.conf\fP now supports the inclusion of arbitrary glob wildcards
+within brackets, which work similarly to \fI[\-v]\fP, above:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+"Funtoo Linux" {
+        kernel bzImage[\-2.6*]
+}
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+The above wildcard will match "bzImage", "bzImage\-2.6.18", and "bzImage\-2.6.24".
+.sp
+Remember that wildcards are optional. If you don\(aqt want to deal with them, you
+can just provide the name of a kernel image.
+.SS initrd/initramfs
+.sp
+The \fIinitrd\fP variable specifies one or more initrds or initramfs images, like
+this:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+"Funtoo Linux" {
+        kernel bzImage
+        initrd initramfs.igz
+}
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+\fIinitrd\fP also allows the use of the \fI[\-v]\fP wildcard to allow you to create
+matching pairs of kernels and initrds on disk that boot\-update will associate
+with one another automatically by suffix. Here\(aqs how it works \-\- assume you have
+the following boot entry:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+"Funtoo Linux" {
+        kernel bzImage[\-v]
+        initrd initramfs[\-v]
+}
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+The \fI/etc/boot.conf\fP entry above will look for all kernels matching \fIbzImage\fP
+and \fIbzImage\-*\fP and generate a boot entry for each one. For the boot entry for
+\fIbzImage\fP, the \fIinitramfs[\-v]\fP wildcard will pull in the initramfs \fIinitramfs\fP
+if it exists \-\- if not, it will be skipped. For the boot entry for
+\fIbzImage\-2.6.24\fP, the initramfs \fIinitramfs\-2.6.24\fP will be used if it exists.
+.sp
+If you are using the enhanced glob wildcard functionality in your \fIkernel\fP
+option (such as \fIbzImage[\-2.6\fP]*, above), then remember that you should still
+use \fI[\-v]\fP in your \fIinitrd\fP option. \fI[\-v]\fP is the only pattern that is supported
+for initrds.
+.SS Multiple initrds
+.sp
+Since Linux allows multiple initramfs images to be loaded at boot time, you can
+specify more than one initrd in a boot entry, and the specified initrds will be
+loaded in succession abt boot time. Note that this is different from the
+\fIkernel\fP option \- where multiple matches will generate multiple boot entries,
+since you can only load one kernel at boot. Here\(aqs an example:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+"Funtoo Linux" {
+        kernel bzImage
+        initrd initramfs\-1.igz initramfs\-2.igz
+}
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+In the above example, a single boot entry will be generated, which will load
+\fIinitramfs\-1.igz\fP and \fIinitramfs\-2.igz\fP as the primary and secondary initramfs
+respectively, and then boot the kernel \fIbzImage\fP\&.
+.sp
+Note that the \fI+=\fP operator can be used to either extend the default initramfs
+setting or to specify multiple initramfs images over multiple lines. Here\(aqs
+a boot entry that is equivalent to the previous example:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+"Funtoo Linux" {
+        kernel bzImage
+        # load initramfs\-1.igz:
+        initrd initramfs\-1.igz
+        # also load initramfs\-2.igz:
+        initrd += initramfs\-2.igz
+}
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+And in the following example, the initial \fI+=\fP tells coreboot to append
+\fIinitramfs\-1.igz\fP to the default initramfs list:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+"Funtoo Linux" {
+        kernel bzImage
+        # load our default initramfs image(s), plus this one:
+        initrd += initramfs\-1.igz
+}
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS Parameters
+.sp
+The \fIparams\fP variable specifies kernel parameters used to boot the kernel.
+Typical kernel parameters, such as \fIinit=/bin/bash\fP, \fIroot=/dev/sda3\fP or others
+can be specified as necessary. Here\(aqs a sophisticated example from Andreas
+Matuschek that was posted on the funtoo\-dev mailing list:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+"Funtoo Linux On Ice" {
+        params root=/dev/sda2
+        params += rootfstype=jfs
+        params += usbcore.autosuspend=1
+        params += acpi_sleep=s3_bios,s3_mode
+        params += hpet=force
+        params += video=radeonfb:ywrap,mtrr:1,1024x768\-32@60
+        params += quiet
+        params += splash=silent,kdgraphics,theme:natural_gentoo
+        params += CONSOLE=/dev/tty1
+        kernel vmlinuz[\-v]
+        initrd ramfs
+}
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+As you can see, when  \fI+=\fP is used as the first argument for \fIparams\fP, the
+default setting can be \fIextended\fP with additional parameters. If the first
+\fIparams root=/dev/sda2\fP line was instead written as \fIparams += root=/dev/sda2\fP,
+then all the parameters specified in this boot entry would \fIextend\fP the default
+params settings. But in this case, Andreas specified the first \fIparams\fP
+parameter in this boot entry without a \fI+=\fP, so his settings replace the
+default settings.
+.sp
+Note that when serial console support is enabled, the appropriate parameters
+for serial support (from the serial section) will be added to params.
+.SS Special Parameters
+.INDENT 0.0
+.TP
+.B \fB+=\fP
+When \fI+=\fP is specified at the beginning of the first \fIparams\fP, \fIinitrd\fP or
+\fIkernel\fP definition in a section, then the arguments after the \fI+=\fP will be
+added to the default settings defined in \fIdefault\fP (type \fIboot\-update
+\-\-showdefaults\fP to see default settings.)  In addition, multiple \fIparams\fP,
+\fIinitrd\fP or \fIkernel\fP lines can appear in a section, as long as the successive
+lines begin with \fI+=\fP\&. This allows these values to be defined over multiple
+lines.
+.TP
+.B \fBroot=auto\fP
+When \fIroot=auto\fP is evaluated, the framework will look at \fI/etc/fstab\fP to
+determine the root filesystem device. Then \fIroot=auto\fP will changed to
+reflect this, so the actual parameter passed to the kernel will be something
+like \fIroot=/dev/sda3\fP .
+.TP
+.B \fBrootfstype=auto\fP
+In a similar fashion to \fIroot=auto\fP, \fIrootfstype=auto\fP will be
+replaced with something like \fIrootfstype=ext4\fP, with the filesystem type
+determined by the setting in \fI/etc/fstab\fP\&.
+.TP
+.B \fBreal_root=auto\fP
+This special parameter is useful when using \fIgenkernel\fP initrds that expect a
+\fIreal_root\fP parameter. When specified, any \fIroot=\fP options already specified
+(including \fIroot=auto\fP) will be removed from \fIparams\fP, and \fIreal_root\fP will
+be set to the root filesystem based on \fI/etc/fstab\fP, so you\(aqll end up with a
+setting such as \fIreal_root=/dev/sda3\fP\&.
+.UNINDENT
+.SH LINUX DISTRIBUTIONS ON SEPARATE PARTITIONS
+.sp
+\fIboot\-update\fP supports creating boot entries for Linux distributions installed
+on separate partitions. In order for \fIboot\-update\fP to find the kernels and initrds
+located on other partitions you have to create a mount point for the partition.
+After creating a mount point you must specify the absolute path to the kernels
+using the scan variable:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+"Debian Sid" {
+        scan /mnt/debian/boot
+        kernel vmlinuz[\-v]
+        initrd initrd.img
+        params root=/dev/sdb1
+}
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+Note that you must also set \fIparams root=/dev/<root>\fP to the correct root
+partition in order to override the default \fIroot=auto\fP setting. At this time
+\fIboot\-update\fP does not support auto detecting for other Linux systems.
+.sp
+If you would like boot\-update to auto mount the partition whenever it is ran, you
+must create an entry for mounting it in \fI/etc/fstab\fP\&. Otherwise you will need to
+mount the partition before running \fIboot\-update\fP\&.
+.SH ALTERNATE OS LOADING
+.sp
+Boot entries can be created for alternate operating systems using the following
+approach:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+"Windows 7" {
+        type win7
+        params root=/dev/sda6
+}
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+The \fItype\fP variable should be set to one of the operating system names that
+\fIboot\-update\fP recognizes (case\-insensitive,) which are:
+.INDENT 0.0
+.IP \(bu 2
+linux (default)
+.IP \(bu 2
+dos
+.IP \(bu 2
+msdos
+.IP \(bu 2
+Windows 2000
+.IP \(bu 2
+win2000
+.IP \(bu 2
+Windows XP
+.IP \(bu 2
+winxp
+.IP \(bu 2
+Windows Vista
+.IP \(bu 2
+vista
+.IP \(bu 2
+Windows 7
+.IP \(bu 2
+win7
+.IP \(bu 2
+Windows 8
+.IP \(bu 2
+win8
+.IP \(bu 2
+Windows 10
+.IP \(bu 2
+win10
+.IP \(bu 2
+Haiku
+.IP \(bu 2
+Haiku OS
+.UNINDENT
+.sp
+For non\-Linux operating systems, the \fIparams\fP variable is used to specify the
+root partition for chain loading. For consistency with Linux boot entries, the
+syntax used is \fIroot=device\fP\&.
+.sp
+Users can manually set the chainloader option if they require a special value
+other than the normal default set by boot.conf:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+"Windows 10" {
+    type win10
+    params root=/dev/sda6
+    params += chainloader=+4
+}
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SH BOOT SECTION
+.SS \fIboot :: autopick\fP
+.sp
+Specifies the strategy that is used to select the default kernel when no
+explicit default is selected via the \fIboot :: default\fP option below.
+This option defaults to \fImtime\fP, which means that the matching kernel with the most
+recent modification time will be selected as a default kernel for booting.
+.sp
+Other possibilities for this option are \fIlast\-booted\fP, which will automatically
+update the default kernel boot selection to match the last kernel booted. Note
+that this option requires running \fIego boot success\fP after the system has
+successfully booted, typically from \fI/etc/local.d\fP\&.
+.SS \fIboot :: generate\fP
+.sp
+Specifies the boot loader that \fIboot\-update\fP should generate a configuration
+files for. This setting should be a single string, set to one of \fIgrub\fP,
+\fIgrub\-legacy\fP or \fIlilo\fP\&. Defaults to \fIgrub\fP\&.
+.SS \fIboot :: timeout\fP
+.sp
+Specifies the boot loader timeout, in seconds. Defaults to \fI5\fP\&.
+.SS \fIboot :: default\fP
+.sp
+Use this setting to specify the boot entry to boot by default. There are two
+ways to use this setting.
+.sp
+The first way is to specify the filename of the kernel to boot by default. This
+setting should contain no path information, just the kernel image name.  This
+is the default mechanism, due to the setting of \fIbzImage\fP\&.
+.sp
+Alternatively, you can also specify the literal name of the boot entry you want
+to boot. This is handy if you want to boot a non\-Linux operating system by
+default. If you had the following boot entry:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+"My Windows 7" {
+        type win7
+        params root=/dev/sda6
+}
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+\&...then, you could boot this entry by default with the following boot section:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+boot {
+        generate grub
+        default My Windows 7
+}
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+This is also a handy mechanism if you want to boot the most recently created
+kernel by default. The kernel with the most recent modification time will be
+selected. To do this, specify the name of the boot entry rather than
+the kernel image name:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+boot {
+        default "Funtoo Linux"
+}
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+If multiple "Funtoo Linux" boot entries are created, the one that has the most
+recently created kernel (by file modification time) will be booted by default.
+.sp
+Also note that if no \fBdefault\fP setting is specified, or no match is found,
+boot\-update will select the most recent kernel by file modification time and
+set it as the default selection for booting.
+.sp
+Note that double\-quotes are optional both in section names and in the
+\fIboot/default\fP value.
+.SS \fIboot :: bootdev\fP
+.sp
+Specifies which device or partition to install the bootloader to. This is
+currently only used for lilo and is the equivalent of setting "boot = <bootdev>"
+in \fB/etc/lilo.conf\fP\&. Other bootloaders will just ignore it if set:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+boot {
+        bootdev /dev/sda
+}
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS \fIboot :: terminal\fP
+.sp
+Specifies the terminal mode: either "serial" or "video". Defaults to "video".
+This setting affects your boot\-loader input/output as well as your kernel\(aqs
+output.
+.sp
+If you set it to "serial", use the "serial" section (see below) to set serial
+options.
+.SH SERIAL SECTION
+.sp
+Specifies the serial port settings for both boot\-loader and kernel. Possible
+values are:
+.sp
+\fIunit\fP (tty number, defaults to 0)
+\fIspeed\fP (bps, defaults to 115200)
+\fIword\fP (word size, defaults to 8)
+\fIparity\fP (yes/no, defaults to no)
+\fIstop\fP (stop bit, defaults to 1)
+.SH DEFAULT AND BOOT ENTRY SECTIONS
+.SS \fIdefault :: type\fP
+.sp
+Specifies the boot entry type; defaults to \fIlinux\fP\&. Currently, DOS/Windows boot
+entries are also supported. Set to one of: \fIlinux\fP, \fIdos\fP, \fImsdos\fP, \fIWindows
+2000\fP, \fIwin2000\fP, \fIWindows XP\fP, \fIwinxp\fP, \fIWindows Vista\fP, \fIvista\fP, \fIWindows 7\fP,
+\fIwin7\fP, \fIwin8\fP, \fIwin10\fP\&. Here\(aqs how to specify a Windows 7 boot entry, which will automatically
+use the proper chainloader +4 parameter to load Microsoft Windows 7:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+"My Windows 7" {
+        type win7
+        params root=/dev/sda6
+}
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS \fIdefault :: scan\fP
+.sp
+This setting specifies one or more directories to scan for kernels and
+initrds. Defaults to \fB/boot\fP\&.
+.SS \fIdefault :: kernel\fP
+.sp
+This setting specifies kernel image name, names or patterns, to find kernels to
+generate boot menu entries for. The path specified in the \fIscan\fP setting is
+searched. Glob patterns are supported, but only one glob pattern may appear per
+filename. The special pattern \fI[\-v]\fP is used to match a kernel base name (such
+as \fIbzImage\fP) plus all kernels with an optional version suffix beginning with a
+\fI\-\fP, such as \fIbzImage\-2.6.24\fP\&. In addition, arbitrary globs can be specified,
+such as \fIbzImage[\-2.6.*]\fP If more than one kernel image matches a pattern, or
+more than one kernel image is specified, then more than one boot entry will be
+created using the settings in this section.
+.SS \fIdefault :: initrd\fP
+.sp
+This setting specifies initrd/initramfs image(s) to load with the menu entry.
+If multiple initrds or initramfs images are specified, then \fIall\fP specified
+images will be loaded for the boot entry. Linux supports multiple initramfs
+images being specified at boot time. Glob patterns are supported. The special
+pattern \fI[\-v]\fP is used to find initrd/initramfs images that match the
+\fI[\-v]\fP pattern of the current kernel.  For example, if the current menu
+entry\(aqs kernel image has a \fI[\-v]\fP pattern of \fI\-2.6.24\fP, then
+\fIinitramfs[\-v]\fP will match \fIinitramfs\-2.6.24\fP\&. If the current menu entry
+had a \fI[\-v]\fP pattern, but it was blank (in the case of \fIbzImage[\-v]\fP
+finding a kernel named \fIbzImage\fP,) then \fIinitramfs[\-v]\fP will match
+\fIinitramfs\fP, if it exists.
+.SS \fIdefault :: params\fP
+.sp
+This setting specifies the parameters passed to the kernel. This option
+appearing in the \fIdefault\fP section can be extended in specific menu sections
+by using the \fI+=\fP operator. The special parameters \fIroot=auto\fP,
+\fIrootfstype=auto\fP and \fIreal_root=auto\fP are supported, which will be
+replaced with similar settings with the \fIauto\fP string replaced with the
+respective setting from \fI/etc/fstab\fP\&. Defaults to \fIroot=auto
+rootfstype=auto\fP\&.
+.SH DISPLAY SECTION
+.SS \fIdisplay :: gfxmode\fP
+.sp
+Specifies the video mode to be used by the boot loader\(aqs menus. This value is
+also inherited and used as the video mode for the kernel when a graphical boot
+(\fIuvesafb\fP, \fIvesafb\-tng\fP) is used. This option is only supported for
+\fIgrub\fP\&. Default value is "text" for MBR booting, or "640x480" for UEFI booting.
+.SS \fIdisplay :: background\fP
+.sp
+Specifies the graphical image to display at boot. The specified file should
+exist within \fB/boot\fP, and the path to the file should be specified relative
+to \fB/boot\fP\&. A file with a "jpg", "jpeg", "png", or "tga" extension
+(capitalized or lowercase) will be recognized and used. This option is only
+supported for \fIgrub\fP, and defaults to being unset.
+.SS \fIdisplay :: font\fP
+.sp
+Specifies a font used to display text in graphical mode (ie. when \fBdisplay::gfxmode\fP is enabled) at boot. Defaults to
+\fBunifont.pf2\fP, which is included with Funtoo\(aqs \fIgrub\fP ebuild, or \fBunicode.pf2\fP, which is included in Gentoo\(aqs
+ebuild. If the font does not exist in \fB/boot/grub\fP or \fB/boot/grub/fonts\fP, it will be copied from \fB/usr/share/grub\fP
+or \fB/usr/share/grub/fonts\fP, if it exists. This option is only supported for \fIgrub\fP, and will only be enabled when a
+\fBgfxmode\fP has been specified.
+.SH COLOR SECTION
+.sp
+Currently, the color options are only supported for \fIgrub\fP\&.
+.SS \fIcolor :: normal\fP
+.sp
+Specifies the regular display colors in \fIfg/bg\fP format. Defaults to \fIcyan/blue\fP\&.
+\fBHINT\fP: a \fIblack\fP background will be transparent when a background image is
+specified.
+.SS \fIcolor :: highlight\fP
+.sp
+Specifies the menu highlight colors in \fIfg/bg\fP format. Defaults to \fIblue/cyan\fP\&.
+\fBHINT\fP: a \fIblack\fP background will be transparent when a background image is
+specified.
+.sp
+Copyright 2015\-2018 Funtoo Solutions, Inc. and contributors.
+.sp
+This program is free software; you can redistribute and/or modify it under the terms of the GNU General Public License
+version 2 or GNU General Public License version 3. Alternatively you may (at your option) use any other license that has
+been publicly approved for use with this program by Funtoo Solutions, Inc. (or its successors, if any.)
+.SH SEE ALSO
+.sp
+boot\-update(8), genkernel(8)
+.SH AUTHOR
+Daniel Robbins <drobbins@funtoo.org>
+.\" Generated by docutils manpage writer.
+.
