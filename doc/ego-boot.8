@@ -1,6 +1,6 @@
 .\" Man page generated from reStructuredText.
 .
-.TH EGO BOOT 8 "" "2.5.0.2" "Funtoo Linux Core System"
+.TH EGO BOOT 8 "" "2.5.0.3" "Funtoo Linux Core System"
 .SH NAME
 ego boot \- Funtoo Linux Boot Loader Module
 .
@@ -102,6 +102,9 @@ ego boot success
 .fi
 .UNINDENT
 .UNINDENT
+.sp
+You can use the invocation \fBego boot attempt default\fP to wipe any attempted kernel setting and reset your
+boot loader to just boot the default kernel on next boot.
 .sp
 Other invocations supported by \fBego boot\fP include \fBego boot \-\-show\-defaults\fP, which will show the default
 \fB/etc/boot.conf\fP settings, \fBego boot \-\-check\fP performs the same action as \fBego boot\fP \-\- simply validating
