@@ -55,6 +55,10 @@ class KernelIDMapper:
 		"""Set an id to promote on next successful boot. In other words, set the special file that tells us that we are attempting a particular kernel."""
 		rand_id = self.get(promote_kname)
 		self.record_rand_id_to_file(rand_id, self.promote_path)
+		
+	def remove_promote_setting(self):
+		if os.path.exists(self.promote_path):
+			os.unlink(self.promote_path)
 	
 	def promote_kernel(self) -> (bool, str):
 		"""If a rand_id is in the promote file, this method tells us to set it as the default. Used for fallback."""

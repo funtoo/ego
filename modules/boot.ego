@@ -204,8 +204,13 @@ class Module(EgoModule):
 			self.cleanup(False)
 	
 	def attempt_action(self):
-		boot_menu = BootLoaderMenu(self.get_extension(), self.boot_config, user_specified_attempt_identifier=self.options.identifier)
-		self.update(boot_menu, quiet=False, cleanup=True)
+		if self.options.identifier != "default":
+			boot_menu = BootLoaderMenu(self.get_extension(), self.boot_config, user_specified_attempt_identifier=self.options.identifier)
+			self.update(boot_menu, quiet=False, cleanup=True)
+		else:
+			self.boot_config.idmapper.remove_promote_setting()
+			self.msgs.append(["info", "Any attempted kernel setting has been wiped -- default will be used."])
+			return self.update_action()
 	
 	def update_action(self, check=False, quiet=False) -> BootLoaderMenu:
 		boot_menu = BootLoaderMenu(self.get_extension(), self.boot_config)

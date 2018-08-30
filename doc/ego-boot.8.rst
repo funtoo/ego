@@ -67,6 +67,9 @@ Then ensure that the following command gets run as part of your startup process:
 
     ego boot success
 
+You can use the invocation ``ego boot attempt default`` to wipe any attempted kernel setting and reset your
+boot loader to just boot the default kernel on next boot.
+
 Other invocations supported by ``ego boot`` include ``ego boot --show-defaults``, which will show the default
 ``/etc/boot.conf`` settings, ``ego boot --check`` performs the same action as ``ego boot`` -- simply validating
 the syntax of ``/etc/boot.conf``. ``ego boot --show sect/key`` can be used to display a section/key setting

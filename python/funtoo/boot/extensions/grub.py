@@ -33,23 +33,35 @@ class GRUBExtension(Extension):
 		else:
 			self.uefiboot = False
 	
-	def _attempt_kernel(self, boot_menu) -> bool:
+	def _attempt_kernel(self, boot_menu, set_default=False) -> bool:
 		identifier = None
+		
+		if set_default is True:
+			# set_default means "just set the default kernel to be the next attempted kernel" (to wipe any existing attempt)
+			seek_flag = BootMenuFlag.DEFAULT
+			# remove any remaining setting:
+			self.config.idmapper.remove_promote_setting()
+		else:
+			seek_flag = BootMenuFlag.ATTEMPT
+		
 		for item in boot_menu.boot_entries:
-			if BootMenuFlag.ATTEMPT in item["flags"]:
+			if seek_flag in item["flags"]:
 				identifier = item["pos"]
 		if identifier is None:
-			self.msgs.append(["fatal", "Unable to find next-attempted kernel entry."])
+			if set_default is False:
+				self.msgs.append(["fatal", "Unable to find next-attempted kernel entry."])
 			return False
 		cmd = "/usr/sbin/grub-reboot"
 		cmdobj = Popen([cmd, str(identifier)], bufsize=-1, stdout=PIPE, stderr=PIPE, shell=False)
 		output = cmdobj.communicate()
 		retval = cmdobj.poll()
 		if retval != 0:
-			self.msgs.append(["fatal", "Unable to set next-attempted kernel to entry \"%s\"." % identifier])
+			if set_default is False:
+				self.msgs.append(["fatal", "Unable to set next-attempted kernel to entry \"%s\"." % identifier])
 			return False
 		else:
-			self.msgs.append(["info", "Next-attempted kernel set to entry \"%s\"." % identifier])
+			if set_default is False:
+				self.msgs.append(["info", "Next-attempted kernel set to entry \"%s\"." % identifier])
 			return True
 	
 	def _set_default(self, boot_menu) -> bool:
@@ -367,6 +379,9 @@ class GRUBExtension(Extension):
 				self._attempt_kernel(boot_menu)
 			else:
 				self.msgs.append(["error", "Unable to find a matching boot entry for attempted kernel you specified."])
+		else:
+			# make sure the *default* kernel is attempted, to wipe out any existing attempt settings.
+			self._attempt_kernel(boot_menu, set_default=True)
 		
 		# The following lines load the GRUB env data. Then we see if "$next_entry" is set, which specifies a to-be-attempted kernel.
 		# If so, it becomes the default (for one boot.) Otherwise, we look and see if "$saved_entry" is set, which is the grub env
