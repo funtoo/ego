@@ -111,8 +111,9 @@ class GRUBExtension(Extension):
 		boot_menu.lines.append("menuentry \"{mn}\" {{".format(mn=myname))
 		if mytype in ["linux16"]:
 			k = self.r.strip_mount_point(self.config[sect + "/kernel"])
-			if not os.path.exists(self.config["boot/path"] + "/" + k):
-				self.msgs.append(["warn", "Image for section {sect} not found - {k}".format(sect=sect, k=k)])
+			full_k = os.path.join(self.config["boot/path"], k.lstrip("/"))
+			if not os.path.exists(full_k):
+				self.msgs.append(["warn", "Image for section {sect} not found - {full_k}".format(sect=sect, full_k=full_k)])
 			else:
 				self.bootitems.append(myname)
 				boot_menu.lines.append("  linux16 " + k)
