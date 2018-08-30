@@ -14,16 +14,19 @@ Funtoo Linux Boot Loader Module
 SYNOPSIS
 --------
 
-The standard invocation of the command is as follows with no options or arguments, which causes a boot loader
-configuration file */etc/boot.conf* to be checked:
+The standard invocation of the command is as follows with no options or arguments, which causes the settings in
+*/etc/boot.conf* to be applied to the boot loader and the boot menu to be displayed on the screen:
 
   **ego boot**
 
 Typically, **ego boot** would be run if the contents of */etc/boot.conf* were changed by the user, or additional kernels
-were installed. This would allow the boot loader menu to reflect these changes. To regenerate configuration for the boot
-loader, use the following invocation:
+were installed. This would allow the boot loader menu to reflect these changes. Alternatively, the *boot-update*
+shortcut can be used:
 
-  **ego boot update**
+  **boot-update**
+
+This has identical behavior to *ego boot*, updating the current boot loader configuration and displaying the boot
+menu.
 
 DESCRIPTION
 -----------
@@ -44,10 +47,10 @@ thus simplifying boot loader configuration and providing advanced features to al
 USAGE
 -----
 
-Running ``ego boot`` with no options will simply validate the syntax of the */etc/boot.conf* file and exit. If you
-would like to update your boot configuration, run ``ego boot update``. This will cause the contents of */etc/boot.conf*
-to be parsed and your GRUB (or other boot loader configuration) to be updated, along with installing new CPU microcode
-for your CPU if such packages are available (Intel systems only.)
+Running ``ego boot`` with no options will update your boot configuration according to */etc/boot.conf*. An alternate
+syntax which performs the same thing is ``ego boot update``, or alternatively ``boot-update``. Any of these alternatives
+will cause the contents of */etc/boot.conf* to be parsed and your GRUB (or other boot loader configuration) to be updated,
+along with installing new CPU microcode for your CPU if such packages are available (Intel systems only.)
 
 It is also possible to run ``ego boot microcode``, which will update boot microcode without touching your boot loader
 configuration.
@@ -71,7 +74,7 @@ You can use the invocation ``ego boot attempt default`` to wipe any attempted ke
 boot loader to just boot the default kernel on next boot.
 
 Other invocations supported by ``ego boot`` include ``ego boot --show-defaults``, which will show the default
-``/etc/boot.conf`` settings, ``ego boot --check`` performs the same action as ``ego boot`` -- simply validating
+``/etc/boot.conf`` settings, ``ego boot --check`` which will validate
 the syntax of ``/etc/boot.conf``. ``ego boot --show sect/key`` can be used to display a section/key setting
 from ``/etc/boot.conf``. It is also possible to set the default kernel from the command-line by using the
 invocation ``ego boot --set-default /boot/kernel-x.y.z``. This will set the specified kernel to be the default

@@ -254,7 +254,8 @@ class Module(EgoModule):
 				self.handle_show_action()
 			elif self.options.set_default is not None:
 				self.set_default_action()
-			elif self.options.check is not None:
+			elif self.options.check:
 				self.update_action(check=True)
-		
+			else:
+				self.update_action()
 # vim: ts=4 sw=4 noet
