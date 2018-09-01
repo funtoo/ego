@@ -1,6 +1,6 @@
 .\" Man page generated from reStructuredText.
 .
-.TH EGO BOOT 8 "" "2.5.0.3" "Funtoo Linux Core System"
+.TH EGO BOOT 8 "" "2.5.0.4" "Funtoo Linux Core System"
 .SH NAME
 ego boot \- Funtoo Linux Boot Loader Module
 .
@@ -32,8 +32,8 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 ..
 .SH SYNOPSIS
 .sp
-The standard invocation of the command is as follows with no options or arguments, which causes a boot loader
-configuration file \fI/etc/boot.conf\fP to be checked:
+The standard invocation of the command is as follows with no options or arguments, which causes the settings in
+\fI/etc/boot.conf\fP to be applied to the boot loader and the boot menu to be displayed on the screen:
 .INDENT 0.0
 .INDENT 3.5
 \fBego boot\fP
@@ -41,13 +41,16 @@ configuration file \fI/etc/boot.conf\fP to be checked:
 .UNINDENT
 .sp
 Typically, \fBego boot\fP would be run if the contents of \fI/etc/boot.conf\fP were changed by the user, or additional kernels
-were installed. This would allow the boot loader menu to reflect these changes. To regenerate configuration for the boot
-loader, use the following invocation:
+were installed. This would allow the boot loader menu to reflect these changes. Alternatively, the \fIboot\-update\fP
+shortcut can be used:
 .INDENT 0.0
 .INDENT 3.5
-\fBego boot update\fP
+\fBboot\-update\fP
 .UNINDENT
 .UNINDENT
+.sp
+This has identical behavior to \fIego boot\fP, updating the current boot loader configuration and displaying the boot
+menu.
 .SH DESCRIPTION
 .sp
 \fIboot\-update\fP (now \fIego boot\fP) is a system tool that will generate a boot loader
@@ -64,10 +67,10 @@ configuration file automatically.
 thus simplifying boot loader configuration and providing advanced features to all popular boot loaders.
 .SH USAGE
 .sp
-Running \fBego boot\fP with no options will simply validate the syntax of the \fI/etc/boot.conf\fP file and exit. If you
-would like to update your boot configuration, run \fBego boot update\fP\&. This will cause the contents of \fI/etc/boot.conf\fP
-to be parsed and your GRUB (or other boot loader configuration) to be updated, along with installing new CPU microcode
-for your CPU if such packages are available (Intel systems only.)
+Running \fBego boot\fP with no options will update your boot configuration according to \fI/etc/boot.conf\fP\&. An alternate
+syntax which performs the same thing is \fBego boot update\fP, or alternatively \fBboot\-update\fP\&. Any of these alternatives
+will cause the contents of \fI/etc/boot.conf\fP to be parsed and your GRUB (or other boot loader configuration) to be updated,
+along with installing new CPU microcode for your CPU if such packages are available (Intel systems only.)
 .sp
 It is also possible to run \fBego boot microcode\fP, which will update boot microcode without touching your boot loader
 configuration.
@@ -107,7 +110,7 @@ You can use the invocation \fBego boot attempt default\fP to wipe any attempted 
 boot loader to just boot the default kernel on next boot.
 .sp
 Other invocations supported by \fBego boot\fP include \fBego boot \-\-show\-defaults\fP, which will show the default
-\fB/etc/boot.conf\fP settings, \fBego boot \-\-check\fP performs the same action as \fBego boot\fP \-\- simply validating
+\fB/etc/boot.conf\fP settings, \fBego boot \-\-check\fP which will validate
 the syntax of \fB/etc/boot.conf\fP\&. \fBego boot \-\-show sect/key\fP can be used to display a section/key setting
 from \fB/etc/boot.conf\fP\&. It is also possible to set the default kernel from the command\-line by using the
 invocation \fBego boot \-\-set\-default /boot/kernel\-x.y.z\fP\&. This will set the specified kernel to be the default
