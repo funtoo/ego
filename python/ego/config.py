@@ -112,10 +112,12 @@ class EgoConfig(object):
 		try:
 			if release is not None:
 				default_kit_branch = self.get_kit_version_of_release(self.release, kit)
+				print("BOING", default_kit_branch)
 			if default_kit_branch is None:
 				default_kit_branch = self.kit_info_metadata["kit_settings"][kit]["default"]
 			if kit_branch is None:
 				kit_branch = default_kit_branch
+			print("DEFAULT_KIT_BRANCH", default_kit_branch)
 		except KeyError:
 			pass
 		return kit_branch, default_kit_branch

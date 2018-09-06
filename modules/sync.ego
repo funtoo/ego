@@ -266,7 +266,13 @@ priority = %s
 			we_synced_successfully = True
 
 			if not self.options.meta_only and "kit_order" in self.config.kit_info_metadata and not self.read_only:
-				for kt in self.config.kit_info_metadata["kit_order"]:
+				if isinstance(self.config.kit_info_metadata["kit_order"], dict):
+					kits = self.config.kit_info_metadata["kit_order"]["%s-release" % self.config.release]
+				else:
+					kits = self.config.kit_info_metadata["kit_order"]
+				print(kits)
+				for kt in kits:
+					print(kt)
 					branch, default_branch = self.config.get_configured_kit(kt)
 					if branch is None:
 						Output.warning("Could not find %s branch %s; using default kit %s instead." % (kt, branch, default_branch))
