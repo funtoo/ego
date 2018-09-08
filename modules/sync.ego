@@ -145,7 +145,7 @@ class Module(EgoModule):
 				os.unlink(link_path)
 
 		updated_config_files = set()
-		for kit_name in self.config.kit_info_metadata["kit_order"]:
+		for kit_name in self.config.kit_info_metadata["kit_order"]["%s-release" % self.config.release]:
 			repo_conf_path = os.path.join(self.config.repos_conf_path, "ego-" + kit_name)
 			kit_path = os.path.join(self.config.unprefixed_kits_root, kit_name)
 			if kit_name == "nokit":
@@ -270,9 +270,7 @@ priority = %s
 					kits = self.config.kit_info_metadata["kit_order"]["%s-release" % self.config.release]
 				else:
 					kits = self.config.kit_info_metadata["kit_order"]
-				print(kits)
 				for kt in kits:
-					print(kt)
 					branch, default_branch = self.config.get_configured_kit(kt)
 					if branch is None:
 						Output.warning("Could not find %s branch %s; using default kit %s instead." % (kt, branch, default_branch))
