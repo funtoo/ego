@@ -31,6 +31,10 @@ class EgoConfig(object):
 		else:
 			return default
 
+	@property
+	def newer_metadata(self):
+		return  isinstance(self.kit_info_metadata["kit_order"], dict)
+
 	def set_setting(self, section, key, value):
 		if section not in self.settings:
 			self.settings.add_section(section)
@@ -80,10 +84,16 @@ class EgoConfig(object):
 			return self.default_release
 
 	def get_kit_version_of_release(self, release, kit):
-		try:
-			return self.kit_info_metadata["release_defs"]["%s-release" % release][kit][0]
-		except KeyError:
-			return None
+		if self.newer_metadata:
+			try:
+				return self.kit_info_metadata["release_defs"]["%s-release" % release][kit][0]
+			except KeyError:
+				return None
+		else:
+			try:
+				return self.kit_info_metadata["release_defs"][release][kit][0]
+			except KeyError:
+				return None
 
 	def kit_branch_is_deprecated(self, kit, branch):
 		try:
