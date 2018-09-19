@@ -32,8 +32,12 @@ class EgoConfig(object):
 			return default
 
 	@property
-	def newer_metadata(self):
-		return  isinstance(self.kit_info_metadata["kit_order"], dict)
+	def metadata_version(self):
+		my_meta = self.load_kit_metadata("version")
+		if my_meta == {} or "version" not in my_meta:
+			return 1
+		else:
+			return my_meta["version"]
 
 	def set_setting(self, section, key, value):
 		if section not in self.settings:
@@ -53,7 +57,7 @@ class EgoConfig(object):
 
 	def load_kit_metadata(self, fn):
 		if not hasattr(self, '_kit_%s' % fn):
-			path = Path(self.meta_repo_root) / 'metadata' / ('kit-%s.json' % fn)
+			path = Path(self.meta_repo_root) / 'metadata' / ('%s.json' % fn)
 			try:
 				with path.open() as f:
 					return json.loads(f.read(), object_pairs_hook=OrderedDict)
@@ -63,18 +67,18 @@ class EgoConfig(object):
 
 	@property
 	def kit_info_metadata(self):
-		return self.load_kit_metadata('info')
+		return self.load_kit_metadata('kit-info')
 
 	@property
 	def kit_sha1_metadata(self):
-		return self.load_kit_metadata('sha1')
+		return self.load_kit_metadata('kit-sha1')
 
 	@property
 	def default_release(self):
 		try:
 			return self.kit_info_metadata["release_info"]["default"]
 		except KeyError:
-			return None
+			return "1.2"
 
 	@property
 	def release(self):
@@ -84,7 +88,7 @@ class EgoConfig(object):
 			return self.default_release
 
 	def get_kit_version_of_release(self, release, kit):
-		if self.newer_metadata:
+		if self.metadata_version >= 10:
 			try:
 				return self.kit_info_metadata["release_defs"]["%s-release" % release][kit][0]
 			except KeyError:
@@ -156,7 +160,7 @@ class EgoConfig(object):
 
 		self.meta_repo_root = self.get_setting("global", "meta_repo_path", join_path(self.root_path, "/var/git/meta-repo"))
 		self.sync_base_url = self.get_setting("global", "sync_base_url", "https://github.com/funtoo/{repo}")
-		self.meta_repo_branch = self.get_setting("global", "meta_repo_branch", "master")
+		self.meta_repo_branch = "master" if self.release in ["1.0", "1.2"] else "%s-release" % self.release
 		self.repos_conf_path = self.get_setting("global", "repos_conf_path", join_path(self.root_path, "/etc/portage/repos.conf"))
 
 		kit_path = self.get_setting("global", "kits_path", "kits")
