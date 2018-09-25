@@ -99,6 +99,14 @@ class EgoConfig(object):
 			except KeyError:
 				return None
 
+	def kit_branch_is_missing(self, kit, branch):
+		try:
+			a = self.kit_info_metadata["kit_settings"][kit]["stability"][branch]
+			return False
+		except KeyError:
+			return True
+		return True
+
 	def kit_branch_is_deprecated(self, kit, branch):
 		try:
 			return self.kit_info_metadata["kit_settings"][kit]["stability"][branch] == "deprecated"

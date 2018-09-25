@@ -282,6 +282,8 @@ priority = %s
 					if branch is None:
 						Output.warning("Could not find %s branch %s; using default kit %s instead." % (kt, branch, default_branch))
 						branch = default_branch
+					elif self.config.kit_branch_is_missing(kt, branch):
+						Output.fatal("Specified %s branch %s is missing! Is it included in this release? Exiting." % (kt, branch))
 					elif self.config.kit_branch_is_deprecated(kt, branch):
 						Output.warning("Specified %s branch %s has been deprecated." % (kt, branch))
 					success = True
