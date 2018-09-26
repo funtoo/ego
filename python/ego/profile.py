@@ -15,7 +15,7 @@ from enum import Enum
 import errno
 from collections import OrderedDict, defaultdict
 from ego.output import Output
-from ego.config import join_path
+from ego.config import join_path, EgoConfig
 from configparser import ConfigParser
 import configparser
 
@@ -444,7 +444,7 @@ class ProfileTree(object):
 				return True
 		return False
 
-	def write(self, config, outfile):
+	def write(self, config: EgoConfig, outfile):
 
 		python_kit_branch, default_branch = config.get_configured_kit("python-kit")
 
@@ -458,7 +458,7 @@ class ProfileTree(object):
 			outfile.write(strout + '\n')
 
 		# add new python-kit settings
-		for kit in os.listdir(config.kits_root):
+		for kit in self.config.all_kit_names_in_release:
 			python_path = os.path.join(config.kits_root, kit, "profiles/funtoo/kits/python-kit/", python_kit_branch)
 			if os.path.exists(python_path):
 				outfile.write("%s:funtoo/kits/python-kit/" % kit + python_kit_branch + "\n")

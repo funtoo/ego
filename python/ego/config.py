@@ -87,6 +87,13 @@ class EgoConfig(object):
 		except KeyError:
 			return self.default_release
 
+	@property
+	def all_kit_names_in_release(self):
+		if self.metadata_version >= 10:
+			return self.kit_info_metadata["release_defs"].keys()
+		else:
+			return self.kit_info_metadata["release_defs"][self.release].keys()
+
 	def get_kit_version_of_release(self, release, kit):
 		if self.metadata_version >= 10:
 			try:
