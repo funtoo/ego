@@ -243,7 +243,9 @@ class Resolver:
 	
 	def calculate_filesystem_for_section(self, params):
 		ok = True
+		print("BLARG")
 		if "rootfstype=auto" in params:
+			print("IN PARAMS", type(params), params)
 			params.remove("rootfstype=auto")
 			for item in params:
 				if item.startswith("root=") or item.startswith("real_root="):

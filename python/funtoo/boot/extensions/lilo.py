@@ -87,7 +87,9 @@ class LILOExtension(Extension):
 				"console=tty0",
 				"console=ttyS%s,%s%s%s" % (c["serial/unit"], c["serial/speed"], c["serial/parity"][0], c["serial/word"])
 			]
-		params += self.config.item(sect, "params").split()
+		for param in self.config.item(sect, "params").split():
+			if param not in params:
+				params.append(param)
 		
 		ok, myroot = self.r.calculate_rootfs_for_section(params)
 		if not ok:

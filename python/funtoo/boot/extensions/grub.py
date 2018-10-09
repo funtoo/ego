@@ -170,7 +170,9 @@ class GRUBExtension(Extension):
 				"console=tty0",
 				"console=ttyS%s,%s%s%s" % (c["serial/unit"], c["serial/speed"], c["serial/parity"][0], c["serial/word"])
 			]
-		params += self.config["{s}/params".format(s=sect)].split()
+		for param in self.config["{s}/params".format(s=sect)].split():
+			if param not in params:
+				params.append(param)
 		
 		# Logic here to see if we are processing a boot entry that is a kernel we should "attempt" to boot. It gets special parameters added to its boot
 		# entry. It may be tagged by the user on this call to ego boot (user_specified_attempt_identifier) or we may simply have boot_menu.attempt_kname
@@ -179,14 +181,16 @@ class GRUBExtension(Extension):
 		entry = boot_menu.addBootEntry(BootLoaderEntryType.LINUX, label=label, image_path=k_full_path)
 		if BootMenuFlag.ATTEMPT in entry["flags"]:
 			# Add special boot parameters for a kernel we are attempting to boot (usually panic=10 or similar to force a reboot)
-			params += self.config["{s}/attemptparams".format(s=sect)].split()
+			for param in self.config["{s}/attemptparams".format(s=sect)].split():
+				if param not in params:
+					params.append(param)
 		
 		# TODO: turn off panic setting after successful boot? (ego boot success?)
 		
 		ok, myroot = self.r.calculate_rootfs_for_section(params)
 		if not ok:
 			return False
-		ok, fstype = self.r.calculate_rootfs_for_section(params)
+		ok, fstype = self.r.calculate_filesystem_for_section(params)
 		if not ok:
 			return False
 		
