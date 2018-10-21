@@ -332,35 +332,45 @@ class GRUBExtension(Extension):
 				  "   set gfxmode={gfx}".format(gfx=self.sanitizeDisplayMode(self.config["display/gfxmode"])),
 				  "   insmod all_video",
 				  "   terminal_output gfxterm"]
-			bg = self.config.item("display", "background").strip()
+			bg = self.config.item("display", "background").split()
 			if len(bg):
-				bgimg = bg[0]
-				bgext = bg[0].rsplit(".")[-1].lower()
-				if bgext == "jpg":
-					bgext = "jpeg"
-				if bgext in ["jpeg", "png", "tga"]:
-					rel_cfgpath = "{path}/{img}".format(path=self.config["boot/path"], img=bgimg)
-					
-					# first, look for absolute path, because our relative path
-					# can eval to "/boot/boot/foo.png" which
-					# due to the /boot/boot symlink will "exist".
-					
-					if bgimg[0] == "/" and os.path.exists(bgimg):
-						# user specified absolute path to file on disk:
-						boot_menu.lines += [
-							"   insmod {bg}".format(bg=bgext),
-							"   background_image {img}".format(img=self.r.RelativePathTo(bgimg, self.config["boot/path"]))
-						]
-					elif os.path.exists(rel_cfgpath):
-						# user specified path relative to /boot:
-						boot_menu.lines += [
-							"   insmod {ext}".format(ext=bgext),
-							"   background_image {img}".format(img=self.r.RelativePathTo(rel_cfgpath, self.config["boot/path"]))
-						]
-					else:
-						self.msgs.append(["warn", "background image \"{img}\" does not exist - skipping.".format(img=bgimg)])
+				bgimg = None
+				bgext = None
+				if len(bg) == 1:
+					# get extension from file:
+					bgimg = bg[0]
+					bgext = bg[0].rsplit(".")[-1].lower()
+				elif len(bg) == 2:
+					# extension specified as second argument:
+					bgimg, bgext = bg
 				else:
-					self.msgs.append(["warn", "background image \"{img}\" (format \"{ext}\") not recognized - skipping.".format(img=bgimg, ext=bgext)])
+					self.msgs.append(["warn", "Unexpected number of arguments for background image - skipping."])
+				if bgimg is not None:
+					if bgext == "jpg":
+						bgext = "jpeg"
+					if bgext in ["jpeg", "png", "tga"]:
+						rel_cfgpath = "{path}/{img}".format(path=self.config["boot/path"], img=bgimg)
+						
+						# first, look for absolute path, because our relative path
+						# can eval to "/boot/boot/foo.png" which
+						# due to the /boot/boot symlink will "exist".
+						
+						if bgimg[0] == "/" and os.path.exists(bgimg):
+							# user specified absolute path to file on disk:
+							boot_menu.lines += [
+								"   insmod {bg}".format(bg=bgext),
+								"   background_image {img}".format(img=self.r.RelativePathTo(bgimg, self.config["boot/path"]))
+							]
+						elif os.path.exists(rel_cfgpath):
+							# user specified path relative to /boot:
+							boot_menu.lines += [
+								"   insmod {ext}".format(ext=bgext),
+								"   background_image {img}".format(img=self.r.RelativePathTo(rel_cfgpath, self.config["boot/path"]))
+							]
+						else:
+							self.msgs.append(["warn", "background image \"{img}\" does not exist - skipping.".format(img=bgimg)])
+					else:
+						self.msgs.append(["warn", "background image \"{img}\" (format \"{ext}\") not recognized - skipping.".format(img=bgimg, ext=bgext)])
 			boot_menu.lines += ["fi",
 								"",
 								self.config.condFormatSubItem("color/normal", "set menu_color_normal={s}"),
