@@ -20,7 +20,7 @@ class GRUBExtension(Extension):
 	""" Implements an extension for the grub bootloader """
 	
 	def __init__(self, config: BootConfigFile, ego_module, testing=False):
-		super()__init__(self, config, ego_module)
+		super().__init__(config, ego_module)
 		self.grubpath = "{path}/{dir}".format(path=self.config["boot/path"], dir=self.config["grub/dir"])
 		self.fn = "{path}/{file}".format(path=self.grubpath, file=self.config["grub/file"])
 		self.bootitems = []
