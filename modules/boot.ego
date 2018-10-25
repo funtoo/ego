@@ -43,7 +43,7 @@ class Module(EgoModule):
 		if self._ext is not None:
 			# unmounts any non-/boot filesystems we may have mounted for scanning.
 			# /boot unmounting is handled via another process.
-			self._ext.r.unmount_if_necessary()
+			self._ext.resolver.unmount_if_necessary()
 		warnings = False
 		for msgtype, msg in self.msgs:
 			if msgtype == "warn":
