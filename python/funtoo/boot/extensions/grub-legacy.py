@@ -9,14 +9,14 @@ from subprocess import STDOUT
 from funtoo.boot.extension import Extension, ExtensionError
 
 
-def getExtension(config):
-	return GRUBLegacyExtension(config)
+def getExtension(config, ego_module):
+	return GRUBLegacyExtension(config, ego_module)
 
 
 class GRUBLegacyExtension(Extension):
 
-	def __init__(self,config):
-		Extension.__init__(self,config)
+	def __init__(self,config, ego_module):
+		super().__init__(config, ego_module)
 		self.fn = "{path}/{dir}/{file}".format(path = self.config["boot/path"], dir = self.config["grub-legacy/dir"], file = self.config["grub-legacy/file"])
 		self.bootitems = []
 		

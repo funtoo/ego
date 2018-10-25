@@ -139,7 +139,7 @@ class Module(EgoModule):
 			extname = "funtoo.boot.extensions.{gen}".format(gen=self.ext_name)
 			__import__(extname)
 			self.ext_module = sys.modules[extname]
-			self._ext = self.ext_module.getExtension(self.boot_config)
+			self._ext = self.ext_module.getExtension(self.boot_config, self)
 			# link extension's messages list to ours so we have easy access to extension's user messages:
 			self._ext.msgs = self.msgs
 		return self._ext
@@ -159,8 +159,9 @@ class Module(EgoModule):
 	
 	def microcode_action(self):
 		from funtoo.boot.resolver import Resolver
-		resolver = Resolver(self.boot_config, self.msgs)
+		resolver = Resolver(self.boot_config, self)
 		success = resolver.microcode_regenerate()
+		self.msgs += resolver.msgs
 		self.cleanup(success=success)
 			
 	def set_default_action(self):

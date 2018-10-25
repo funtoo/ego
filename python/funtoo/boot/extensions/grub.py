@@ -11,9 +11,9 @@ from funtoo.boot.extension import Extension, ExtensionError
 from funtoo.boot.config import BootConfigFile
 
 
-def getExtension(config):
+def getExtension(config, ego_module):
 	""" Gets the extension based on the configuration """
-	return GRUBExtension(config)
+	return GRUBExtension(config, ego_module)
 
 
 class GRUBExtension(Extension):
@@ -115,14 +115,14 @@ class GRUBExtension(Extension):
 			self.msgs.append(["fatal", "Unrecognized boot entry type \"{mt}\"".format(mt=mytype)])
 			return False
 		params = self.config["{s}/params".format(s=sect)].split()
-		myroot = self.r.GetParam(params, "root=")
-		mychainloader = self.r.GetParam(params, "chainloader=")
+		myroot = self.resolver.GetParam(params, "root=")
+		mychainloader = self.resolver.GetParam(params, "chainloader=")
 		myname = sect
 		# TODO check for valid root entry
 		boot_menu.lines.append("")
 		boot_menu.lines.append("menuentry \"{mn}\" {{".format(mn=myname))
 		if mytype in ["linux16"]:
-			k = self.r.strip_mount_point(self.config[sect + "/kernel"])
+			k = self.resolver.strip_mount_point(self.config[sect + "/kernel"])
 			full_k = os.path.join(self.config["boot/path"], k.lstrip("/"))
 			if not os.path.exists(full_k):
 				self.msgs.append(["warn", "Image for section {sect} not found - {full_k}".format(sect=sect, full_k=full_k)])
@@ -148,7 +148,7 @@ class GRUBExtension(Extension):
 		""" Generates the boot entry """
 		mytype = self.config["{s}/type".format(s=sect)]
 		boot_menu.lines.append("")
-		label = self.r.GetBootEntryString(sect, k_full_path)
+		label = self.resolver.GetBootEntryString(sect, k_full_path)
 		boot_menu.lines.append("menuentry \"{l}\" {{".format(l=label))
 		
 		# TODO: add last-selected, which is different than last-booted.
@@ -162,7 +162,7 @@ class GRUBExtension(Extension):
 		
 		self.PrepareGRUBForFilesystem(scanpath, boot_menu.lines)
 		
-		k_sub_path = self.r.strip_mount_point(k_full_path)
+		k_sub_path = self.resolver.strip_mount_point(k_full_path)
 		c = self.config
 		params = []
 		if c.hasItem("boot/terminal") and c["boot/terminal"] == "serial":
@@ -187,18 +187,18 @@ class GRUBExtension(Extension):
 		
 		# TODO: turn off panic setting after successful boot? (ego boot success?)
 		
-		ok, myroot = self.r.calculate_rootfs_for_section(params)
+		ok, myroot = self.resolver.calculate_rootfs_for_section(params)
 		if not ok:
 			return False
-		ok, fstype = self.r.calculate_filesystem_for_section(params)
+		ok, fstype = self.resolver.calculate_filesystem_for_section(params)
 		if not ok:
 			return False
 		
 		initrds = self.config.item(sect, "initrd")
-		initrds = self.r.find_initrds(initrds, scanpath, k_full_path, kext)
+		initrds = self.resolver.find_initrds(initrds, scanpath, k_full_path, kext)
 		if myroot and ('root=' + myroot) in params and 0 == len(initrds):
 			params.remove('root=' + myroot)
-			params.append('root=' + self.r.resolvedev(myroot))
+			params.append('root=' + self.resolver.resolvedev(myroot))
 		
 		xenpath = None
 		xenparams = None
@@ -209,21 +209,21 @@ class GRUBExtension(Extension):
 			# Add leading / if needed
 			if not xenkernel.startswith("/"):
 				xenkernel = "/{xker}".format(xker=xenkernel)
-			xenpath = self.r.strip_mount_point(xenkernel)
+			xenpath = self.resolver.strip_mount_point(xenkernel)
 			xenparams = self.config["{s}/xenparams".format(s=sect)].split()
 		
 		# Add unique identifier that can be used to determine if kernel booted.
-		params.append("rand_id=%s" % self.r.idmapper.get(k_full_path))
+		params.append("rand_id=%s" % self.resolver.idmapper.get(k_full_path))
 		# Append kernel lines based on type
 		if mytype == "xen":
 			boot_menu.lines.append("  multiboot {xker} {xparams}".format(xker=xenpath, xparams=" ".join(xenparams)))
 			boot_menu.lines.append("  module {ker} {params}".format(ker=k_sub_path, params=" ".join(params)))
 			for initrd in initrds:
-				boot_menu.lines.append("  module {initrd}".format(initrd=self.r.strip_mount_point(initrd)))
+				boot_menu.lines.append("  module {initrd}".format(initrd=self.resolver.strip_mount_point(initrd)))
 		else:
 			boot_menu.lines.append("  {t} {k} {par}".format(t=mytype, k=k_sub_path, par=" ".join(params)))
 			if initrds:
-				initrds = (self.r.strip_mount_point(initrd) for initrd in initrds)
+				initrds = (self.resolver.strip_mount_point(initrd) for initrd in initrds)
 				boot_menu.lines.append("  initrd {rds}".format(rds=" ".join(initrds)))
 		
 		# Append graphics line
@@ -328,7 +328,7 @@ class GRUBExtension(Extension):
 				boot_menu.success = False
 
 			
-			boot_menu.lines += ["if loadfont {dst}; then".format(dst=self.r.RelativePathTo(dst_font, self.config["boot/path"])),
+			boot_menu.lines += ["if loadfont {dst}; then".format(dst=self.resolver.RelativePathTo(dst_font, self.config["boot/path"])),
 				  "   set gfxmode={gfx}".format(gfx=self.sanitizeDisplayMode(self.config["display/gfxmode"])),
 				  "   insmod all_video",
 				  "   terminal_output gfxterm"]
@@ -359,13 +359,13 @@ class GRUBExtension(Extension):
 							# user specified absolute path to file on disk:
 							boot_menu.lines += [
 								"   insmod {bg}".format(bg=bgext),
-								"   background_image {img}".format(img=self.r.RelativePathTo(bgimg, self.config["boot/path"]))
+								"   background_image {img}".format(img=self.resolver.RelativePathTo(bgimg, self.config["boot/path"]))
 							]
 						elif os.path.exists(rel_cfgpath):
 							# user specified path relative to /boot:
 							boot_menu.lines += [
 								"   insmod {ext}".format(ext=bgext),
-								"   background_image {img}".format(img=self.r.RelativePathTo(rel_cfgpath, self.config["boot/path"]))
+								"   background_image {img}".format(img=self.resolver.RelativePathTo(rel_cfgpath, self.config["boot/path"]))
 							]
 						else:
 							self.msgs.append(["warn", "background image \"{img}\" does not exist - skipping.".format(img=bgimg)])
@@ -380,7 +380,7 @@ class GRUBExtension(Extension):
 			if self.config.hasItem("display/background"):
 				self.msgs.append(["warn", "display/gfxmode not provided - display/background \"{bg}\" will not be displayed.".format(bg=self.config["display/background"])])
 		
-		self.r.GenerateSections(boot_menu, self.generateBootEntry, self.generateOtherBootEntry)
+		self.resolver.GenerateSections(boot_menu, self.generateBootEntry, self.generateOtherBootEntry)
 		
 		if boot_menu.user_specified_attempt_identifier:
 			if boot_menu.attempt_kname is not None and boot_menu.attempt_position is not None:

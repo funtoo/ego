@@ -8,14 +8,14 @@ from subprocess import STDOUT
 from funtoo.boot.extension import Extension
 
 
-def getExtension(config):
-	return LILOExtension(config)
+def getExtension(config, ego_module):
+	return LILOExtension(config, ego_module)
 
 
 class LILOExtension(Extension):
 	
-	def __init__(self, config):
-		Extension.__init__(self, config)
+	def __init__(self, config, ego_module):
+		super().__init__(config, ego_module)
 		self.fn = self.config["lilo/file"]
 		self.lilo_cmd = self.config["lilo/bin"]
 		self.bootitems = []
@@ -53,7 +53,7 @@ class LILOExtension(Extension):
 		
 		self.bootitems.append(sect)
 		params = self.config["{s}/params".format(s=sect)].split()
-		myroot = self.r.GetParam(params, "root=")
+		myroot = self.resolver.GetParam(params, "root=")
 		
 		l.append("")
 		l.append("other={dev}".format(dev=myroot))
@@ -91,14 +91,14 @@ class LILOExtension(Extension):
 			if param not in params:
 				params.append(param)
 		
-		ok, myroot = self.r.calculate_rootfs_for_section(params)
+		ok, myroot = self.resolver.calculate_rootfs_for_section(params)
 		if not ok:
 			return False
-		ok, myfstype = self.r.calculate_filesystem_for_section(params)
+		ok, myfstype = self.resolver.calculate_filesystem_for_section(params)
 		if not ok:
 			return False
 		
-		self.r.ZapParam(params, "root=")
+		self.resolver.ZapParam(params, "root=")
 		
 		l += [
 			"	label=\"{name}\"".format(name=sect.replace(" ", "_")),
@@ -107,9 +107,9 @@ class LILOExtension(Extension):
 			"	append=\"{par}\"".format(par=" ".join(params))
 		]
 		initrds = self.config.item(sect, "initrd")
-		initrds = self.r.find_initrds(initrds, kname, kext)
+		initrds = self.resolver.find_initrds(initrds, kname, kext)
 		for initrd in initrds:
-			l.append("  initrd={rd}".format(self.r.RelativePathTo(initrd, "/boot")))
+			l.append("  initrd={rd}".format(self.resolver.RelativePathTo(initrd, "/boot")))
 		
 		return ok
 	

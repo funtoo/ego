@@ -19,12 +19,16 @@ class ExtensionError(Exception):
 
 
 class Extension:
-	def __init__(self,config):
+	def __init__(self, config, ego_module):
 		# initialization should always succeed.
 		self.config = config
-		self.msgs = []
-		self.r = Resolver(config, self.msgs)
+		self.ego_module = ego_module
 		self.fn = None
+		self.resolver = Resolver(config, ego_module)
+
+	@property
+	def msgs(self):
+		return self.ego_module.msgs
 
 	def attemptKernel(self, identifier) -> bool:
 		self.msgs.append(["fatal", "This extension does not support kernel attempt/fallback."])

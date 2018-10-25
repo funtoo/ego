@@ -40,7 +40,7 @@ class Resolver:
 	on what the resolver found.
 	"""
 	
-	def __init__(self, config, msgs):
+	def __init__(self, config, ego_module):
 		self.config = config
 		self.mounted = {}
 		self.fstabinfo = fstabInfo()
@@ -50,7 +50,8 @@ class Resolver:
 		self._defnames = []
 		self._default, self._default_mode = self.config.get_default_boot_setting()
 		self.rootarg = None
-		self.msgs = msgs
+		self.ego_module = ego_module
+		self.msgs = self.ego_module.msgs
 		self.idmapper = self.config.idmapper
 		self.has_microcode = self.microcode_initialize()
 
