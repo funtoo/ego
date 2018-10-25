@@ -31,8 +31,6 @@ class Module(EgoModule):
 	
 	def setup(self):
 		
-		# self.msgs: accumulated messages that will be output at the end of the ego boot/boot-update command.
-		self.msgs = []
 		self.boot_config = self.get_boot_config()
 		# TODO: check for None ^^
 		self._ext = None
@@ -122,6 +120,13 @@ class Module(EgoModule):
 				self.cleanup(False)
 				return None
 	
+	@property
+	def msgs(self):
+		if self._ext is not None:
+			return self._ext.msgs
+		else:
+			return None
+	
 	def get_extension(self):
 		if self._ext is None:
 			success = True
@@ -140,8 +145,6 @@ class Module(EgoModule):
 			__import__(extname)
 			self.ext_module = sys.modules[extname]
 			self._ext = self.ext_module.getExtension(self.boot_config, self)
-			# link extension's messages list to ours so we have easy access to extension's user messages:
-			self._ext.msgs = self.msgs
 		return self._ext
 	
 	def handle_show_action(self):
@@ -161,7 +164,6 @@ class Module(EgoModule):
 		from funtoo.boot.resolver import Resolver
 		resolver = Resolver(self.boot_config, self)
 		success = resolver.microcode_regenerate()
-		self.msgs += resolver.msgs
 		self.cleanup(success=success)
 			
 	def set_default_action(self):
