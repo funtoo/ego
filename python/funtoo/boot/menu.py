@@ -113,11 +113,16 @@ class BootLoaderMenu:
 
 	def show(self):
 		pos = 0
+		found_default = False
+		for item in self.boot_entries:
+			if BootMenuFlag.DEFAULT in item["flags"]:
+				found_default = True
+				break
 		for item in self.boot_entries:
 			label = item["label"]
 			if BootMenuFlag.ATTEMPT in item["flags"]:
 				mesg("attemptboot", label, entry=pos)
-			elif BootMenuFlag.DEFAULT in item["flags"]:
+			elif BootMenuFlag.DEFAULT in item["flags"] or (not found_default and pos == 0):
 				mesg("defboot", label, entry=pos)
 			else:
 				mesg("boot", label, entry=pos)
