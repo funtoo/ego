@@ -19,8 +19,8 @@ def getExtension(config, ego_module):
 class GRUBExtension(Extension):
 	""" Implements an extension for the grub bootloader """
 	
-	def __init__(self, config: BootConfigFile, testing=False):
-		Extension.__init__(self, config)
+	def __init__(self, config: BootConfigFile, ego_module, testing=False):
+		super()__init__(self, config, ego_module)
 		self.grubpath = "{path}/{dir}".format(path=self.config["boot/path"], dir=self.config["grub/dir"])
 		self.fn = "{path}/{file}".format(path=self.grubpath, file=self.config["grub/file"])
 		self.bootitems = []
