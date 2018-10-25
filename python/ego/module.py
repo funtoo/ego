@@ -51,6 +51,7 @@ class EgoModule:
 		self.info = config.ego_mods_info[name]
 		self.version = VERSION
 		self.options = None
+		self.msgs = []
 		self.setup()
 
 	def _no_repo_available(self, exit=True):

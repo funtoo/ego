@@ -40,19 +40,17 @@ class Module(EgoModule):
 	def cleanup(self, success, quiet=False):
 		""" prints accumulated errors and warnings and exits appropriately """
 		print()
-		msgs = self.msgs
-		
 		if self._ext is not None:
 			# unmounts any non-/boot filesystems we may have mounted for scanning.
 			# /boot unmounting is handled via another process.
 			self._ext.r.unmount_if_necessary()
 		warnings = False
-		for msgtype, msg in msgs:
+		for msgtype, msg in self.msgs:
 			if msgtype == "warn":
 				warnings = True
 			if not quiet:
 				mesg(msgtype, msg)
-		if not success or "error" in map(lambda x: x[0], msgs):
+		if not success or "error" in map(lambda x: x[0], self.msgs):
 			mesg("fatal", "Did not complete successfully.")
 			print()
 			sys.exit(1)
@@ -119,13 +117,6 @@ class Module(EgoModule):
 			if cleanup:
 				self.cleanup(False)
 				return None
-	
-	@property
-	def msgs(self):
-		if self._ext is not None:
-			return self._ext.msgs
-		else:
-			return None
 	
 	def get_extension(self):
 		if self._ext is None:
