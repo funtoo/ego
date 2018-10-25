@@ -470,7 +470,7 @@ class Resolver:
 			return boot_menu
 		elif boot_menu.default_position is None:
 			# this means we didn't pick a default kernel to boot!
-			self.msgs.append(["warn", "Had difficulty finding a default kernel -- using first one. (report this error.)"])
+			self.msgs.append(["warn", "Had difficulty finding a default kernel -- using first one."])
 			# If we didn't find a specified default, use the first one
 			boot_menu.default_position = 0
 		else:
