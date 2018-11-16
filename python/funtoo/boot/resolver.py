@@ -40,8 +40,9 @@ class Resolver:
 	on what the resolver found.
 	"""
 	
-	def __init__(self, config, boot_options, ego_module):
+	def __init__(self, boot_config, config, boot_options, ego_module):
 		self.config = config
+		self.boot_config = boot_config
 		self.boot_options = boot_options
 		self.mounted = {}
 		self.fstabinfo = fstabInfo()
@@ -49,15 +50,15 @@ class Resolver:
 		# a position counter -- if 0, we processed no kernels...
 		self._pos = 0
 		self._defnames = []
-		self._default, self._default_mode = self.config.get_default_boot_setting()
+		self._default, self._default_mode = self.boot_config.get_default_boot_setting()
 		self.rootarg = None
 		self.ego_module = ego_module
 		self.msgs = self.ego_module.msgs
-		self.idmapper = self.config.idmapper
+		self.idmapper = self.boot_config.idmapper
 		self.has_microcode = self.microcode_initialize()
 
 	def device_shift(self, device_ref):
-		if "device-shift" in self.boot_options:
+		if "device-shift" in self.boot_options and self.boot_options["device-shift"] is not None:
 			old_dev, new_dev = self.boot_options['device-shift'].split(",")
 			device_ref = device_ref.replace(old_dev, new_dev)
 		return device_ref
@@ -114,10 +115,10 @@ class Resolver:
 		
 		# We aren't generating a config file, just updating microcode -- so do the main loop ourselves, and just update microcode:
 		if self.has_microcode:
-			sections = self.config.getSections()
+			sections = self.boot_config.getSections()
 			scanpaths = set()
 			for sect in sections:
-				paths = set(self.config.item(sect, "scan").split())
+				paths = set(self.boot_config.item(sect, "scan").split())
 				scanpaths |= paths
 			
 			# mount paths we may need to update
@@ -346,7 +347,7 @@ class Resolver:
 
 		# Process a section, such as "genkernel" section.
 		
-		findlist, skiplist = self.config.flagItemList("{s}/kernel".format(s=sect))
+		findlist, skiplist = self.boot_config.flagItemList("{s}/kernel".format(s=sect))
 		
 		# findlist == special patterns to match (i.e. kernel[-v])
 		# skiplist == patterns to skip.
@@ -354,10 +355,11 @@ class Resolver:
 		findmatch = []
 		skipmatch = []
 		
-		scanpaths = self.config.item(sect, "scan").split()
-		
+		scanpaths = self.boot_config.item(sect, "scan").split()
 		for scanpath in scanpaths:
-			self.mount_if_necessary(scanpath)
+			scanpath = os.path.join(self.config.root_path, scanpath)
+			if self.config.root_path == "/":
+				self.mount_if_necessary(scanpath)
 			if len(skiplist):
 				# find kernels to skip...
 				matches = self.GetMatchingKernels(scanpath, skiplist)
@@ -429,7 +431,7 @@ class Resolver:
 		"""Generates sections using passed in extension-supplied functions"""
 		
 		try:
-			timeout = int(self.config["boot/timeout"])
+			timeout = int(self.boot_config["boot/timeout"])
 		except ValueError:
 			ok = False
 			self.msgs.append(["fatal", "Invalid value for boot/timeout."])
@@ -441,9 +443,9 @@ class Resolver:
 			self.msgs.append(["norm", "boot/timeout value is below 3 seconds."])
 		
 		# Remove builtins from list of sections
-		sections = self.config.getSections()
+		sections = self.boot_config.getSections()
 		for sect in sections[:]:
-			if sect in self.config.builtins:
+			if sect in self.boot_config.builtins:
 				sections.remove(sect)
 		
 		# If we have no boot entries, throw an error - force user to be
@@ -456,7 +458,7 @@ class Resolver:
 		# Warn if there are no linux entries
 		has_linux = False
 		for sect in sections:
-			if self.config["{s}/{t}".format(s=sect, t="type")] == "linux":
+			if self.boot_config["{s}/{t}".format(s=sect, t="type")] == "linux":
 				has_linux = True
 				break
 		if has_linux is False:
@@ -464,7 +466,7 @@ class Resolver:
 		
 		# Generate sections
 		for sect in sections:
-			if self.config["{s}/type".format(s=sect)] in ["linux", "xen"]:
+			if self.boot_config["{s}/type".format(s=sect)] in ["linux", "xen"]:
 				ok = self._GenerateLinuxSection(boot_menu, sect, sfunc)
 			elif ofunc:
 				ok = self._GenerateOtherSection(boot_menu, sect, ofunc)
@@ -483,7 +485,7 @@ class Resolver:
 			self.msgs.append(["note", "Default kernel selected via: %s." % self._default_mode])
 			# Tag the boot menu as being default for display:
 			boot_menu.boot_entries[boot_menu.default_position]["flags"].append(BootMenuFlag.DEFAULT)
-		if self._default_mode == "autopick: mtime" and self.config.item("boot", "autopick") == "last-booted":
+		if self._default_mode == "autopick: mtime" and self.boot_config.item("boot", "autopick") == "last-booted":
 				self.msgs.append(["warn", "Falling back to last modification time booting due to lack of last-booted info."])
 
 		return boot_menu
@@ -498,18 +500,12 @@ class Resolver:
 	def strip_mount_point(self, file_path):
 		"""Strips mount point from file_path"""
 		
-		mountpoint = self.GetMountPoint(file_path)
-		
-		if mountpoint:
-			split_path = file_path.split(mountpoint, 1)
-			if len(split_path) != 2:
-				# TODO Handle error better
-				# Couldn't strip mount point, just return original file_path
-				return file_path
-			else:
-				return os.path.normpath(split_path[1])
-		else:
-			# No mount point, just return file_path
-			return file_path
+		if self.config.root_path != "/":
+			file_path = file_path[:len(self.config.root_path)]
+			if file_path[:1] != "/":
+				file_path = "/" + file_path
+		if file_path.startswith("/boot/"):
+			file_path = file_path[5:]
+		return file_path
 
 # vim: ts=4 sw=4 noet

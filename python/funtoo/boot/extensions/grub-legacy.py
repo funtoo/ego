@@ -15,13 +15,13 @@ def getExtension(config, ego_module):
 
 class GRUBLegacyExtension(Extension):
 
-	def __init__(self,config, ego_module):
-		super().__init__(config, ego_module)
-		self.fn = "{path}/{dir}/{file}".format(path = self.config["boot/path"], dir = self.config["grub-legacy/dir"], file = self.config["grub-legacy/file"])
+	def __init__(self, boot_config, ego_module):
+		super().__init__(boot_config, ego_module)
+		self.fn = "{path}/{dir}/{file}".format(path = self.boot_config["boot/path"], dir = self.boot_config["grub-legacy/dir"], file = self.boot_config["grub-legacy/file"])
 		self.bootitems = []
 		
 	def initialize(self):
-		self.grub_root = self.DeviceGRUB(self.DeviceOfFilesystem(self.config["boot/path"]))
+		self.grub_root = self.DeviceGRUB(self.DeviceOfFilesystem(self.boot_config["boot/path"]))
 		if self.grub_root is None:
 			self.msgs.append(["fatal", "Could not determine device of filesystem using grub-probe"])
 			return False
@@ -30,7 +30,7 @@ class GRUBLegacyExtension(Extension):
 		return True
 
 	def generateOtherBootEntry(self, l, sect):
-		mytype = self.config["{s}/type".format(s=sect)].lower()
+		mytype = self.boot_config["{s}/type".format(s=sect)].lower()
 		if mytype in ["dos", "msdos"]:
 			mytype = "dos"
 		elif mytype in ["windows", "windows 2000", "win2000", "windows xp", "winxp"]:
@@ -46,7 +46,7 @@ class GRUBLegacyExtension(Extension):
 		else:
 			self.msgs.append(["fatal","Unrecognized boot entry type \"{type}\"".format(type = mytype)])
 			return False
-		params = self.config["{s}/params".format(s = sect)].split()
+		params = self.boot_config["{s}/params".format(s = sect)].split()
 		myroot = self.r.GetParam(params,"root=")
 		# TODO check for valid root entry
 		l.append("title {s}".format(s=sect))
@@ -105,7 +105,7 @@ class GRUBLegacyExtension(Extension):
 	def generateBootEntry(self, l, sect, kname, kext):
 		
 		ok = True
-		mytype = self.config["{s}/type".format(s=sect)]
+		mytype = self.boot_config["{s}/type".format(s=sect)]
 		label = self.r.GetBootEntryString(sect, kname)
 		
 		l.append("title {name}".format(name=label))
@@ -114,13 +114,13 @@ class GRUBLegacyExtension(Extension):
 		# Get kernel and params
 		kpath = self.r.strip_mount_point(kname)
 		params = []
-		c = self.config
+		c = self.boot_config
 		if c.hasItem("boot/terminal") and c["boot/terminal"] == "serial":
 			params += [
 				"console=tty0",
 				"console=ttyS%s,%s%s%s" % (c["serial/unit"], c["serial/speed"], c["serial/parity"][0], c["serial/word"])
 			]
-		for param in self.config.item(sect, "params").split():
+		for param in self.boot_config.item(sect, "params").split():
 			if param not in params:
 				params.append(param)
 		ok, myroot = self.r.calculate_rootfs_for_section(params)
@@ -130,7 +130,7 @@ class GRUBLegacyExtension(Extension):
 		if not ok:
 			return False
 
-		mygrubroot = self.DeviceGRUB(self.DeviceOfFilesystem(self.config["boot/path"]))
+		mygrubroot = self.DeviceGRUB(self.DeviceOfFilesystem(self.boot_config["boot/path"]))
 		if mygrubroot is None:
 			self.msgs.append(["fatal", "Could not determine device of filesystem using grub-probe"])
 			return False
@@ -139,19 +139,19 @@ class GRUBLegacyExtension(Extension):
 		l.append("  root {dev}".format(dev=mygrubroot))
 
 		# Get initrds
-		initrds = self.config.item(sect, "initrd")
+		initrds = self.boot_config.item(sect, "initrd")
 		initrds = self.r.find_initrds(initrds, kname, kext)
 		
 		xenpath = None
 		xenparams = []
 		# Populate xen variables if type is xen
 		if mytype == "xen":
-			xenkernel = self.config["{s}/xenkernel".format(s=sect)]
+			xenkernel = self.boot_config["{s}/xenkernel".format(s=sect)]
 			# Add leading / if needed
 			if not xenkernel.startswith("/"):
 				xenkernel = "/{xker}".format(xker=xenkernel)
 			xenpath = self.r.strip_mount_point(xenkernel)
-			xenparams = self.config["{s}/xenparams".format(s=sect)].split()
+			xenparams = self.boot_config["{s}/xenparams".format(s=sect)].split()
 
 		# Append kernel lines based on type
 		
@@ -177,7 +177,7 @@ class GRUBLegacyExtension(Extension):
 		ok, self.defpos, self.defname = self.r.GenerateSections(l, self.generateBootEntry, self.generateOtherBootEntry)
 		if not ok:
 			return False, l
-		c = self.config
+		c = self.boot_config
 		if c.hasItem("boot/terminal") and c["boot/terminal"] == "serial":
 			self.msgs.append(["warn", "Configured for SERIAL input/output."])
 			l = [
@@ -189,7 +189,7 @@ class GRUBLegacyExtension(Extension):
 				] + l
 		else:
 			l = [
-					self.config.condFormatSubItem("boot/timeout", "timeout {s}"),
+					self.boot_config.condFormatSubItem("boot/timeout", "timeout {s}"),
 					"default {pos}".format(pos=self.defpos),
 					""
 				] + l

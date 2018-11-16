@@ -14,10 +14,10 @@ def getExtension(config, ego_module):
 
 class LILOExtension(Extension):
 	
-	def __init__(self, config, ego_module):
-		super().__init__(config, ego_module)
-		self.fn = self.config["lilo/file"]
-		self.lilo_cmd = self.config["lilo/bin"]
+	def __init__(self, boot_config, ego_module):
+		super().__init__(boot_config, ego_module)
+		self.fn = self.boot_config["lilo/file"]
+		self.lilo_cmd = self.boot_config["lilo/bin"]
 		self.bootitems = []
 	
 	def isAvailable(self):
@@ -52,7 +52,7 @@ class LILOExtension(Extension):
 			return False
 		
 		self.bootitems.append(sect)
-		params = self.config["{s}/params".format(s=sect)].split()
+		params = self.boot_config["{s}/params".format(s=sect)].split()
 		myroot = self.resolver.GetParam(params, "root=")
 		
 		l.append("")
@@ -68,7 +68,7 @@ class LILOExtension(Extension):
 		ok = True
 		
 		# Type 'xen' isn't supported in lilo
-		if self.config["{s}/type".format(s=sect)] == "xen":
+		if self.boot_config["{s}/type".format(s=sect)] == "xen":
 			self.msgs.append(["fatal", "Type 'xen' is not supported in lilo"])
 			return False
 		
@@ -80,14 +80,14 @@ class LILOExtension(Extension):
 		l.append("")
 		self.bootitems.append(kname)
 		l.append("image={k}".format(k=kname))
-		c = self.config
+		c = self.boot_config
 		params = []
 		if c.hasItem("boot/terminal") and c["boot/terminal"] == "serial":
 			params += [
 				"console=tty0",
 				"console=ttyS%s,%s%s%s" % (c["serial/unit"], c["serial/speed"], c["serial/parity"][0], c["serial/word"])
 			]
-		for param in self.config.item(sect, "params").split():
+		for param in self.boot_config.item(sect, "params").split():
 			if param not in params:
 				params.append(param)
 		
@@ -106,7 +106,7 @@ class LILOExtension(Extension):
 			"	root={dev}".format(dev=myroot),
 			"	append=\"{par}\"".format(par=" ".join(params))
 		]
-		initrds = self.config.item(sect, "initrd")
+		initrds = self.boot_config.item(sect, "initrd")
 		initrds = self.resolver.find_initrds(initrds, kname, kext)
 		for initrd in initrds:
 			l.append("  initrd={rd}".format(self.resolver.RelativePathTo(initrd, "/boot")))
@@ -115,7 +115,7 @@ class LILOExtension(Extension):
 	
 	def generateConfigFile(self):
 		l = []
-		c = self.config
+		c = self.boot_config
 		ok = True
 		
 		# Warn if no boot entry.

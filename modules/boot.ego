@@ -17,21 +17,21 @@ class Module(EgoModule):
 	
 	boot_config_file = "/etc/boot.conf"
 	
-	def get_boot_config(self):
+	def get_boot_config(self, cfgfile):
 		# Load /etc/boot.conf master configuration file:
 		
 		try:
-			config = BootConfigFile(self.boot_config_file)
+			config = BootConfigFile(cfgfile)
 			if not config.fileExists():
-				Output.fatal("Master configuration file %s does not exist." % self.boot_config_file)
+				Output.fatal("Master configuration file %s does not exist." % cfgfile)
 			else:
 				return config
 		except ConfigFileError as e:
-			Output.fatal("Error reading %s: %s." % (self.boot_config_file, str(e)))
+			Output.fatal("Error reading %s: %s." % (cfgfile, str(e)))
 	
 	def setup(self):
 		
-		self.boot_config = self.get_boot_config()
+		self.boot_config = self.get_boot_config(os.path.join(self.config.root_path, self.boot_config_file))
 		# TODO: check for None ^^
 		self._ext = None
 		self.ext_name = None
@@ -43,7 +43,8 @@ class Module(EgoModule):
 		if self._ext is not None:
 			# unmounts any non-/boot filesystems we may have mounted for scanning.
 			# /boot unmounting is handled via another process.
-			self._ext.resolver.unmount_if_necessary()
+			if self.config.root_path == "/":
+				self._ext.resolver.unmount_if_necessary()
 		warnings = False
 		for msgtype, msg in self.msgs:
 			if msgtype == "warn":
@@ -91,15 +92,18 @@ class Module(EgoModule):
 		# already mounted:
 		
 		imountedit = False
-		fstabinfo = funtoo.boot.helper.fstabInfo()
+		fstabinfo = None
 		
-		if fstabinfo.hasEntry("/boot"):
-			if not os.path.ismount("/boot"):
-				mesg("debug", "Mounting filesystem /boot...")
-				os.system("mount /boot")
-				imountedit = True
-		else:
-			mesg("info", "No /etc/fstab entry for /boot; not mounting.")
+		if self.config.root_path == "/":
+			fstabinfo = funtoo.boot.helper.fstabInfo()
+			
+			if fstabinfo.hasEntry("/boot"):
+				if not os.path.ismount("/boot"):
+					mesg("debug", "Mounting filesystem /boot...")
+					os.system("mount /boot")
+					imountedit = True
+			else:
+				mesg("info", "No /etc/fstab entry for /boot; not mounting.")
 		
 		# regenerate config:
 		try:
@@ -138,7 +142,7 @@ class Module(EgoModule):
 			extname = "funtoo.boot.extensions.{gen}".format(gen=self.ext_name)
 			__import__(extname)
 			self.ext_module = sys.modules[extname]
-			self._ext = self.ext_module.getExtension(self.boot_config, boot_options, self)
+			self._ext = self.ext_module.getExtension(self.boot_config, self.config, boot_options, self)
 		return self._ext
 	
 	def handle_show_action(self):
@@ -156,7 +160,7 @@ class Module(EgoModule):
 	
 	def microcode_action(self):
 		from funtoo.boot.resolver import Resolver
-		resolver = Resolver(self.boot_config, self.boot_options, self)
+		resolver = Resolver(self.boot_config, self.config, self.boot_options, self)
 		success = resolver.microcode_regenerate()
 		self.cleanup(success=success)
 			
@@ -211,7 +215,7 @@ class Module(EgoModule):
 	
 	@property
 	def boot_options(self):
-		return {"device-shift": self.options.device_shift }
+		return {"device-shift": self.options.device_shift}
 	
 	def update_action(self, check=False, quiet=False) -> BootLoaderMenu:
 		boot_menu = BootLoaderMenu(self.get_extension(self.boot_options), self.boot_config)
