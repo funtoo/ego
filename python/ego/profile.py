@@ -147,7 +147,7 @@ class MetaProfileCatalog:
 			if not repo_info["has_profiles"]:
 				continue
 			pa = repo_info["config"]["location"]
-			self.catalogs[repo] = ProfileCatalog(repo, pa + "/profiles")
+			self.catalogs[repo] = ProfileCatalog(repo, config, pa + "/profiles")
 
 	def set_arch(self, arch=None):
 		for repo_name, catalog in self.catalogs.items():
@@ -199,7 +199,8 @@ class ProfileCatalog:
 
 	"""
 
-	def __init__(self, repo_name, profile_root):
+	def __init__(self, repo_name, config, profile_root):
+		self.config = config
 		self.repo_name = repo_name
 		self.profile_root = profile_root
 		self.egodescfile = self.profile_root + "/profiles.ego.desc"
@@ -265,7 +266,7 @@ class ProfileCatalog:
 			return
 
 		for dirname in dirlist:
-			p = self.profile_root + "/" + dirname
+			p = join_path(self.config.root_path, self.profile_root + "/" + dirname)
 			try:
 				for profile_root in os.listdir(p):
 					if os.path.isdir(p + "/" + profile_root):

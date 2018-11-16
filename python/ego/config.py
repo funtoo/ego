@@ -12,10 +12,7 @@ from configparser import InterpolationError
 
 def join_path(x, y):
 	# ignore absolute paths (leading "/") in second component, for convenience...
-	if y.startswith("/"):
-		return os.path.join(x, y[1:])
-	else:
-		return os.path.join(x,y)
+	return os.path.join(x, y.lstrip("/"))
 
 class EgoConfig(object):
 
