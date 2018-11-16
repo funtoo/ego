@@ -344,7 +344,6 @@ class Resolver:
 							  sfunc: Callable[[BootLoaderMenu, str, str, str], bool]) -> bool:
 		"""Generates section for Linux systems"""
 		ok = True
-
 		# Process a section, such as "genkernel" section.
 		
 		findlist, skiplist = self.boot_config.flagItemList("{s}/kernel".format(s=sect))
@@ -357,7 +356,7 @@ class Resolver:
 		
 		scanpaths = self.boot_config.item(sect, "scan").split()
 		for scanpath in scanpaths:
-			scanpath = os.path.join(self.config.root_path, scanpath)
+			scanpath = os.path.join(self.config.root_path, scanpath.lstrip("/"))
 			if self.config.root_path == "/":
 				self.mount_if_necessary(scanpath)
 			if len(skiplist):
@@ -429,7 +428,6 @@ class Resolver:
 						 sfunc: Callable[[BootLoaderMenu, str, str], bool],
 						 ofunc: Callable[[BootLoaderMenu, str], bool] = None) -> BootLoaderMenu:
 		"""Generates sections using passed in extension-supplied functions"""
-		
 		try:
 			timeout = int(self.boot_config["boot/timeout"])
 		except ValueError:
@@ -499,7 +497,7 @@ class Resolver:
 	
 	def strip_mount_point(self, file_path):
 		"""Strips mount point from file_path"""
-		
+
 		if self.config.root_path != "/":
 			file_path = file_path[:len(self.config.root_path)]
 			if file_path[:1] != "/":

@@ -23,7 +23,10 @@ class GRUBExtension(Extension):
 		super().__init__(boot_config, config, boot_options, ego_module)
 		self.grubpath = "{path}/{dir}".format(path=self.boot_config["boot/path"], dir=self.boot_config["grub/dir"])
 		# fn = path for output grub.cfg.
-		self.fn = os.path.join(self.config.root_path, "{path}/{file}".format(path=self.grubpath, file=self.boot_config["grub/file"]))
+		self.fn = "{path}/{file}".format(path=self.grubpath, file=self.boot_config["grub/file"])
+		if self.fn.startswith("/"):
+			self.fn = self.fn[1:]
+		self.fn = os.path.join(self.config.root_path, self.fn)
 		self.bootitems = []
 		self.testing = testing
 		self.GuppyMap()
@@ -303,7 +306,8 @@ class GRUBExtension(Extension):
 					break
 				for font in fonts:
 					path_to_font = fontpath + "/" + font
-					if os.path.exists(path_to_font):
+					full_path_to_font = os.path.join(self.config.root_path, path_to_font.lstrip("/"))
+					if os.path.exists(full_path_to_font):
 						dst_font = path_to_font
 						break
 			
@@ -316,7 +320,8 @@ class GRUBExtension(Extension):
 						path_to_font = fontpath + "/" + font
 						if os.path.exists(path_to_font):
 							src_font = path_to_font
-							dst_font = self.grubpath + '/fonts' + font
+							dst_font = self.grubpath + '/fonts/' + font
+							dst_font = os.path.join(self.config.root_path, dst_font.lstrip("/"))
 							if not os.path.exists(dst_font):
 								import shutil
 								shutil.copy(src_font, dst_font)
@@ -381,7 +386,6 @@ class GRUBExtension(Extension):
 		else:
 			if self.boot_config.hasItem("display/background"):
 				self.msgs.append(["warn", "display/gfxmode not provided - display/background \"{bg}\" will not be displayed.".format(bg=self.boot_config["display/background"])])
-		
 		self.resolver.GenerateSections(boot_menu, self.generateBootEntry, self.generateOtherBootEntry)
 		
 		if boot_menu.user_specified_attempt_identifier:
