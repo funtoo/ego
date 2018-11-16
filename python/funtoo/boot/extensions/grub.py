@@ -11,16 +11,16 @@ from funtoo.boot.extension import Extension, ExtensionError
 from funtoo.boot.config import BootConfigFile
 
 
-def getExtension(config, ego_module):
+def getExtension(config, boot_options, ego_module):
 	""" Gets the extension based on the configuration """
-	return GRUBExtension(config, ego_module)
+	return GRUBExtension(config, boot_options, ego_module)
 
 
 class GRUBExtension(Extension):
 	""" Implements an extension for the grub bootloader """
 	
-	def __init__(self, config: BootConfigFile, ego_module, testing=False):
-		super().__init__(config, ego_module)
+	def __init__(self, config: BootConfigFile, boot_options, ego_module, testing=False):
+		super().__init__(config, boot_options, ego_module)
 		self.grubpath = "{path}/{dir}".format(path=self.config["boot/path"], dir=self.config["grub/dir"])
 		self.fn = "{path}/{file}".format(path=self.grubpath, file=self.config["grub/file"])
 		self.bootitems = []
@@ -488,7 +488,7 @@ class GRUBExtension(Extension):
 		for mod in self.RequiredGRUBModules(dev):
 			l.append("  insmod {m}".format(m=mod))
 		retval, grubdev = self.DeviceGRUB(dev)
-		l.append("  set root={dev}".format(dev=grubdev))
+		l.append("  set root={dev}".format(dev=self.resolver.device_shift(grubdev)))
 		retval, uuid = self.DeviceUUID(dev)
 		if retval == 0:
 			l.append("  search --no-floppy --fs-uuid --set {u}".format(u=uuid))

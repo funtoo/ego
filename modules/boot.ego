@@ -64,11 +64,14 @@ class Module(EgoModule):
 			print()
 			sys.exit(0)
 			
-	def update(self, boot_menu: BootLoaderMenu, check=False, quiet=False, cleanup=True):
+	def update(self, boot_menu: BootLoaderMenu, check=False, quiet=False, cleanup=True, boot_options=None):
 		"""
 		Perform traditional boot-update action of updating boot-loader configuration based on /etc/boot.conf.
 		:return:
 		"""
+		
+		if boot_options is None:
+			boot_options = {}
 		
 		for invalid in self.boot_config.validate():
 			self.msgs.append(["warn", "invalid config setting \"{iv}\"; ignored.".format(iv=invalid)])
@@ -80,7 +83,7 @@ class Module(EgoModule):
 		if os.geteuid() != 0:
 			Output.fatal("Updating boot configuration requires root privileges.")
 		
-		extension = self.get_extension()
+		extension = self.get_extension(boot_options)
 		mesg("norm", "Generating config for {gen}...".format(gen=self.ext_name))
 		print()
 		
@@ -118,7 +121,7 @@ class Module(EgoModule):
 				self.cleanup(False)
 				return None
 	
-	def get_extension(self):
+	def get_extension(self, boot_options):
 		if self._ext is None:
 			success = True
 			self.ext_name = self.boot_config["boot/generate"]
@@ -135,7 +138,7 @@ class Module(EgoModule):
 			extname = "funtoo.boot.extensions.{gen}".format(gen=self.ext_name)
 			__import__(extname)
 			self.ext_module = sys.modules[extname]
-			self._ext = self.ext_module.getExtension(self.boot_config, self)
+			self._ext = self.ext_module.getExtension(self.boot_config, boot_options, self)
 		return self._ext
 	
 	def handle_show_action(self):
@@ -153,7 +156,7 @@ class Module(EgoModule):
 	
 	def microcode_action(self):
 		from funtoo.boot.resolver import Resolver
-		resolver = Resolver(self.boot_config, self)
+		resolver = Resolver(self.boot_config, self.boot_options, self)
 		success = resolver.microcode_regenerate()
 		self.cleanup(success=success)
 			
@@ -199,16 +202,20 @@ class Module(EgoModule):
 	
 	def attempt_action(self):
 		if self.options.identifier != "default":
-			boot_menu = BootLoaderMenu(self.get_extension(), self.boot_config, user_specified_attempt_identifier=self.options.identifier)
+			boot_menu = BootLoaderMenu(self.get_extension(self.boot_options), self.boot_config, user_specified_attempt_identifier=self.options.identifier)
 			self.update(boot_menu, quiet=False, cleanup=True)
 		else:
 			self.boot_config.idmapper.remove_promote_setting()
 			self.msgs.append(["info", "Any attempted kernel setting has been wiped -- default will be used."])
 			return self.update_action()
 	
+	@property
+	def boot_options(self):
+		return {"device-shift": self.options.device_shift }
+	
 	def update_action(self, check=False, quiet=False) -> BootLoaderMenu:
-		boot_menu = BootLoaderMenu(self.get_extension(), self.boot_config)
-		self.update(boot_menu, quiet=quiet, cleanup=True, check=check)
+		boot_menu = BootLoaderMenu(self.get_extension(self.boot_options), self.boot_config)
+		self.update(boot_menu, quiet=quiet, cleanup=True, check=check, boot_options=self.boot_options)
 		return boot_menu
 	
 	def show_action(self):
@@ -223,7 +230,7 @@ class Module(EgoModule):
 		parser.add_argument("--show", default=None, metavar="sect/val", help="Echo a specific configuration setting.")
 		parser.add_argument("--set-default", default=None, metavar="path-to-kernel-img", help="Set a default kernel image to boot using /etc/boot.d.")
 		parser.add_argument("--check", action="store_true", help="Check the validity of the %s file." % self.boot_config_file)
-		
+		parser.add_argument("--device-shift", default=None, metavar="sda,sdb", help="Modify disk references FROM,TO -- for generating configs for temp. mounted disks.")
 		subparsers = parser.add_subparsers(title="actions", dest="action")
 		update_parser = subparsers.add_parser('update', help="Update boot loader configuration based on /etc/boot.conf.")
 		update_parser.set_defaults(handler=self.update_action)

@@ -40,8 +40,9 @@ class Resolver:
 	on what the resolver found.
 	"""
 	
-	def __init__(self, config, ego_module):
+	def __init__(self, config, boot_options, ego_module):
 		self.config = config
+		self.boot_options = boot_options
 		self.mounted = {}
 		self.fstabinfo = fstabInfo()
 		# The following 3 variables are for use in generating sections:
@@ -54,6 +55,12 @@ class Resolver:
 		self.msgs = self.ego_module.msgs
 		self.idmapper = self.config.idmapper
 		self.has_microcode = self.microcode_initialize()
+
+	def device_shift(self, device_ref):
+		if "device-shift" in self.boot_options:
+			old_dev, new_dev = self.boot_options['device-shift'].split(",")
+			device_ref = device_ref.replace(old_dev, new_dev)
+		return device_ref
 
 	def resolvedev(self, dev):
 		if (dev[0:5] == "UUID=") or (dev[0:6] == "LABEL="):
@@ -187,8 +194,8 @@ class Resolver:
 		 modifies params, setting root= or real_root= appropriately. Self.rootarg gets set to either "root" or "real_root".
 		 
 		 Returns;
-		 	boolean(success/fail),
-		 	the actual root device string, or None if we could not determine it.
+			boolean(success/fail),
+			the actual root device string, or None if we could not determine it.
 		"""
 		ok = True
 		doauto = False
@@ -205,12 +212,11 @@ class Resolver:
 			rootflags = self.fstabinfo.getRootMountFlags()
 			# filter out ones that the kernel can't handle:
 			rootflags = self.filterRootFlags(rootflags)
-			if ((rootdev[0:5] != "/dev/") and (rootdev[0:5] != "UUID=")
-					and (rootdev[0:6] != "LABEL=")):
+			if (rootdev[0:5] != "/dev/") and (rootdev[0:5] != "UUID=") and (rootdev[0:6] != "LABEL="):
 				ok = False
 				self.msgs.append(["fatal", "(root=auto) - / entry in /etc/fstab not recognized ({dev}).".format(dev=rootdev)])
 			else:
-				params.append("{arg}={dev}".format(arg=self.rootarg, dev=rootdev))
+				params.append("{arg}={dev}".format(arg=self.rootarg, dev=self.device_shift(rootdev)))
 				if len(rootflags):
 					params.append("{arg}flags={flags}".format(arg=self.rootarg, flags=rootflags))
 			return ok, rootdev
@@ -219,9 +225,9 @@ class Resolver:
 			# or real_root specified in params, and return the root dev.
 			for param in params:
 				if param[0:5] == "root=":
-					return ok, param[5:]
+					return ok, self.device_shift(param[5:])
 				elif param[0:10] == "real_root=":
-					return ok, param[10:]
+					return ok, self.device_shift(param[10:])
 			# if we got here, we didn't find a root or real_root
 			self.msgs.append(["warn", "(root=auto) - cannot find a root= or real_root= setting in params."])
 			return ok, None
@@ -253,7 +259,7 @@ class Resolver:
 					if fstype == "":
 						ok = False
 						self.msgs.append(["fatal", "(rootfstype=auto) - cannot find a valid / entry in /etc/fstab."])
-						return [ok, self.msgs, None]
+						return [ok, self.msgs]
 					params.append("rootfstype={fs}".format(fs=fstype))
 					break
 		else:
@@ -267,7 +273,7 @@ class Resolver:
 		mountpoint = scanpath
 		
 		# Avoids problems
-		if os.path.isabs(mountpoint) == False:
+		if os.path.isabs(mountpoint)is False:
 			return None
 		
 		while True:
@@ -480,7 +486,6 @@ class Resolver:
 		if self._default_mode == "autopick: mtime" and self.config.item("boot", "autopick") == "last-booted":
 				self.msgs.append(["warn", "Falling back to last modification time booting due to lack of last-booted info."])
 
-		
 		return boot_menu
 	
 	def RelativePathTo(self, imagepath, mountpath):

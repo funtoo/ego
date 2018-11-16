@@ -80,6 +80,24 @@ from ``/etc/boot.conf``. It is also possible to set the default kernel from the 
 invocation ``ego boot --set-default /boot/kernel-x.y.z``. This will set the specified kernel to be the default
 kernel and update your boot configuration accordingly.
 
+OPTIONS
+-------
+
+The ``--device-shift`` option can be used in rescue situations when you are temporarily mounting a disk that will
+be showing up as another device when it is actually booted. Here is an example::
+
+    # export ROOT=/mnt/myroot
+    # mount /dev/sdb3 /mnt/myroot
+    # mount /dev/sdb1 /mnt/myroot/boot
+    # ego boot --device-shift=sdb,sda update
+
+In the above example, ``/mnt/myroot`` is where we have mounted a root and boot filesystem of a disk we are repairing.
+``/mnt/myroot/etc/fstab`` refers to its filesystems as ``/dev/sda1``, ``/dev/sda3``, etc. But since we pulled the disk
+out of the other system and hooked it up to ours, on our system the disk is recognized as ``/dev/sda``. By exporting
+``ROOT`` to point to the root filesystem of the other disk and using the ``--device-shift=sdb,sda`` option, all
+references to ``/dev/sdbX`` in the ``/mnt/myroot/boot/grub/grub.cfg`` will actually say ``/dev/sdaX`` and
+``ego boot update`` will also process the alternate root filesystem's ``/mnt/myroot/etc/fstab`` file.
+
 .. include:: ../COPYRIGHT.txt
 
 SEE ALSO

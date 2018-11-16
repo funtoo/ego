@@ -19,12 +19,13 @@ class ExtensionError(Exception):
 
 
 class Extension:
-	def __init__(self, config, ego_module):
+	def __init__(self, config, boot_options, ego_module):
 		# initialization should always succeed.
 		self.config = config
+		self.boot_options = boot_options
 		self.ego_module = ego_module
 		self.fn = None
-		self.resolver = Resolver(config, ego_module)
+		self.resolver = Resolver(config, boot_options, ego_module)
 
 	@property
 	def msgs(self):
