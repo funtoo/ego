@@ -162,7 +162,7 @@ class GRUBExtension(Extension):
 		# self.bootitems records all our boot items
 		self.bootitems.append(label)
 		
-		scanpath = os.path.join(self.config.root_path, self.boot_config.item(sect, "scan"))
+		scanpath = os.path.join(self.config.root_path, self.boot_config.item(sect, "scan").lstrip("/"))
 		
 		self.PrepareGRUBForFilesystem(scanpath, boot_menu.lines)
 		
