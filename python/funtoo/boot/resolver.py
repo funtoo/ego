@@ -497,9 +497,8 @@ class Resolver:
 	
 	def strip_mount_point(self, file_path):
 		"""Strips mount point from file_path"""
-
 		if self.config.root_path != "/":
-			file_path = file_path[:len(self.config.root_path)]
+			file_path = file_path[len(self.config.root_path):]
 			if file_path[:1] != "/":
 				file_path = "/" + file_path
 		if file_path.startswith("/boot/"):

@@ -288,7 +288,7 @@ class GRUBExtension(Extension):
 			]
 		elif self.boot_config.hasItem("display/gfxmode"):
 			boot_menu.lines.append("")
-			self.PrepareGRUBForFilesystem(self.boot_config["boot/path"], boot_menu.lines)
+			self.PrepareGRUBForFilesystem(os.path.join(self.config.root_path, self.boot_config["boot/path"].lstrip('/')), boot_menu.lines)
 			if self.boot_config.hasItem("display/font"):
 				font = self.boot_config["display/font"]
 			else:
