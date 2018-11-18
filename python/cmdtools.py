@@ -25,7 +25,7 @@ class Task(object):
 		self.returncode = runner.execute(self.cmdlist)
 		self.running = False
 		self.complete_on = datetime.now()
-		if self.abortOnError == True and self.returncode != 0:
+		if self.abortOnError is True and self.returncode != 0:
 			self.failEvent()
 			return False
 		else:
