@@ -45,7 +45,7 @@ class Resolver:
 		self.boot_config = boot_config
 		self.boot_options = boot_options
 		self.mounted = {}
-		self.fstabinfo = fstabInfo()
+		self.fstabinfo = fstabInfo(self.config.root_path)
 		# The following 3 variables are for use in generating sections:
 		# a position counter -- if 0, we processed no kernels...
 		self._pos = 0

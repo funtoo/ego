@@ -95,7 +95,7 @@ class Module(EgoModule):
 		fstabinfo = None
 		
 		if self.config.root_path == "/":
-			fstabinfo = funtoo.boot.helper.fstabInfo()
+			fstabinfo = funtoo.boot.helper.fstabInfo("/")
 			
 			if fstabinfo.hasEntry("/boot"):
 				if not os.path.ismount("/boot"):
