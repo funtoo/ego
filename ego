@@ -49,8 +49,6 @@ parent_path = os.path.dirname(file_path)
 if os.path.isdir(os.path.join(parent_path, ".git")):
 	# we are being run from a git repository; so run in "dev mode", grab modules, etc from git path...
 	install_path = parent_path
-elif root_path != "/":
-	install_path = join_path(root_path, "/usr/share/ego")
 elif "global" in settings and "install_path" in settings["global"]:
 	install_path = settings["global"]["install_path"]
 else:
