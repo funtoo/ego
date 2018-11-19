@@ -1,6 +1,6 @@
 .\" Man page generated from reStructuredText.
 .
-.TH EGO BOOT 8 "" "2.6.3" "Funtoo Linux Core System"
+.TH EGO BOOT 8 "" "2.7.0" "Funtoo Linux Core System"
 .SH NAME
 ego boot \- Funtoo Linux Boot Loader Module
 .
@@ -115,6 +115,30 @@ the syntax of \fB/etc/boot.conf\fP\&. \fBego boot \-\-show sect/key\fP can be us
 from \fB/etc/boot.conf\fP\&. It is also possible to set the default kernel from the command\-line by using the
 invocation \fBego boot \-\-set\-default /boot/kernel\-x.y.z\fP\&. This will set the specified kernel to be the default
 kernel and update your boot configuration accordingly.
+.SH OPTIONS
+.sp
+The \fB\-\-device\-shift\fP option can be used in rescue situations when you are temporarily mounting a disk that will
+be showing up as another device when it is actually booted. Here is an example:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+# export ROOT=/mnt/myroot
+# mount /dev/sdb3 /mnt/myroot
+# mount /dev/sdb1 /mnt/myroot/boot
+# ego boot \-\-device\-shift=sdb,sda update
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+In the above example, \fB/mnt/myroot\fP is where we have mounted a root and boot filesystem of a disk we are repairing.
+\fB/mnt/myroot/etc/fstab\fP refers to its filesystems as \fB/dev/sda1\fP, \fB/dev/sda3\fP, etc. But since we pulled the disk
+out of the other system and hooked it up to ours, on our system the disk is recognized as \fB/dev/sda\fP\&. By exporting
+\fBROOT\fP to point to the root filesystem of the other disk and using the \fB\-\-device\-shift=sdb,sda\fP option, all
+references to \fB/dev/sdbX\fP in the \fB/mnt/myroot/boot/grub/grub.cfg\fP will actually say \fB/dev/sdaX\fP and
+\fBego boot update\fP will also process the alternate root filesystem\(aqs \fB/mnt/myroot/etc/fstab\fP file.
 .sp
 Copyright 2015\-2018 Funtoo Solutions, Inc. and contributors.
 .sp
