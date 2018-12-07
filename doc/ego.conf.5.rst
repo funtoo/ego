@@ -77,9 +77,6 @@ This setting defines the base URL to use for cloning of kits as well as meta-rep
 value ``meta-repo``. Note that this setting only takes effect upon first clone, and if changed, you should remove
 meta-repo and kits and perform an initial ``ego sync`` to reinitialize the repositories.
 
-**meta_repo_branch**
-
-This setting defines the default meta-repo branch to use. Default is ``master``.
 
 Kits Section
 ============
