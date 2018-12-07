@@ -1,6 +1,6 @@
 .\" Man page generated from reStructuredText.
 .
-.TH EGO.CONF 5 "" "2.7.0" "Funtoo Linux Core System"
+.TH EGO.CONF 5 "" "2.7.1" "Funtoo Linux Core System"
 .SH NAME
 ego.conf \- Ego global configuration file
 .
@@ -93,10 +93,6 @@ This setting defines the base URL to use for cloning of kits as well as meta\-re
 \fBhttps://github.com/funtoo/{repo}\fP\&. The \fB{repo}\fP value is replaced with the name of the kit or with the literal
 value \fBmeta\-repo\fP\&. Note that this setting only takes effect upon first clone, and if changed, you should remove
 meta\-repo and kits and perform an initial \fBego sync\fP to reinitialize the repositories.
-.sp
-\fBmeta_repo_branch\fP
-.sp
-This setting defines the default meta\-repo branch to use. Default is \fBmaster\fP\&.
 .SS Kits Section
 .sp
 The \fIkits\fP section is used to specify non\-default branches to use for Funtoo Linux kits. By default, \fBego\fP will use
