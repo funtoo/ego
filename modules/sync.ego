@@ -80,7 +80,9 @@ class Module(EgoModule):
 			Output.fatal("Fatal: could not find kit %s branch %s. Has it been deprecated?" % ( kit_name, branch ))
 		if type(sha1_data) == dict:
 			# new format
-			desired_depth = sha1_data["depth"] if self.config.kits_depth !=0 else None
+			desired_depth = sha1_data["depth"] if self.config.kits_depth != 0 else None
+			# add safety delta for the sake of independently-maintained kits. Allowing up to 30 commits between regens.
+			desired_depth += 30
 			desired_sha1 = sha1_data["sha1"]
 		else:
 			desired_depth = self.config.kits_depth if self.config.kits_depth != 0 else None
