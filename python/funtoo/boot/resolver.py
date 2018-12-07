@@ -501,8 +501,14 @@ class Resolver:
 			file_path = file_path[len(self.config.root_path):]
 			if file_path[:1] != "/":
 				file_path = "/" + file_path
-		if file_path.startswith("/boot/"):
-			file_path = file_path[5:]
+			if file_path.startswith("/boot/"):
+				file_path = file_path[5:]
+		else:
+			mt_point = self.GetMountPoint(file_path)
+			if mt_point:
+				split_path = file_path.split(mt_point, 1)
+				if len(split_path) == 2:
+					return os.path.normpath(split_path[1])
 		return file_path
 
 # vim: ts=4 sw=4 noet
