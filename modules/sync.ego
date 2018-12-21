@@ -100,8 +100,6 @@ class Module(EgoModule):
 		kit.clean(options=["-fd"])
 		kit.pull(options=["-f", "--no-commit"])
 
-		# do sync
-
 		# TODO: handle transition of auto-generated kit to independently-maintained and vice-versa. Currently not handled.
 
 		try:
