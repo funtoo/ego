@@ -71,7 +71,7 @@ class Resolver:
 		else:
 			return dev
 	
-	def GetMatchingKernels(self, scanpath, globlist, skip=None):
+	def GetMatchingKernels(self, scanpath, globlist, skip=None, bare=False):
 		# find kernels in scanpath that match globs in globlist, and return them
 		found = []
 		if skip is None:
@@ -86,7 +86,10 @@ class Resolver:
 						continue
 					# append the matching kernel, and "" representing that no
 					# [-v] extension was used
-					found.append([match, "", os.path.getmtime(match)])
+					if bare:
+						found.append(match)
+					else:
+						found.append([match, "", os.path.getmtime(match)])
 			if base_glob != wild_glob:
 				for match in glob.glob(wild_glob):
 					if match not in skip and match not in found:
@@ -95,7 +98,10 @@ class Resolver:
 							continue
 						# append the matching kernel, and the literal [-v]
 						# extension that was found on this kernel
-						found.append([match, match[len(scanpath) + 1 + pattern.find("["):], os.path.getmtime(match)])
+						if bare:
+							found.append(match)
+						else:
+							found.append([match, match[len(scanpath) + 1 + pattern.find("["):], os.path.getmtime(match)])
 		return found
 	
 	def microcode_initialize(self):
@@ -361,7 +367,7 @@ class Resolver:
 				self.mount_if_necessary(scanpath)
 			if len(skiplist):
 				# find kernels to skip...
-				matches = self.GetMatchingKernels(scanpath, skiplist)
+				matches = self.GetMatchingKernels(scanpath, skiplist, bare=True)
 				skipmatch += matches
 			if len(findlist):
 				# find kernels to match (skipping any kernels we should skip...)
