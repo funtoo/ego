@@ -17,7 +17,10 @@ class Module(EgoModule):
 	
 	@property
 	def boot_config_file(self):
-		return os.path.join(self.config.root_path, "etc/boot.conf")
+		outpath = os.path.join(self.config.root_path, "etc/boot.conf")
+		if self.config.root_path != "/":
+			Output.warning("Using boot configuration file %s." % outpath)
+		return outpath
 	
 	def get_boot_config(self):
 		cfgfile = self.boot_config_file
@@ -32,8 +35,7 @@ class Module(EgoModule):
 	def setup(self):
 		
 		self.boot_config = self.get_boot_config()
-		if self.config.root_path != "/":
-			Output.warning("Using boot configuration file %s." % self.boot_config)
+
 		self._ext = None
 		self.ext_name = None
 		self.ext_module = None
