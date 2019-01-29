@@ -17,7 +17,7 @@ class Module(EgoModule):
 	
 	@property
 	def boot_config_file(self):
-		os.path.join(self.config.root_path or "/", "etc/boot.conf")
+		return os.path.join(self.config.root_path or "/", "etc/boot.conf")
 	
 	def get_boot_config(self):
 		# This can return "None" if the file doesn't exist.
