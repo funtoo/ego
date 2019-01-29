@@ -80,12 +80,10 @@ class Module(EgoModule):
 			Output.fatal("Fatal: could not find kit %s branch %s. Has it been deprecated?" % ( kit_name, branch ))
 		if type(sha1_data) != str:
 			# new format
-			desired_depth = sha1_data["depth"] if self.config.kits_depth != 0 else None
-			# add safety delta for the sake of independently-maintained kits. Allowing up to 30 commits between regens.
-			desired_depth += 30
+			desired_depth = sha1_data["depth"] if self.config.kits_depth != 0 else 1
 			desired_sha1 = sha1_data["sha1"]
 		else:
-			desired_depth = self.config.kits_depth if self.config.kits_depth != 0 else None
+			desired_depth = self.config.kits_depth if self.config.kits_depth != 0 else 1
 			desired_sha1 = sha1_data
 
 		if not kit.exists():
@@ -102,28 +100,35 @@ class Module(EgoModule):
 		kit.clean(options=["-fd"])
 		kit.pull(options=["-f", "--no-commit"])
 
-		# do sync
-		sha1 = kit.commitID
-		success = False
+		# TODO: handle transition of auto-generated kit to independently-maintained and vice-versa. Currently not handled.
 
-		def sha1_check(my_sha1, desired_sha1):
-			Output.debug((my_sha1, desired_sha1))
-			if not self.hex_re.match(my_sha1):
-				Output.fatal("Fatal: kit CommitID not a SHA1: %s" % my_sha1)
-			if not self.hex_re.match(desired_sha1):
-				Output.fatal("Fatal: kit-sha1.json value not a SHA1: %s" % desired_sha1)
-
-		sha1_check(sha1, desired_sha1)
-
-		if sha1 == desired_sha1:
-			success = True
+		try:
+			kit_type = self.config.kit_info_metadata["kit_settings"][kit_name]["type"]
+		except IndexError:
+			kit_type = "AUTO"
+		if kit_type == "INDY":
+			return True
 		else:
-			kit.fetchRemote(branch)
 			sha1 = kit.commitID
+			success = False
+			def sha1_check(my_sha1, desired_sha1):
+				Output.debug((my_sha1, desired_sha1))
+				if not self.hex_re.match(my_sha1):
+					Output.fatal("Fatal: kit CommitID not a SHA1: %s" % my_sha1)
+				if not self.hex_re.match(desired_sha1):
+					Output.fatal("Fatal: kit-sha1.json value not a SHA1: %s" % desired_sha1)
+
 			sha1_check(sha1, desired_sha1)
-			if sha1 != desired_sha1:
-				success = kit.checkout(desired_sha1)
-		return success
+
+			if sha1 == desired_sha1:
+				success = True
+			else:
+				kit.fetchRemote(branch)
+				sha1 = kit.commitID
+				sha1_check(sha1, desired_sha1)
+				if sha1 != desired_sha1:
+					success = kit.checkout(desired_sha1)
+			return success
 
 	def update_repos_conf(self):
 		if "kit_order" not in self.config.kit_info_metadata:
