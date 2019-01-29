@@ -132,4 +132,4 @@ if __name__ == "__main__":
 			except (PermissionError, IOError):
 				Output.error("Unable to write full traceback.")
 			sys.exit(1)
-# vim: ts=4 sw=4 noexpandtab
+# vim: ts=4 sw=4 noet

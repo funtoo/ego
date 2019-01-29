@@ -253,6 +253,7 @@ class Resolver:
 		ok = True
 		if "rootfstype=auto" in params:
 			params.remove("rootfstype=auto")
+			
 			for item in params:
 				if item.startswith("root=") or item.startswith("real_root="):
 					myroot = item.split("root=")[1]

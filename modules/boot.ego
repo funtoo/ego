@@ -15,11 +15,13 @@ from funtoo.boot.extension import ExtensionError, BootLoaderMenu
 
 class Module(EgoModule):
 	
-	boot_config_file = "/etc/boot.conf"
+	@property
+	def boot_config_file(self):
+		os.path.join(self.config.root_path, "etc/boot.conf")
+
 	
-	def get_boot_config(self, cfgfile):
-		# Load /etc/boot.conf master configuration file:
-		
+	def get_boot_config(self):
+		cfgfile = self.boot_config_file
 		try:
 			config = BootConfigFile(cfgfile)
 			if not config.fileExists():
@@ -31,7 +33,7 @@ class Module(EgoModule):
 	
 	def setup(self):
 		
-		self.boot_config = self.get_boot_config(os.path.join(self.config.root_path, self.boot_config_file))
+		self.boot_config = self.get_boot_config()
 		# TODO: check for None ^^
 		self._ext = None
 		self.ext_name = None
