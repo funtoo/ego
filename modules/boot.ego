@@ -18,23 +18,21 @@ class Module(EgoModule):
 	@property
 	def boot_config_file(self):
 		os.path.join(self.config.root_path, "etc/boot.conf")
-
 	
 	def get_boot_config(self):
+		# This can return "None" if the file doesn't exist.
 		cfgfile = self.boot_config_file
 		try:
 			config = BootConfigFile(cfgfile)
 			if not config.fileExists():
-				Output.fatal("Master configuration file %s does not exist." % cfgfile)
-			else:
-				return config
+				Output.error("Master configuration file %s does not exist." % cfgfile)
+			return config
 		except ConfigFileError as e:
 			Output.fatal("Error reading %s: %s." % (cfgfile, str(e)))
 	
 	def setup(self):
 		
 		self.boot_config = self.get_boot_config()
-		# TODO: check for None ^^
 		self._ext = None
 		self.ext_name = None
 		self.ext_module = None

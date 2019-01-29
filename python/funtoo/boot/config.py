@@ -187,7 +187,7 @@ class BootConfigFile(config.ConfigFile):
 			return "default"
 		return None
 	
-	def __init__(self, fn="/etc/boot.conf", existing=True, msgs=None):
+	def __init__(self, fn, existing=True, msgs=None):
 		# builtins is our list of all those sections that we recognize as having config values and
 		# not boot entries.
 		self.builtins = ["boot", "display", "default", "altboot", "color", "grub", "grub-legacy", "lilo"]
