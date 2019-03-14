@@ -125,7 +125,7 @@ class ProfileType(ProfileName):
 	@classmethod
 	def single(cls):
 		# profile types that should only be set once.
-		return [ ProfileType.ARCH, ProfileType.BUILD, ProfileType.FLAVOR ]
+		return [ ProfileType.ARCH, ProfileType.BUILD, ProfileType.SUBARCH, ProfileType.FLAVOR ]
 
 
 class MetaProfileCatalog:
