@@ -93,12 +93,12 @@ class Module(EgoModule):
 		repo_urls = {
 			'faustoo': 'https://github.com/fmoro/faustoo/tree/master/{cat}/{pkg}',
 			'fusion809': 'https://github.com/fusion809/fusion809-overlay/tree/master/{cat}/{pkg}',
-			'flora': 'https://github.com/funtoo/flora/tree/master/{cat}/{pkg}',
-			'gentoo-staging': 'http://git.funtoo.org/gentoo-staging/tree/{cat}/{pkg}',
-			'kit-fixups': 'https://github.com/funtoo/kit-fixups/tree/master/{kit}/{branch}/{cat}/{pkg}',
+			'flora': 'https://code.funtoo.org/bitbucket/projects/CO/repos/flora/browse/{cat}/{pkg}',
+			'gentoo-staging': 'https://code.funtoo.org/bitbucket/projects/AUTO/repos/gentoo-staging/browse/{cat}/{pkg}',
+			'kit-fixups': 'hhttps://code.funtoo.org/bitbucket/projects/CORE/repos/kit-fixups/browse/{kit}/{branch}/{cat}/{pkg}',
 			'rh1': 'https://github.com/x48rph/glassfish/tree/master/{cat}/{pkg}',
 		}
-		gentoo_base_url = 'https://gitweb.gentoo.org/repo/gentoo.git/tree/{cat}/{pkg}'
+		gentoo_base_url = 'https://github.com/gentoo/gentoo/tree/master/{cat}/{pkg}'
 		atom = self.options.package
 		r = requests.get('http://ports.funtoo.org/packages.xml')
 		try:
@@ -142,7 +142,7 @@ class Module(EgoModule):
 					)
 		except ElementTree.ParseError as e:
 			Output.error("Unable to parse https://ports.funtoo.org/packages.xml.")
-			
+
 	def handle_bugs_subcommand(self):
 		"""Given a valid atom string, list related bugs on bugs.funtoo.org."""
 		atom = self.options.package
