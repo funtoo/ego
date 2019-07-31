@@ -218,7 +218,7 @@ class BootConfigFile(config.ConfigFile):
 		invalid = []
 		validmap = {
 			"boot": ["path", "generate", "timeout", "default", "bootdev", "terminal", "autopick"],
-			"display": ["gfxmode", "background", "font"],
+			"display": ["gfxmode", "background", "font", "theme"],
 			"color": ["normal", "highlight"],
 			"default": ["scan", "gfxmode", "kernel", "initrd", "params", "type", "xenkernel", "xenparams", "attemptparams"],
 			"grub": ["dir", "file", "grub-mkdevicemap", "grub-probe", "font_src"],

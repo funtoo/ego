@@ -334,7 +334,7 @@ class GRUBExtension(Extension):
 					self.msgs.append(["fatal", "Could not find one of %s to copy into boot directory; aborting." % ",".join(fonts)])
 				boot_menu.success = False
 
-			
+
 			boot_menu.lines += ["if loadfont {dst}; then".format(dst=self.resolver.RelativePathTo(dst_font, self.boot_config["boot/path"])),
 				  "   set gfxmode={gfx}".format(gfx=self.sanitizeDisplayMode(self.boot_config["display/gfxmode"])),
 				  "   insmod all_video",
@@ -383,9 +383,22 @@ class GRUBExtension(Extension):
 								self.boot_config.condFormatSubItem("color/normal", "set menu_color_normal={s}"),
 								self.boot_config.condFormatSubItem("color/highlight", "set menu_color_highlight={s}"),
 								]
+
+			if self.boot_config.hasItem("display/theme"):
+				path_to_theme = self.grubpath + "/themes/" + self.boot_config["display/theme"] + "/theme.txt"
+				if os.path.exists(path_to_theme):
+					boot_menu.lines += ["",
+									"insmod png",
+									"set theme={file}".format(file=path_to_theme),
+									"export theme",
+									]
+				else:
+					self.msgs.append(["warn", "Theme - {file} file not found - skipping.".format(file=path_to_theme)])
 		else:
 			if self.boot_config.hasItem("display/background"):
 				self.msgs.append(["warn", "display/gfxmode not provided - display/background \"{bg}\" will not be displayed.".format(bg=self.boot_config["display/background"])])
+			if self.boot_config.hasItem("display/theme"):
+				self.msgs.append(["warn", "display/gfxmode not provided - display/theme \"{th}\" will not be displayed.".format(th=self.boot_config["display/theme"])])
 		self.resolver.GenerateSections(boot_menu, self.generateBootEntry, self.generateOtherBootEntry)
 		
 		if boot_menu.user_specified_attempt_identifier:
