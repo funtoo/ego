@@ -19,16 +19,17 @@ import shutil
 import subprocess
 import sys
 import tempfile
-
+from pathlib import Path as pyPath
 
 # These are the versions we fully support and require to pass tests.
 PYTHON_SUPPORTED_VERSIONS = [
-	'3.4',
-    '3.6'
+	'3.6',
+	'3.7'
 ]
 # The rest are just "nice to have".
 PYTHON_NICE_VERSIONS = [
 	'pypy',
+	'pypy3',
 	'3.5',
 ]
 
@@ -68,13 +69,21 @@ class Colors(object):
 			self.NORMAL = '\033[0m'
 
 
+def get_python_library(ver):
+	"""Find the right python library for |ver|"""
+	if ver in ('pypy', 'pypy3'):
+		prog = ver
+	else:
+		prog = 'python' + ver
+	return pyPath(EPREFIX).joinpath('usr', 'lib64', prog, 'site-packages')
+
 def get_python_executable(ver):
 	"""Find the right python executable for |ver|"""
 	if ver in ('pypy', 'pypy3'):
 		prog = ver
 	else:
 		prog = 'python' + ver
-	return os.path.join(EPREFIX, 'usr', 'bin', prog)
+	return pyPath(EPREFIX).joinpath('usr', 'bin', prog)
 
 
 def get_parser():
@@ -131,23 +140,22 @@ def main(argv):
 		statuses = []
 		for ver in pyversions:
 			prog = get_python_executable(ver)
-			cmd = [prog, '-b', '-Wd', 'pym/portage/tests/runTests.py'] + args
+			testpath = get_python_library(ver).joinpath('portage', 'tests', 'runTests.py')
+			print(testpath)
+			cmd = [str(prog), '-b', '-Wd', str(testpath)] + args
 			if os.access(prog, os.X_OK):
-				print('%sTesting with Python %s...%s' %
-					(colors.GOOD, ver, colors.NORMAL))
+				print('{0}Testing with Python{2}...{1}'.format(colors.GOOD, colors.NORMAL, ver))
 				statuses.append((ver, subprocess.call(cmd)))
 			elif not ignore_missing:
-				print('%sCould not find requested Python %s%s' %
-					(colors.BAD, ver, colors.NORMAL))
+				print('{0}Could not find requested Python {2}{1}'.format(colors.BAD, colors.NORMAL, ver))
 				statuses.append((ver, 1))
 			else:
-				print('%sSkip Python %s...%s' %
-					(colors.WARN, ver, colors.NORMAL))
+				print('{0}Skip Python {2}...{1}'.format(colors.WARN, colors.NORMAL, ver))
 			print()
 	finally:
 		if tempdir is not None:
 			if opts.keep_temp:
-				print('Temporary directory left behind:\n%s' % tempdir)
+				print('Temporary directory left behind:\n{}'.format(tempdir))
 			else:
 				# Nuke our tempdir and anything that might be under it.
 				shutil.rmtree(tempdir, True)
@@ -155,8 +163,8 @@ def main(argv):
 	# Then summarize it all.
 	print('\nSummary:\n')
 	width = 10
-	header = '| %-*s | %s' % (width, 'Version', 'Status')
-	print('%s\n|%s' % (header, '-' * (len(header) - 1)))
+	header = '| {0:{sp}<{width}} | {1}'.format('Version', 'Status', sp=' ', width=width)
+	print('{}\n|{}'.format(header, '-' * (len(header) - 1)))
 	exit_status = 0
 	for ver, status in statuses:
 		exit_status += status
@@ -166,8 +174,7 @@ def main(argv):
 		else:
 			color = colors.GOOD
 			msg = 'PASS'
-		print('| %s%-*s%s | %s%s%s' %
-			(color, width, ver, colors.NORMAL, color, msg, colors.NORMAL))
+		print('| {0}{2:{sp}<{width}}{1} | {0}{3}{1}'.format(color, colors.NORMAL, ver, msg, sp=' ', width=width))
 	exit(exit_status)
 
 
