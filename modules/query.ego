@@ -95,7 +95,7 @@ class Module(EgoModule):
 			'fusion809': 'https://github.com/fusion809/fusion809-overlay/tree/master/{cat}/{pkg}',
 			'flora': 'https://code.funtoo.org/bitbucket/projects/CO/repos/flora/browse/{cat}/{pkg}',
 			'gentoo-staging': 'https://code.funtoo.org/bitbucket/projects/AUTO/repos/gentoo-staging/browse/{cat}/{pkg}',
-			'kit-fixups': 'hhttps://code.funtoo.org/bitbucket/projects/CORE/repos/kit-fixups/browse/{kit}/{branch}/{cat}/{pkg}',
+			'kit-fixups': 'https://code.funtoo.org/bitbucket/projects/CORE/repos/kit-fixups/browse/{kit}/{branch}/{cat}/{pkg}',
 			'rh1': 'https://github.com/x48rph/glassfish/tree/master/{cat}/{pkg}',
 		}
 		gentoo_base_url = 'https://github.com/gentoo/gentoo/tree/master/{cat}/{pkg}'
