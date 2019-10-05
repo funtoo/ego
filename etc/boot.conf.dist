@@ -1,0 +1,33 @@
+boot {
+	generate grub
+	default "Funtoo Linux" 
+	timeout 3 
+}
+
+"Funtoo Linux" {
+	kernel bzImage[-v]
+}
+
+"Funtoo Linux genkernel" {
+	kernel kernel[-v]
+	initrd initramfs[-v]
+
+	# IMPORTANT: Most users will want to remove "nomodeset", below!
+	#
+	# It is included in the initial install to ensure that virtually all
+	# systems boot up with a readable initial console.
+
+	# But all graphics drivers (with the one exception of the proprietary
+	# NVIDIA drivers) REQUIRE mode setting to be enabled, and thus the
+	# nomodeset option must be REMOVED prior to setting up a graphical
+	# environment or X will not start. Remember to run "ego boot update" after
+	# removing the option, and then reboot prior to configuring X.
+
+	# Also note that if you are using a 4K or higher resolution display, your
+	# console text may become very small after enabling kernel mode setting
+	# since it will display your console at the native resolution of your
+	# display.
+
+	params += real_root=auto rootfstype=auto nomodeset
+}
+
