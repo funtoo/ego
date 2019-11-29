@@ -61,14 +61,14 @@ class ColorType(str):
 
 
 class Color(object):
-	PURPLE = ColorType('\033[95m' if is_tty else "")
-	CYAN = ColorType('\033[96m' if is_tty else "")
+	PURPLE = ColorType('\033[35m' if is_tty else "")
+	CYAN = ColorType('\033[36m' if is_tty else "")
 	DARKCYAN = ColorType('\033[36m' if is_tty else "")
-	DARKBLUEBG = ColorType('\033[48;5;018m' if is_tty else "")
-	BLUE = ColorType('\033[94m' if is_tty else "")
-	GREEN = ColorType('\033[92m' if is_tty else "")
-	YELLOW = ColorType('\033[93m' if is_tty else "")
-	RED = ColorType('\033[91m' if is_tty else "")
+	DARKBLUEBG = ColorType('\033[44m' if is_tty else "")
+	BLUE = ColorType('\033[34m' if is_tty else "")
+	GREEN = ColorType('\033[32m' if is_tty else "")
+	YELLOW = ColorType('\033[33m' if is_tty else "")
+	RED = ColorType('\033[31m' if is_tty else "")
 	BOLD = ColorType('\033[1m' if is_tty else "")
 	UNDERLINE = ColorType('\033[4m' if is_tty else "")
 	END = ColorType('\033[0m' if is_tty else "")
