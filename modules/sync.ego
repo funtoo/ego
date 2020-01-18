@@ -4,6 +4,7 @@ import os
 import pwd
 import re
 import sys
+import stat
 
 from cmdtools import run
 from ego.module import EgoModule
@@ -15,7 +16,14 @@ from pathlib import Path
 class Module(EgoModule):
 
 	hex_re = re.compile('[0-9a-fA-F]+')
-	read_only = False
+	can_write = False
+	sync_user = 0
+	sync_group = 0
+	kits_retval = {
+		"success" : True,
+		"fails": [],
+		"kit_stab_ratings": []
+	}
 
 	@property
 	def root(self):
@@ -58,11 +66,15 @@ class Module(EgoModule):
 		parser.add_argument('--meta-repo-only', dest="meta_only", action='store_true', help="Do not sync kits, only meta-repo.")
 		parser.add_argument('--dest', dest="dest", default=None, help="Manually specify destination of meta-repo")
 		parser.add_argument('--config-only', dest="config_only", action='store_true', help="Update /etc/portage/repos.conf files only.")
+		parser.add_argument('--in-place', dest="in_place", action='store_true', default=False, help="No syncing, but update configs and check out correct kits (ignore SHA1).")
+		parser.add_argument('--user', dest="user", action='store_true', default=False, help="Run as current user.")
 
-	def sync_kit(self, kit_name, kit_root, branch, default_branch):
+	def sync_kit(self, kit_name, kit_root, branch, default_branch, in_place=False):
 		if branch is None:
 			Output.fatal("Fatal: branch cannot be None.")
-		if branch == default_branch:
+		if self.options.in_place:
+			Output.log("Updating kit %s to %s" % (kit_name, branch))
+		elif branch == default_branch:
 			Output.log(Color.purple("Syncing %s branch %s" % (kit_name, branch)))
 		else:
 			# highlight non-default branches in green for convenience
@@ -74,31 +86,36 @@ class Module(EgoModule):
 				os.rmdir(kit.root)
 			except OSError:
 				pass
-		try:
-			sha1_data = self.config.kit_sha1_metadata[kit_name][branch]
-		except KeyError as e:
-			Output.fatal("Fatal: could not find kit %s branch %s. Has it been deprecated?" % ( kit_name, branch ))
-		if type(sha1_data) != str:
-			# new format
-			desired_depth = sha1_data["depth"] if self.config.kits_depth != 0 else 1
-			desired_sha1 = sha1_data["sha1"]
-		else:
-			desired_depth = self.config.kits_depth if self.config.kits_depth != 0 else 1
-			desired_sha1 = sha1_data
 
-		if not kit.exists():
-			retval = kit.clone(self.config.sync_base_url.format(repo=kit_name), branch, depth=desired_depth)
-			if retval != 0:
-				Output.fatal("Could not clone kit '%s' into '%s'." % (kit_name, kit_path))
-		else:
-			if not kit.is_git_repo():
-				Output.fatal("Kit %s exists but does not appear to be a git repository. Can't sync." % kit_name)
-		if not kit.localBranchExists(branch):
-			kit.fetchRemote(branch)
+		if not in_place:
+			try:
+				sha1_data = self.config.kit_sha1_metadata[kit_name][branch]
+			except KeyError as e:
+				Output.fatal("Fatal: could not find kit %s branch %s. Has it been deprecated?" % ( kit_name, branch ))
+			if type(sha1_data) != str:
+				# new format
+				desired_depth = sha1_data["depth"] if self.config.kits_depth != 0 else 1
+				desired_sha1 = sha1_data["sha1"]
+			else:
+				desired_depth = self.config.kits_depth if self.config.kits_depth != 0 else 1
+				desired_sha1 = sha1_data
+
+			if not kit.exists():
+				retval = kit.clone(self.config.sync_base_url.format(repo=kit_name), branch, depth=desired_depth)
+				if retval != 0:
+					Output.fatal("Could not clone kit '%s' into '%s'." % (kit_name, kit_path))
+			else:
+				if not kit.is_git_repo():
+					Output.fatal("Kit %s exists but does not appear to be a git repository. Can't sync." % kit_name)
+			if not kit.localBranchExists(branch):
+				kit.fetchRemote(branch)
 		kit.checkout(branch)
 		kit.reset(options=["--hard"])
 		kit.clean(options=["-fd"])
-		kit.pull(options=["-f", "--no-commit"])
+		if not self.options.in_place:
+			kit.pull(options=["-f", "--no-commit"])
+		else:
+			return True
 
 		# TODO: handle transition of auto-generated kit to independently-maintained and vice-versa. Currently not handled.
 
@@ -190,145 +207,199 @@ priority = %s
 		if os.path.islink(join_path(self.config.root_path, "/etc/portage/repos.conf/funtoo")):
 			os.unlink(join_path(self.config.root_path, "/etc/portage/repos.conf/funtoo"))
 
+	def drop_perms_and_run(self, fn):
+		try:
+			pid = os.fork()
+			if pid == 0:
+				# in child process.
+				os.chdir('/tmp')  # Make sure we are not in /root or other user-forbidden directory
+				os.setgid(self.sync_group)
+				os.setuid(self.sync_user)
+				retval = fn()
+				if retval:
+					sys.exit(0)
+				else:
+					sys.exit(1)
+			elif os.waitpid(pid, 0)[1] > 0:
+				return False
+			else:
+				return True
+		except PermissionError:
+			Output.fatal("Not enough privileges to switch uid/gid. You should probably run this command as root.")
+
+	def repo_can_write_test(self):
+		meta_test = Path(self.root + "/.touch")
+		try:
+			if not os.path.exists(self.root):
+				os.makedirs(self.root)
+			meta_test.touch()
+			self.can_write = True
+			return True
+		except PermissionError:
+			self.can_write = False
+			return False
+		finally:
+			if meta_test.exists():
+				meta_test.unlink()
+
+	@property
+	def running_on_root_metarepo(self):
+		return self.options.dest is None and self.config.root_path == "/"
+
+	@property
+	def do_kits_sync(self):
+		if self.options.config_only or not self.can_write:
+			return False
+		if not self.running_on_root_metarepo:
+			return False
+		return not self.options.kits_only
+
+	@property
+	def do_meta_repo_sync(self):
+		if self.options.config_only or not self.can_write:
+			return False
+		if not self.running_on_root_metarepo:
+			return False
+		return not self.options.meta_only
+
 	def sync_meta_repo(self):
+		repo = GitHelper(self, self.root)
+		meta_repo_branch = self.config.meta_repo_branch
+		if repo.is_git_repo():
+			if not self.options.in_place:
+				repo.fetchRemote(meta_repo_branch, options=["--no-recurse-submodules"])
+			repo.checkout(meta_repo_branch)
+			repo.reset(options=["--hard"])
+			repo.clean(options=["-fd"])
+			if not self.options.in_place:
+				retval = repo.pull(options=["--no-commit", "-f", "--no-recurse-submodules"])
+				if retval != 0:
+					Output.fatal("There was an error syncing meta-repo.")
+
+		# TODO: get version of metadata and abort if we don't support the metadata version.
+		# TODO: track 4 versions: version of metadata, minimum version of metadata support required (for backwards compat), and minimum version/recommended version of ego required.
+
+		elif not repo.exists():
+			if self.options.in_place:
+				Output.fatal("Could not find meta-repo; exiting.")
+			retval = repo.clone(self.config.sync_base_url.format(repo="meta-repo"), meta_repo_branch)
+			if retval != 0:
+				Output.fatal("Could not clone meta-repo at '%s'." % (self.root,))
+		else:
+			Output.fatal("Meta-repo exists but does not appear to be a git repository. Can't sync.")
+
+	def sync_kits(self):
+		we_synced = False
+		we_synced_successfully = True
+		if "kit_order" in self.config.kit_info_metadata:
+			if isinstance(self.config.kit_info_metadata["kit_order"], dict):
+				kits = self.config.kit_info_metadata["kit_order"]["%s-release" % self.config.release]
+			else:
+				kits = self.config.kit_info_metadata["kit_order"]
+			for kt in kits:
+				branch, default_branch = self.config.get_configured_kit(kt)
+				if branch is None:
+					Output.warning("Could not find %s branch %s; using default kit %s instead." % (kt, branch, default_branch))
+					branch = default_branch
+				elif self.config.kit_branch_is_missing(kt, branch):
+					Output.fatal("Specified %s branch %s is missing! Is it included in this release? Exiting." % (kt, branch))
+				elif self.config.kit_branch_is_deprecated(kt, branch):
+					Output.warning("Specified %s branch %s has been deprecated." % (kt, branch))
+				success = True
+				if not self.options.config_only:
+					success = self.sync_kit(kt, self.kits_root, branch, default_branch, in_place=self.options.in_place)
+					we_synced = True
+					if not success:
+						we_synced_successfully = False
+						self.kits_retval["fails"].append((kt, branch))
+				if success:
+					# we want to run this in config-only mode:
+					stab_rating = self.config.kit_branch_stability(kt, branch)
+					if stab_rating not in ["prime"]:
+						self.kits_retval["kit_stab_ratings"].append((kt, branch, stab_rating))
+			if we_synced and not we_synced_successfully:
+				for kt, branch in self.kits_retval["fails"]:
+					Output.error("There was an error syncing %s." % kt)
+		self.kits_retval["success"] = we_synced_successfully
+
+	# these exit commands get run by the child process
+
+	def sync_meta_repo_and_kits(self):
 		if "HOME" in os.environ:
 			# git will look here for various things
 			del os.environ["HOME"]
 
-		have_uid = False
-		if os.path.exists(self.root):
-			meta_repo_path = Path(self.root + "/.touch")
-			try:
-				meta_repo_path.touch()
-				have_uid = True
-			except PermissionError:
-				self.read_only = True
-				if not self.options.config_only:
-					self.options.config_only = True
-					Output.warning("Meta-repo is read-only -- running in config-only mode.")
-			finally:
-				if meta_repo_path.exists():
-					meta_repo_path.unlink()
-		
-		uid = None
-		gid = None
-		
-		if have_uid:
-			try:
-				pwnam = pwd.getpwnam(self.config.sync_user)
-				uid = pwnam.pw_uid
-				gid = pwnam.pw_gid
-				have_uid = True
-			except KeyError:
-				Output.warning("Could not find user '%s' -- not dropping permissions." % self.config.sync_user)
+		# 1. FIGURE OUT WHAT USER TO USE TO 'DO OUR THING'
 
-		if not self.options.config_only:
-			containing_dir = os.path.dirname(self.root)
-			if self.options.dest is None:
-				if not os.path.exists(containing_dir):
-					os.makedirs(containing_dir, 0o775)
-				if have_uid:
-					stat_info = os.stat(containing_dir)
-					try:
-						if stat_info.st_uid != uid and self.config.sync_user != "root":
-							run("chown %s:%s %s" % (uid, gid, containing_dir), quiet=True)
-						if os.path.exists(self.root):
-							stat_info = os.stat(self.root)
-							if stat_info.st_uid != uid and self.config.sync_user != "root":
-								run("chown -R %s:%s %s" % (uid, gid, self.root), quiet=True)
-					except PermissionError:
-						Output.fatal("Not enough privileges to fix permissions. You should probably run this command as root.")
-			# /var/git exists now, and is owned by portage:portage, and is ug=rwx, o=rx. Now we can drop perms and clone:
+		if os.geteuid() != 0 or self.options.config_only or self.options.dest is not None:
+			# if we're not root, or we're running in config-only mode, or we're modifying a non-standard path meta-repo, do the sync operations as a regular user.
+			Output.warning("Running as regular user.")
+			if not self.options.config_only:
+				self.repo_can_write_test()
+				if not self.can_write:
+					Output.fatal("Cannot write to meta-repo. Exiting.")
+		else:
+			Output.warning("Running as root user.")
+			if os.path.exists(self.root):
+				self.sync_user = os.stat(self.root)[stat.ST_UID]
+				self.sync_group = os.stat(self.root)[stat.ST_GID]
+			# we need to assign here because drop_perms_and_run forks.
+			self.can_write = self.drop_perms_and_run(self.repo_can_write_test)
+			if not self.can_write:
+				Output.warning("Can't write to meta-repo -- running as read-only.")
 
-		kit_stab_ratings = []
+		# 2. "DO OUR THING" -- DROPPING PERMS AS NEEDED:
 
-		pid = os.fork()
-		if pid == 0:
-			# in child process.
-			os.chdir('/tmp')  # Make sure we are not in /root or other user-forbidden directory
-			if self.options.dest is None and self.config.root_path == "/" and have_uid:
-				try:
-					os.setgid(gid)
-					os.setuid(uid)
-				except PermissionError:
-					Output.fatal("Not enough privileges to switch uid/gid. You should probably run this command as root.")
+		if not self.options.in_place:
+			Output.log(Color.green("Syncing meta-repo"))
+		else:
+			Output.log(Color.green("Updating meta-repo in-place"))
 
-			if not (self.options.kits_only or self.options.config_only):
-				repo = GitHelper(self, self.root)
-				Output.log(Color.green("Syncing meta-repo"))
-				meta_repo_branch = self.config.meta_repo_branch
-				if repo.is_git_repo():
-				
-					repo.fetchRemote(meta_repo_branch, options=["--no-recurse-submodules"])
-					repo.checkout(meta_repo_branch)
-					repo.reset(options=["--hard"])
-					repo.clean(options=["-fd"])
-					retval = repo.pull(options=["--no-commit", "-f", "--no-recurse-submodules"])
-					if retval != 0:
-						Output.fatal("There was an error syncing meta-repo.")
-					# TODO: get version of metadata and abort if we don't support the metadata version.
-					# TODO: track 4 versions: version of metadata, minimum version of metadata support required (for backwards compat), and minimum version/recommended version of ego required.
-				elif not repo.exists():
-					retval = repo.clone(self.config.sync_base_url.format(repo="meta-repo"), meta_repo_branch)
-					if retval != 0:
-						Output.fatal("Could not clone meta-repo at '%s'." % (self.root,))
-				else:
-					Output.fatal("Meta-repo exists but does not appear to be a git repository. Can't sync.")
-			fails = []
+		if self.do_meta_repo_sync:
+			if os.geteuid() == 0 and self.sync_user is not None:
+				self.drop_perms_and_run(self.sync_meta_repo)
+			else:
+				self.sync_meta_repo()
+		if self.do_kits_sync:
+			if os.geteuid() == 0 and self.sync_user is not None:
+				self.drop_perms_and_run(self.sync_kits)
+			else:
+				self.sync_kits()
+			if not self.kits_retval or self.kits_retval["success"] is not True:
+				Output.fatal("Sync not successful.")
+				sys.exit(1)
 
-			we_synced = False
-			we_synced_successfully = True
+		# 3. PRINT SUCCESSFUL INITIAL COMPLETION MESSAGE
 
-			if not self.options.meta_only and "kit_order" in self.config.kit_info_metadata and not self.read_only:
-				if isinstance(self.config.kit_info_metadata["kit_order"], dict):
-					kits = self.config.kit_info_metadata["kit_order"]["%s-release" % self.config.release]
-				else:
-					kits = self.config.kit_info_metadata["kit_order"]
-				for kt in kits:
-					branch, default_branch = self.config.get_configured_kit(kt)
-					if branch is None:
-						Output.warning("Could not find %s branch %s; using default kit %s instead." % (kt, branch, default_branch))
-						branch = default_branch
-					elif self.config.kit_branch_is_missing(kt, branch):
-						Output.fatal("Specified %s branch %s is missing! Is it included in this release? Exiting." % (kt, branch))
-					elif self.config.kit_branch_is_deprecated(kt, branch):
-						Output.warning("Specified %s branch %s has been deprecated." % (kt, branch))
-					success = True
-					if not self.options.config_only:
-						success = self.sync_kit(kt, self.kits_root, branch, default_branch)
-						we_synced = True
-						if not success:
-							we_synced_successfully = False
-							fails.append((kt, branch))
-					if success:
-						# we want to run this in config-only mode:
-						stab_rating = self.config.kit_branch_stability(kt, branch)
-						if stab_rating not in ["prime"]:
-							kit_stab_ratings.append((kt, branch, stab_rating))
-				if we_synced and not we_synced_successfully:
-					for kt, branch in fails:
-						Output.error("There was an error syncing %s." % kt)
-				# these exit commands get run by the child process
-					sys.exit(1)
-			sys.exit(0)
-
-		# Forked process terminated here - now we are back in the parent:
-
-		if os.waitpid(pid, 0)[1] > 0:
-			return False
-
-		if not self.options.config_only:
+		if self.options.in_place:
+			Output.log(Color.green("Meta-repo updated in-place to kits specified in ego.conf (SHA1's ignored.)"))
+		elif not self.options.config_only:
 			if self.options.meta_only:
 				Output.log(Color.green("Sync successful! :)"))
 			else:
 				Output.log(Color.green("Sync successful and kits in alignment! :)"))
 
+		# 4: EXTRA WARNING FOR NON-PRIME KITS
+
+		if "kit_stab_ratings" in self.kits_retval and len(self.kits_retval["kit_stab_ratings"]):
+			print()
+			Output.log(Color.darkcyan("The following non-prime kits are currently selected:"))
+			for kit, branch, rating in self.kits_retval["kit_stab_ratings"]:
+				kb = "%s %s" % (kit, branch)
+				kb = kb.ljust(30)
+				Output.log(Color.darkcyan(kb) + Color.red(rating))
+
+		# 5. POST-STEPS: UPDATE REPOS.CONF and PROFILE SETTINGS, run EMERGE --sync --package-moves=n for NON-FUNTOO REPOS
+
 		# If we are not writing to a special destination for archiving, we want to update our local repos.conf and profile settings automatically, as well
 		# as possibly run emerge --sync:
 
+		if os.geteuid() != 0:
+			Output.warning("Running as regular user so I can't update repos.conf. Run as root if needed.")
+			return True
+
 		if self.options.dest is None:
 			self.update_repos_conf()
-
 			try:
 				EgoModule.run_ego_module('profile', self.config, ['update'])
 			except PermissionError:
@@ -347,17 +418,12 @@ priority = %s
 				run("/usr/bin/emerge --sync --package-moves=n", quiet=True)
 			# do package moves and slotmoves...
 			self._do_package_moves()
-		if len(kit_stab_ratings):
-			print()
-			Output.log(Color.darkcyan("The following non-prime kits are currently selected:"))
-			for kit, branch, rating in kit_stab_ratings:
-				kb = "%s %s" % (kit, branch)
-				kb = kb.ljust(30)
-				Output.log(Color.darkcyan(kb) + Color.red(rating))
+
+
 
 		return True
 
 	def handle(self):
-		self.sync_meta_repo()
+		self.sync_meta_repo_and_kits()
 
 # vim: ts=4 sw=4 noet
