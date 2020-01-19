@@ -228,19 +228,20 @@ priority = %s
 			Output.fatal("Not enough privileges to switch uid/gid. You should probably run this command as root.")
 
 	def repo_can_write_test(self):
-		meta_test = Path(self.root + "/.touch")
 		try:
-			if not os.path.exists(self.root):
-				os.makedirs(self.root)
-			meta_test.touch()
-			self.can_write = True
-			return True
+			test_path = os.path.dirname(self.root)
+			while test_path != "/":
+				if os.path.exists(test_path):
+					meta_test = Path(test_path + "/.touch")
+					meta_test.touch()
+					meta_test.unlink()
+					self.can_write = True
+					return True
+				else:
+					test_path = os.path.dirname(test_path)
 		except PermissionError:
 			self.can_write = False
 			return False
-		finally:
-			if meta_test.exists():
-				meta_test.unlink()
 
 	@property
 	def running_on_root_metarepo(self):
