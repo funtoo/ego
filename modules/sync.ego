@@ -13,6 +13,7 @@ from ego.config import join_path, EgoConfig
 from git_helper import GitHelper
 from pathlib import Path
 
+
 class Module(EgoModule):
 
 	hex_re = re.compile('[0-9a-fA-F]+')
@@ -20,7 +21,7 @@ class Module(EgoModule):
 	sync_user = 0
 	sync_group = 0
 	kits_retval = {
-		"success" : True,
+		"success": True,
 		"fails": [],
 		"kit_stab_ratings": []
 	}
@@ -289,7 +290,7 @@ priority = %s
 		else:
 			Output.fatal("Meta-repo exists but does not appear to be a git repository. Can't sync.")
 
-	def sync_kits(self):
+	def sync_kits(self, drop_perms=True):
 		we_synced = False
 		we_synced_successfully = True
 		if "kit_order" in self.config.kit_info_metadata:
@@ -308,7 +309,12 @@ priority = %s
 					Output.warning("Specified %s branch %s has been deprecated." % (kt, branch))
 				success = True
 				if not self.options.config_only:
-					success = self.sync_kit(kt, self.kits_root, branch, default_branch, in_place=self.options.in_place)
+					def sync_func():
+						return self.sync_kit(kt, self.kits_root, branch, default_branch, in_place=self.options.in_place)
+					if drop_perms:
+						success = self.drop_perms_and_run(sync_func)
+					else:
+						success = sync_func()
 					we_synced = True
 					if not success:
 						we_synced_successfully = False
@@ -363,9 +369,9 @@ priority = %s
 				self.sync_meta_repo()
 		if self.do_kits_sync:
 			if os.geteuid() == 0 and self.sync_user is not None:
-				self.drop_perms_and_run(self.sync_kits)
+				self.sync_kits(drop_perms=True)
 			else:
-				self.sync_kits()
+				self.sync_kits(drop_perms=False)
 			if not self.kits_retval or self.kits_retval["success"] is not True:
 				Output.fatal("Sync not successful.")
 				sys.exit(1)
@@ -414,12 +420,12 @@ priority = %s
 
 		if "kit_stab_ratings" in self.kits_retval and len(self.kits_retval["kit_stab_ratings"]):
 			print()
-			Output.log(Color.darkcyan("The following non-prime kits are currently selected:"))
+			Output.log(Color.yellow("  The following non-prime kits are currently selected:"))
+			print("  " + "=" * 55)
 			for kit, branch, rating in self.kits_retval["kit_stab_ratings"]:
-				kb = "%s %s" % (kit, branch)
-				kb = kb.ljust(30)
-				Output.log(Color.darkcyan(kb) + Color.red(rating))
-
+				kb = "  %s %s" % (Color.darkcyan(kit.ljust(30)), Color.red(branch))
+				print(kb)
+			print()
 		return True
 
 	def handle(self):
