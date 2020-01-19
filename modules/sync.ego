@@ -340,13 +340,13 @@ priority = %s
 
 		if os.geteuid() != 0 or self.options.config_only or self.options.dest is not None:
 			# if we're not root, or we're running in config-only mode, or we're modifying a non-standard path meta-repo, do the sync operations as a regular user.
-			Output.warning("Running as regular user.")
+			Output.log("Running as regular user.")
 			if not self.options.config_only:
 				self.repo_can_write_test()
 				if not self.can_write:
 					Output.fatal("Cannot write to meta-repo. Exiting.")
 		else:
-			Output.warning("Running as root user.")
+			Output.log("Running as root user (will drop perms for sync.)")
 			if os.path.exists(self.root):
 				self.sync_user = os.stat(self.root)[stat.ST_UID]
 				self.sync_group = os.stat(self.root)[stat.ST_GID]
