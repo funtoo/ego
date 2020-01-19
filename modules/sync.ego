@@ -370,27 +370,7 @@ priority = %s
 				Output.fatal("Sync not successful.")
 				sys.exit(1)
 
-		# 3. PRINT SUCCESSFUL INITIAL COMPLETION MESSAGE
-
-		if self.options.in_place:
-			Output.log(Color.green("Meta-repo updated in-place to kits specified in ego.conf (SHA1's ignored.)"))
-		elif not self.options.config_only:
-			if self.options.meta_only:
-				Output.log(Color.green("Sync successful! :)"))
-			else:
-				Output.log(Color.green("Sync successful and kits in alignment! :)"))
-
-		# 4: EXTRA WARNING FOR NON-PRIME KITS
-
-		if "kit_stab_ratings" in self.kits_retval and len(self.kits_retval["kit_stab_ratings"]):
-			print()
-			Output.log(Color.darkcyan("The following non-prime kits are currently selected:"))
-			for kit, branch, rating in self.kits_retval["kit_stab_ratings"]:
-				kb = "%s %s" % (kit, branch)
-				kb = kb.ljust(30)
-				Output.log(Color.darkcyan(kb) + Color.red(rating))
-
-		# 5. POST-STEPS: UPDATE REPOS.CONF and PROFILE SETTINGS, run EMERGE --sync --package-moves=n for NON-FUNTOO REPOS
+		# 3. POST-STEPS: UPDATE REPOS.CONF and PROFILE SETTINGS, run EMERGE --sync --package-moves=n for NON-FUNTOO REPOS
 
 		# If we are not writing to a special destination for archiving, we want to update our local repos.conf and profile settings automatically, as well
 		# as possibly run emerge --sync:
@@ -420,7 +400,25 @@ priority = %s
 			# do package moves and slotmoves...
 			self._do_package_moves()
 
+		# 4. PRINT SUCCESSFUL COMPLETION MESSAGE
 
+		if self.options.in_place:
+			Output.log(Color.green("Meta-repo updated in-place to kits specified in ego.conf (SHA1's ignored.)"))
+		elif not self.options.config_only:
+			if self.options.meta_only:
+				Output.log(Color.green("Sync successful! :)"))
+			else:
+				Output.log(Color.green("Sync successful and kits in alignment! :)"))
+
+		# 5: EXTRA WARNING FOR NON-PRIME KITS
+
+		if "kit_stab_ratings" in self.kits_retval and len(self.kits_retval["kit_stab_ratings"]):
+			print()
+			Output.log(Color.darkcyan("The following non-prime kits are currently selected:"))
+			for kit, branch, rating in self.kits_retval["kit_stab_ratings"]:
+				kb = "%s %s" % (kit, branch)
+				kb = kb.ljust(30)
+				Output.log(Color.darkcyan(kb) + Color.red(rating))
 
 		return True
 
