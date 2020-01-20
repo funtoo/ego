@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-
+import grp
 import os
 import pwd
 import re
@@ -68,7 +68,6 @@ class Module(EgoModule):
 		parser.add_argument('--dest', dest="dest", default=None, help="Manually specify destination of meta-repo")
 		parser.add_argument('--config-only', dest="config_only", action='store_true', help="Update /etc/portage/repos.conf files only.")
 		parser.add_argument('--in-place', dest="in_place", action='store_true', default=False, help="No syncing, but update configs and check out correct kits (ignore SHA1).")
-		parser.add_argument('--user', dest="user", action='store_true', default=False, help="Run as current user.")
 
 	def sync_kit(self, kit_name, kit_root, branch, default_branch, in_place=False):
 		if branch is None:
@@ -350,6 +349,9 @@ priority = %s
 			if os.path.exists(self.root):
 				self.sync_user = os.stat(self.root)[stat.ST_UID]
 				self.sync_group = os.stat(self.root)[stat.ST_GID]
+			else:
+				self.sync_user = pwd.getpwnam('portage').pw_uid
+				self.sync_group = grp.getgrnam('portage').gr_gid
 			# we need to assign here because drop_perms_and_run forks.
 			self.can_write = self.drop_perms_and_run(self.repo_can_write_test)
 			if not self.can_write:

@@ -67,8 +67,10 @@ no longer exist in meta-repo.
 
 **sync_user**
 
-This setting defines the user and group that are used to perform the sync operation, and thus the user and group which
-will end up owning the meta-repo files. The default value for *sync_user* is ``portage``.
+This setting was deprecated as of ego 2.8.0 and is no longer used.
+This setting defined the user and group that are used to perform the sync operation, and thus the user and group which
+will end up owning the meta-repo files. Now, the sync process can run as root or a regular user. When running as root,
+ego sync will read the group and user ownership of meta-repo and use this user and group to perform sync operations.
 
 **sync_base_url**
 
