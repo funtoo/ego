@@ -1,6 +1,6 @@
 .\" Man page generated from reStructuredText.
 .
-.TH EGO SYNC 8 "" "2.7.5" "Funtoo Linux Core System"
+.TH EGO SYNC 8 "" "2.8.0" "Funtoo Linux Core System"
 .SH NAME
 ego sync \- Funtoo Linux Sync Module
 .
@@ -32,17 +32,46 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 ..
 .SH SYNOPSIS
 .sp
-\fBego sync [\-h] [\-\-kits\-only|\-\-meta\-repo\-only] [\-\-dest DESTINATION]\fP
+\fBego sync [\-h] [\-\-kits\-only|\-\-meta\-repo\-only|\-\-in\-place|\-\-config\-only] [\-\-dest DESTINATION]\fP
 .SH USAGE
 .sp
 Use the \fBego sync\fP command to perform an initial clone of meta\-repo, or to update meta\-repo according to the settings
 in \fB/etc/ego.conf\fP See ego.conf(5) for information on how to configure \fBego sync\fP\&.
+.sp
+\fBego sync\fP is typically run as the root user, but can also be run as a regular user. When run as a root user, the
+code will look at the user and group ownership of the meta\-repo directory if it exists and will \(aqdrop permissions\(aq
+to run the sync operations as this user. If meta\-repo does not yet exist, it will perform the sync operations as the
+\fBportage\fP user and the \fBportage\fP group.
+.sp
+When run as a regular user, \fBego sync\fP will of course not drop permissions, but will perform sync operations as
+the current user and the current user\(aqs primary group.
+.sp
+\fBego sync\fP, when run as root, will run \fBemerge sync\fP in order to sync any non\-Funtoo kits, and this will also
+trigger any \(aqpackage move updates\(aq (renames) that need to be applied to the package database in \fB/var/db/pkg\fP\&.
+When run as a regular user, these steps are skipped.
 .SS Syncing Kits Only
 .sp
 Use the \fB\-\-kits\-only\fP option to tell ego to only sync the kits themselves, and not update meta\-repo.
 .SS Syncing Meta\-Repo Only
 .sp
 Use the \fB\-\-meta\-repo\-only\fP option to tell ego to only sync meta\-repo, and not update or clone any kits.
+.SS Syncing In\-Place
+.sp
+Use the \fB\-\-in\-place\fP option to tell ego to not perform any syncing, but to check out the correct kits according
+to \fB/etc/ego.conf\fP kit and release settings, update \fB/etc/portage/repos.conf\fP, and update the active profiles
+accordingly. This is useful in conjunction when doing development and using Funtoo\(aqs merge\-all\-kits script to
+generate your own local meta\-repo. After this is done, moving to symlinking it to \fB/var/git/meta\-repo\fP and running
+\fBego sync \-\-in\-place\fP will ensure that the correct kit branches are checked out and that meta\-repo is ready to use.
+You must run \fBego sync \-\-in\-place\fP as root since it must modify files in \fB/etc/portage\fP\&.
+.SS Updating Config Only
+.sp
+The \fB\-\-config\-only\fP option will instruct ego to not change the current kit branches that are checked out at all,
+so \fBmeta\-repo\fP will not be touched, but the configuration in \fB/etc/portage\fP will be updated to reflect the current
+state of \fBmeta\-repo\fP\&. This is different than \fB\-\-in\-place\fP as what is in \fB/etc/ego.conf\fP is not consulted and
+the files in \fB/etc/portage\fP are set up to use the \fBmeta\-repo\fP as it currently exists on disk. This is used by
+\fBmetro\fP when building stages. When a meta\-repo snapshot is extracted, \fBego sync \-\-kits\-only\fP is run to grab the
+kit repos, and then \fBego sync \-\-config\-only\fP is run to update the files in \fB/etc/portage\fP to use this extracted
+meta\-repo.
 .SS Creating a Meta\-Repo For Archiving
 .sp
 The \fB\-\-dest\fP option can be used to manually specify the location to point to a new location to create
