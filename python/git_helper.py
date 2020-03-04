@@ -97,3 +97,5 @@ class GitHelper(object):
 			return out.strip()
 		else:
 			return None
+
+# vim: ts=4 sw=4 noet
