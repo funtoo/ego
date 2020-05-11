@@ -13,7 +13,6 @@ from ego.config import join_path, EgoConfig
 from git_helper import GitHelper
 from pathlib import Path
 
-
 class Module(EgoModule):
 
 	hex_re = re.compile('[0-9a-fA-F]+')
@@ -251,15 +250,21 @@ priority = %s
 			return False
 		if not self.running_on_root_metarepo:
 			return False
-		return not self.options.kits_only
+		if self.options.meta_only:
+			return False
+		return True
 
 	@property
 	def do_meta_repo_sync(self):
+		"""
+		Should we attempt to sync the main meta-repo? This property is intended to correctly answer this question.
+		"""
+
 		if self.options.config_only or not self.can_write:
 			return False
-		if not self.running_on_root_metarepo:
+		if self.options.kits_only:
 			return False
-		return not self.options.meta_only
+		return True
 
 	def sync_meta_repo(self):
 		repo = GitHelper(self, self.root)
@@ -363,7 +368,7 @@ priority = %s
 			Output.log(Color.green("Syncing meta-repo"))
 		else:
 			Output.log(Color.green("Updating meta-repo in-place"))
-
+		print("DEBUG", self.do_meta_repo_sync)
 		if self.do_meta_repo_sync:
 			if os.geteuid() == 0 and self.sync_user is not None:
 				self.drop_perms_and_run(self.sync_meta_repo)
@@ -383,11 +388,10 @@ priority = %s
 		# If we are not writing to a special destination for archiving, we want to update our local repos.conf and profile settings automatically, as well
 		# as possibly run emerge --sync:
 
-		if os.geteuid() != 0:
-			Output.warning("Running as regular user so I can't update repos.conf. Run as root if needed.")
-			return True
-
 		if self.options.dest is None:
+			if os.geteuid() != 0:
+				Output.warning("Running as regular user so I can't update repos.conf. Run as root if needed.")
+				return True
 			self.update_repos_conf()
 			try:
 				EgoModule.run_ego_module('profile', self.config, ['update'])
@@ -395,18 +399,18 @@ priority = %s
 				Output.error("Could not update ego profiles automatically due to permissions (code in /root, most likely.)")
 				Output.error("Please run 'epro update' manually as root.")
 
-		if self.config.root_path == "/":
-			repos_configs = os.listdir("/etc/portage/repos.conf")
-			foreign_repo = False
-			for repoitem in repos_configs:
-				if not repoitem.startswith("ego-"):
-					foreign_repo = True
-					break
-			if foreign_repo:
-				Output.log(Color.bold("Updating non-funtoo repositories..."))
-				run("/usr/bin/emerge --sync --package-moves=n", quiet=True)
-			# do package moves and slotmoves...
-			self._do_package_moves()
+			if self.config.root_path == "/":
+				repos_configs = os.listdir("/etc/portage/repos.conf")
+				foreign_repo = False
+				for repoitem in repos_configs:
+					if not repoitem.startswith("ego-"):
+						foreign_repo = True
+						break
+				if foreign_repo:
+					Output.log(Color.bold("Updating non-funtoo repositories..."))
+					run("/usr/bin/emerge --sync --package-moves=n", quiet=True)
+				# do package moves and slotmoves...
+				self._do_package_moves()
 
 		# 4. PRINT SUCCESSFUL COMPLETION MESSAGE
 
