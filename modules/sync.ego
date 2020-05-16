@@ -35,6 +35,8 @@ class Module(EgoModule):
 				root = self.config.meta_repo_root
 			if not os.path.exists(os.path.dirname(root)):
 				os.makedirs(os.path.dirname(root))
+			if os.path.islink(root):
+				root = os.readlink(root)
 			self._root = root
 		return self._root
 
