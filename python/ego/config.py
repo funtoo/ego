@@ -87,7 +87,12 @@ class EgoConfig(object):
 	@property
 	def all_kit_names_in_release(self):
 		if self.metadata_version >= 10:
-			return self.kit_info_metadata["release_defs"].keys()
+			kits = []
+			for kit_name in self.kit_info_metadata["release_defs"].keys():
+				branch, default_branch = self.get_configured_kit(kit_name)
+				if branch != 'skip':
+					kits.append(kit_name)
+			return kits
 		else:
 			return self.kit_info_metadata["release_defs"][self.release].keys()
 

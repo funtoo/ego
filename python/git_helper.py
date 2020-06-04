@@ -54,7 +54,7 @@ class GitHelper(object):
 		options = options or []
 		self.readOnlyCheck()
 		opts = " ".join(options)
-		return run("git -C %s pull %s" % (self.root, opts), quiet=self.quiet)
+		return run("git -C %s pull %s --ff-only" % (self.root, opts), quiet=self.quiet)
 
 	def reset(self, options=None):
 		options = options or []
