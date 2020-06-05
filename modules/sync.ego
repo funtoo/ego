@@ -83,7 +83,6 @@ class Module(EgoModule):
 				os.rmdir(kit.root)
 			except OSError:
 				pass
-
 		if not in_place:
 			try:
 				sha1_data = self.config.kit_sha1_metadata[kit_name][branch]
@@ -170,6 +169,10 @@ class Module(EgoModule):
 
 		updated_config_files = set()
 		for kit_name in self.config.kit_info_metadata["kit_order"]:
+			branch, default_branch = self.config.get_configured_kit(kit_name)
+			if branch == 'skip':
+				# Kit has been manually disabled; skip.
+				continue
 			repo_conf_path = os.path.join(self.config.repos_conf_path, "ego-" + kit_name)
 			kit_path = os.path.join(self.config.unprefixed_kits_root, kit_name)
 			if kit_name == "nokit":
@@ -302,7 +305,10 @@ priority = %s
 				kits = self.config.kit_info_metadata["kit_order"]
 			for kt in kits:
 				branch, default_branch = self.config.get_configured_kit(kt)
-				if branch is None:
+				if branch == 'skip':
+					Output.warning(f"Skipping kit {kt} due to skip setting in /etc/ego.conf.")
+					continue
+				elif branch is None:
 					Output.warning("Could not find %s branch %s; using default kit %s instead." % (kt, branch, default_branch))
 					branch = default_branch
 				elif self.config.kit_branch_is_missing(kt, branch):

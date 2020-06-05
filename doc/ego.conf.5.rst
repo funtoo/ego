@@ -96,6 +96,5 @@ After changing default kit values, be sure to run ``ego sync`` to update meta-re
 be sure to run ``epro update`` to regenerate your profile information (in some cases, this can be done manually by
 ``ego sync``).
 
-
-
-
+To *omit* a kit from your meta-repo, you can set the branch to ``skip``. On next sync, this kit will not by synced
+nor will it be configured in your ``/etc/portage/repos.conf`` or ``/etc/portage/make.profile/parent``.
