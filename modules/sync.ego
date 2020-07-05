@@ -60,11 +60,14 @@ class Module(EgoModule):
 			Output.warning("Unable to perform package moves due to the following parse error: " + str(e))
 			
 	def add_arguments(self, parser):
-		parser.add_argument('--kits-only', action='store_true', help="Do not sync meta-repo, only kits.")
-		parser.add_argument('--meta-repo-only', dest="meta_only", action='store_true', help="Do not sync kits, only meta-repo.")
+		parser.add_argument('--kits', action='store_true', default=True, help="Sync kits.")
+		parser.add_argument('--no-kits', action='store_false', dest='kits', help="Disable kits syncing.")
+		parser.add_argument('--meta', action='store_true', default=True, help="Sync main meta-repo.")
+		parser.add_argument('--no-meta', action='store_false', default=True, help="Disable meta-repo sync.")
 		parser.add_argument('--dest', dest="dest", default=None, help="Manually specify destination of meta-repo")
-		parser.add_argument('--config-only', dest="config_only", action='store_true', help="Update /etc/portage/repos.conf files only.")
-		parser.add_argument('--in-place', dest="in_place", action='store_true', default=False, help="No syncing, but update configs and check out correct kits (ignore SHA1).")
+		parser.add_argument('--config', dest="config", action='store_true', default=True, help="Update /etc/portage/repos.conf files only.")
+		parser.add_argument('--no-config', dest="config", action='store_false', default=True, help="Disable config file updates.")
+		parser.add_argument('--in-place', dest="in_place", action='store_true', default=False, help="Disable all syncing (kits and meta).")
 
 	def sync_kit(self, kit_name, kit_root, branch, default_branch, in_place=False):
 		if branch is None:
@@ -249,25 +252,18 @@ priority = %s
 
 	@property
 	def do_kits_sync(self):
-		if self.options.config_only or not self.can_write:
+		if not self.can_write:
 			return False
-		if not self.running_on_root_metarepo:
-			return False
-		if self.options.meta_only:
-			return False
-		return True
+		return self.options.kits
 
 	@property
 	def do_meta_repo_sync(self):
 		"""
 		Should we attempt to sync the main meta-repo? This property is intended to correctly answer this question.
 		"""
-
-		if self.options.config_only or not self.can_write:
+		if not self.can_write:
 			return False
-		if self.options.kits_only:
-			return False
-		return True
+		return self.options.kits
 
 	def sync_meta_repo(self):
 		repo = GitHelper(self, self.root)
@@ -316,7 +312,7 @@ priority = %s
 				elif self.config.kit_branch_is_deprecated(kt, branch):
 					Output.warning("Specified %s branch %s has been deprecated." % (kt, branch))
 				success = True
-				if not self.options.config_only:
+				if self.options.kits:
 					def sync_func():
 						return self.sync_kit(kt, self.kits_root, branch, default_branch, in_place=self.options.in_place)
 					if drop_perms:
@@ -344,12 +340,25 @@ priority = %s
 			# git will look here for various things
 			del os.environ["HOME"]
 
+		# --in-place overrides other settings:
+
+		if self.options.in_place and self.options.meta:
+			self.options.meta = False
+
+		if self.options.in_place and self.options.kits:
+			self.options.kits = False
+
+		# If someone disable kits and meta-repo, this is an in-place sync:
+
+		if not self.options.kits and self.options.meta:
+			self.options.in_place = True
+
+
 		# 1. FIGURE OUT WHAT USER TO USE TO 'DO OUR THING'
 
-		if os.geteuid() != 0 or self.options.config_only or self.options.dest is not None:
-			# if we're not root, or we're running in config-only mode, or we're modifying a non-standard path meta-repo, do the sync operations as a regular user.
+		if os.geteuid() != 0 or self.options.in_place or self.options.dest is not None:
 			Output.log("Running as regular user.")
-			if not self.options.config_only:
+			if self.options.config:
 				self.repo_can_write_test()
 				if not self.can_write:
 					Output.fatal("Cannot write to meta-repo. Exiting.")
@@ -422,11 +431,10 @@ priority = %s
 
 		if self.options.in_place:
 			Output.log(Color.green("Meta-repo updated in-place to kits specified in ego.conf (SHA1's ignored.)"))
-		elif not self.options.config_only:
-			if self.options.meta_only:
-				Output.log(Color.green("Sync successful! :)"))
-			else:
-				Output.log(Color.green("Sync successful and kits in alignment! :)"))
+		elif not self.options.kits:
+			Output.log(Color.green("Sync successful! :)"))
+		else:
+			Output.log(Color.green("Sync successful and kits in alignment! :)"))
 
 		# 5: EXTRA WARNING FOR NON-PRIME KITS
 
