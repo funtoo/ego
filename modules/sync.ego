@@ -261,9 +261,10 @@ priority = %s
 		"""
 		Should we attempt to sync the main meta-repo? This property is intended to correctly answer this question.
 		"""
+
 		if not self.can_write:
 			return False
-		return self.options.kits
+		return self.options.meta
 
 	def sync_meta_repo(self):
 		repo = GitHelper(self, self.root)
@@ -350,9 +351,11 @@ priority = %s
 
 		# If someone disable kits and meta-repo, this is an in-place sync:
 
-		if not self.options.kits and self.options.meta:
+		if not self.options.kits and not self.options.meta:
 			self.options.in_place = True
 
+		if self.options.in_place:
+			Output.log("Syncing in-place (no network updates.)")
 
 		# 1. FIGURE OUT WHAT USER TO USE TO 'DO OUR THING'
 
@@ -383,7 +386,6 @@ priority = %s
 			Output.log(Color.green("Syncing meta-repo"))
 		else:
 			Output.log(Color.green("Updating meta-repo in-place"))
-		print("DEBUG", self.do_meta_repo_sync)
 		if self.do_meta_repo_sync:
 			if os.geteuid() == 0 and self.sync_user is not None:
 				self.drop_perms_and_run(self.sync_meta_repo)
