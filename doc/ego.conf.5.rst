@@ -98,3 +98,18 @@ be sure to run ``epro update`` to regenerate your profile information (in some c
 
 To *omit* a kit from your meta-repo, you can set the branch to ``skip``. On next sync, this kit will not by synced
 nor will it be configured in your ``/etc/portage/repos.conf`` or ``/etc/portage/make.profile/parent``.
+
+Omitting Kits
+~~~~~~~~~~~~~
+
+If you want to instruct ``ego sync`` to avoid syncing and enabling a particular kit, you can use the skip option,
+which is used as follows::
+
+  [kits]
+
+  xorg-kit = skip
+
+It will then not be synced/updated over the network, and your ``/etc/portage`` kits configuration will be set up
+to not include this kit, even if it happens to exist in ``/var/git/meta-repo/kits`` due to previously being
+enabled.
+
