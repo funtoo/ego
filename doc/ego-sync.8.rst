@@ -14,7 +14,7 @@ Funtoo Linux Sync Module
 SYNOPSIS
 ========
 
-``ego sync [-h] [--kits-only|--meta-repo-only|--in-place|--config-only] [--dest DESTINATION]``
+``ego sync [-h] [--kits|--no-kits] [--meta|--no-meta] [--in-place] [--config|--no-config] [--dest DESTINATION]``
 
 USAGE
 =====
@@ -34,33 +34,36 @@ the current user and the current user's primary group.
 trigger any 'package move updates' (renames) that need to be applied to the package database in ``/var/db/pkg``.
 When run as a regular user, these steps are skipped.
 
-Syncing Kits Only
-~~~~~~~~~~~~~~~~~
+Disable Updates to Kits
+~~~~~~~~~~~~~~~~~~~~~~~
 
-Use the ``--kits-only`` option to tell ego to only sync the kits themselves, and not update meta-repo.
+By default, all kits will be updated. To turn this off, specify the ``--no-kits`` option.
 
-Syncing Meta-Repo Only
+Disable Updates to Meta-Repo
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+By default, meta-repo will be updated to the latest version available. To turn this off, specify the
+``--no-meta`` option. This is used by metro when it is using a Portage snapshot and wants to use *that*
+snapshot and not update it.
+
+Disable Config Updates
 ~~~~~~~~~~~~~~~~~~~~~~
-Use the ``--meta-repo-only`` option to tell ego to only sync meta-repo, and not update or clone any kits.
+
+By default, ``ego sync`` will update configuration in ``/etc/portage``, unless ``--dest`` is being used
+to write out the meta-repo to a non-default location. This involves ensuring that the correct kits are
+checked out according to ``/etc/ego.conf`` kit and release settings, and that updates are made to
+``/etc/portage/repos.conf``, and the active profiles enabled in ``/etc/portage/make.profile/parent``
+are set correctly based on your profile (flavor and mix-in) settings.
+
+You almost always want config to be updated when you run ``ego sync`` to ensure everything is
+configured properly, but if you want to disable this, you can use the ``--no-config`` option
+which will disable these configuration updates.
+
 
 Syncing In-Place
 ~~~~~~~~~~~~~~~~
-Use the ``--in-place`` option to tell ego to not perform any syncing, but to check out the correct kits according
-to ``/etc/ego.conf`` kit and release settings, update ``/etc/portage/repos.conf``, and update the active profiles
-accordingly. This is useful in conjunction when doing development and using Funtoo's merge-all-kits script to
-generate your own local meta-repo. After this is done, moving to symlinking it to ``/var/git/meta-repo`` and running
-``ego sync --in-place`` will ensure that the correct kit branches are checked out and that meta-repo is ready to use.
-You must run ``ego sync --in-place`` as root since it must modify files in ``/etc/portage``.
+Use the ``--in-place`` option to tell ego to not perform any syncing, so it is short-hand for ``--no-meta --no-kits``.
 
-Updating Config Only
-~~~~~~~~~~~~~~~~~~~~
-The ``--config-only`` option will instruct ego to not change the current kit branches that are checked out at all,
-so ``meta-repo`` will not be touched, but the configuration in ``/etc/portage`` will be updated to reflect the current
-state of ``meta-repo``. This is different than ``--in-place`` as what is in ``/etc/ego.conf`` is not consulted and
-the files in ``/etc/portage`` are set up to use the ``meta-repo`` as it currently exists on disk. This is used by
-``metro`` when building stages. When a meta-repo snapshot is extracted, ``ego sync --kits-only`` is run to grab the
-kit repos, and then ``ego sync --config-only`` is run to update the files in ``/etc/portage`` to use this extracted
-meta-repo.
 
 Creating a Meta-Repo For Archiving
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
