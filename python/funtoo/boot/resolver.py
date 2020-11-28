@@ -8,11 +8,11 @@ import os
 from subprocess import PIPE
 from subprocess import Popen
 from subprocess import STDOUT
-from subprocess import getstatusoutput, getoutput
 from typing import Callable
 
-from funtoo.boot.helper import fstabInfo
+from funtoo.boot.helper import fstabInfo, get_scanpaths, get_cpu_vendor, get_cpu_instance
 from funtoo.boot.menu import BootLoaderMenu, BootMenuFlag
+
 
 def bracketzap(instr, wild=True):
 	""" Removes various bracket types from the input string. """
@@ -55,6 +55,7 @@ class Resolver:
 		self.ego_module = ego_module
 		self.msgs = self.ego_module.msgs
 		self.idmapper = self.boot_config.idmapper
+		self.cpu = get_cpu_instance(boot_config)
 		self.has_microcode = self.microcode_initialize()
 
 	def device_shift(self, device_ref):
@@ -99,15 +100,13 @@ class Resolver:
 		return found
 	
 	def microcode_initialize(self):
-		if not self.isIntel():
-			self.msgs.append(["warn", "No CPU microcode available for non-Intel systems."])
+		if self.cpu is None:
+			self.msgs.append(["warn", f"No CPU microcode available for {get_cpu_vendor()} systems."])
 			return True
-		if not os.path.exists("/lib/firmware/intel-ucode"):
-			self.msgs.append(["warn", "Intel system detected - please emerge sys-firmware/intel-microcode and sys-apps/iucode_tool and run boot-update " +
-							  "again; boot-update will then patch your system with the latest Intel CPU and chipset microcode patches at boot-time, " +
-							  "protecting you against important vulnerabilities and errata."])
+		if not self.cpu.has_microcode():
+			self.msgs.append(self.cpu.get_absent_microcode_msg())
 			return False
-		self.msgs.append(["note", "Intel microcode will be loaded at boot-time."])
+		self.msgs.append(self.cpu.get_found_microcode_msg())
 		return True
 	
 	def microcode_regenerate(self):
@@ -115,33 +114,20 @@ class Resolver:
 		
 		# We aren't generating a config file, just updating microcode -- so do the main loop ourselves, and just update microcode:
 		if self.has_microcode:
-			sections = self.boot_config.getSections()
-			scanpaths = set()
-			for sect in sections:
-				paths = set(self.boot_config.item(sect, "scan").split())
-				scanpaths |= paths
-			
+			scanpaths = get_scanpaths(self.boot_config)
 			# mount paths we may need to update
 			for path in scanpaths:
 				self.mount_if_necessary(scanpath=path)
-				self.generate_cpu_microcode_initramfs(path)
+				self.generate_cpu_microcode_initramfs(scanpath=path)
 			
 			self.unmount_if_necessary()
 			return True
 		else:
 			return False
 	
-	def isIntel(self):
-		a = getoutput("/usr/bin/lscpu | grep ^Vendor")
-		return a.endswith("GenuineIntel")
-	
 	def generate_cpu_microcode_initramfs(self, scanpath="/boot"):
-		s, o = getstatusoutput(
-			"rm -f %s/early_ucode.cpio; /usr/sbin/iucode_tool --write-earlyfw=%s/early_ucode.cpio /lib/firmware/intel-ucode/* >/dev/null 2>&1" % (scanpath, scanpath))
-		if s == 0:
-			return True, "%s/early_ucode.cpio" % scanpath
-		return False, "%s/early_ucode.cpio" % scanpath
-	
+		return self.cpu.generate_cpu_microcode_initramfs(scanpath)
+
 	def find_initrds(self, initrds, scanpath, kernel, kext):
 		found = []
 		base_path = os.path.dirname(kernel)
