@@ -56,7 +56,7 @@ elif "global" in settings and "install_path" in settings["global"]:
 else:
 	install_path = "/usr/share/ego"
 
-sys.path.insert(0, install_path + "/python")
+sys.path.insert(0, install_path + "/modules")
 
 from ego.config import EgoConfig
 

@@ -451,22 +451,22 @@ class ProfileTree(object):
 
 	def write(self, config: EgoConfig, outfile):
 
-		python_kit_branch, default_branch = config.get_configured_kit("python-kit")
+		python_kit_branch, default_branch = config.get_configured_kit("modules-kit")
 
 		# TODO: it's possible to get blank lines in the profile file, and the specifier doesn't like this...
 
 		for specifier, odict in self.profile_hier.items():
 			strout = str(specifier)
-			if strout.find(":funtoo/kits/python-kit/") != -1:
-				# strip old python-kit settings
+			if strout.find(":funtoo/kits/modules-kit/") != -1:
+				# strip old modules-kit settings
 				continue
 			outfile.write(strout + "\n")
 
-		# add new python-kit settings
+		# add new modules-kit settings
 		for kit in self.config.all_kit_names_in_release:
-			python_path = os.path.join(config.kits_root, kit, "profiles/funtoo/kits/python-kit/", python_kit_branch)
+			python_path = os.path.join(config.kits_root, kit, "profiles/funtoo/kits/modules-kit/", python_kit_branch)
 			if os.path.exists(python_path):
-				outfile.write("%s:funtoo/kits/python-kit/" % kit + python_kit_branch + "\n")
+				outfile.write("%s:funtoo/kits/modules-kit/" % kit + python_kit_branch + "\n")
 
 	def remove_line(self, spec_str):
 		"""

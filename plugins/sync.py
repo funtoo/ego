@@ -16,19 +16,15 @@ from pathlib import Path
 
 class Module(EgoModule):
 
-	hex_re = re.compile('[0-9a-fA-F]+')
+	hex_re = re.compile("[0-9a-fA-F]+")
 	can_write = False
 	sync_user = 0
 	sync_group = 0
-	kits_retval = {
-		"success": True,
-		"fails": [],
-		"kit_stab_ratings": []
-	}
+	kits_retval = {"success": True, "fails": [], "kit_stab_ratings": []}
 
 	@property
 	def root(self):
-		if not hasattr(self, '_root'):
+		if not hasattr(self, "_root"):
 			if self.options.dest is not None:
 				root = self.options.dest
 			else:
@@ -38,7 +34,7 @@ class Module(EgoModule):
 
 	@property
 	def kits_root(self):
-		if not hasattr(self, '_kits_root'):
+		if not hasattr(self, "_kits_root"):
 			if self.options.dest is not None:
 				root = self.options.dest + "/kits"
 			else:
@@ -48,27 +44,37 @@ class Module(EgoModule):
 				os.makedirs(os.path.dirname(root))
 			self._kits_root = root
 		return self._kits_root
-	
+
 	def _do_package_moves(self):
 		import portage
 		from portage._global_updates import _global_updates
-		portage.proxy.lazyimport.lazyimport(globals(), '_emerge.actions:adjust_configs,load_emerge_config', )
+
+		portage.proxy.lazyimport.lazyimport(
+			globals(),
+			"_emerge.actions:adjust_configs,load_emerge_config",
+		)
 		try:
-			emerge_config = load_emerge_config(action='sync')
+			emerge_config = load_emerge_config(action="sync")
 			_global_updates(emerge_config.trees, emerge_config.target_config.mtimedb["updates"], quiet=False)
 			emerge_config.target_config.mtimedb.commit()
 		except portage.exception.ParseError as e:
 			Output.warning("Unable to perform package moves due to the following parse error: " + str(e))
-			
+
 	def add_arguments(self, parser):
-		parser.add_argument('--kits', action='store_true', default=True, help="Sync kits.")
-		parser.add_argument('--no-kits', action='store_false', dest='kits', help="Disable kits syncing.")
-		parser.add_argument('--meta', action='store_true', default=True, help="Sync main meta-repo.")
-		parser.add_argument('--no-meta', action='store_false', default=True, help="Disable meta-repo sync.")
-		parser.add_argument('--dest', dest="dest", default=None, help="Manually specify destination of meta-repo")
-		parser.add_argument('--config', dest="config", action='store_true', default=True, help="Update /etc/portage/repos.conf files only.")
-		parser.add_argument('--no-config', dest="config", action='store_false', default=True, help="Disable config file updates.")
-		parser.add_argument('--in-place', dest="in_place", action='store_true', default=False, help="Disable all syncing (kits and meta).")
+		parser.add_argument("--kits", action="store_true", default=True, help="Sync kits.")
+		parser.add_argument("--no-kits", action="store_false", dest="kits", help="Disable kits syncing.")
+		parser.add_argument("--meta", action="store_true", default=True, help="Sync main meta-repo.")
+		parser.add_argument("--no-meta", action="store_false", default=True, help="Disable meta-repo sync.")
+		parser.add_argument("--dest", dest="dest", default=None, help="Manually specify destination of meta-repo")
+		parser.add_argument(
+			"--config", dest="config", action="store_true", default=True, help="Update /etc/portage/repos.conf files only."
+		)
+		parser.add_argument(
+			"--no-config", dest="config", action="store_false", default=True, help="Disable config file updates."
+		)
+		parser.add_argument(
+			"--in-place", dest="in_place", action="store_true", default=False, help="Disable all syncing (kits and meta)."
+		)
 
 	def sync_kit(self, kit_name, kit_root, branch, default_branch, in_place=False):
 		if branch is None:
@@ -91,7 +97,7 @@ class Module(EgoModule):
 			try:
 				sha1_data = self.config.kit_sha1_metadata[kit_name][branch]
 			except KeyError as e:
-				Output.fatal("Fatal: could not find kit %s branch %s. Has it been deprecated?" % ( kit_name, branch ))
+				Output.fatal("Fatal: could not find kit %s branch %s. Has it been deprecated?" % (kit_name, branch))
 			if type(sha1_data) != str:
 				# new format
 				desired_depth = sha1_data["depth"] if self.config.kits_depth != 0 else 1
@@ -128,6 +134,7 @@ class Module(EgoModule):
 		else:
 			sha1 = kit.commitID
 			success = False
+
 			def sha1_check(my_sha1, desired_sha1):
 				Output.debug((my_sha1, desired_sha1))
 				if not self.hex_re.match(my_sha1):
@@ -174,7 +181,7 @@ class Module(EgoModule):
 		updated_config_files = set()
 		for kit_name in self.config.kit_info_metadata["kit_order"]:
 			branch, default_branch = self.config.get_configured_kit(kit_name)
-			if branch == 'skip':
+			if branch == "skip":
 				# Kit has been manually disabled; skip.
 				continue
 			repo_conf_path = os.path.join(self.config.repos_conf_path, "ego-" + kit_name)
@@ -185,15 +192,20 @@ class Module(EgoModule):
 				kit_priority = 1
 			with open(repo_conf_path, "w") as f:
 				if kit_name == "core-kit":
-					f.write("""[DEFAULT]
+					f.write(
+						"""[DEFAULT]
 main-repo = core-kit
 
-""")
-				f.write("""[%s]
+"""
+					)
+				f.write(
+					"""[%s]
 location = %s
 auto-sync = no
 priority = %s
-""" % ( kit_name, kit_path, kit_priority))
+"""
+					% (kit_name, kit_path, kit_priority)
+				)
 			updated_config_files.add("ego-" + kit_name)
 
 		# clean up any repos.conf entries that begin with "ego-" that are stale:
@@ -216,7 +228,7 @@ priority = %s
 			pid = os.fork()
 			if pid == 0:
 				# in child process.
-				os.chdir('/tmp')  # Make sure we are not in /root or other user-forbidden directory
+				os.chdir("/tmp")  # Make sure we are not in /root or other user-forbidden directory
 				os.setgid(self.sync_group)
 				os.setuid(self.sync_user)
 				retval = fn()
@@ -255,7 +267,6 @@ priority = %s
 			return False
 		return self.options.kits
 
-
 	def sync_meta_repo(self):
 		repo = GitHelper(self, self.root)
 		meta_repo_branch = self.config.meta_repo_branch
@@ -292,7 +303,7 @@ priority = %s
 				kits = self.config.kit_info_metadata["kit_order"]
 			for kt in kits:
 				branch, default_branch = self.config.get_configured_kit(kt)
-				if branch == 'skip':
+				if branch == "skip":
 					Output.warning(f"Skipping kit {kt} due to skip setting in /etc/ego.conf.")
 					continue
 				elif branch is None:
@@ -304,8 +315,10 @@ priority = %s
 					Output.warning("Specified %s branch %s has been deprecated." % (kt, branch))
 				success = True
 				if self.options.kits:
+
 					def sync_func():
 						return self.sync_kit(kt, self.kits_root, branch, default_branch, in_place=self.options.in_place)
+
 					if drop_perms:
 						retval = self.drop_perms_and_run(sync_func)
 					else:
@@ -348,10 +361,10 @@ priority = %s
 				self.sync_user = os.stat(self.root)[stat.ST_UID]
 				self.sync_group = os.stat(self.root)[stat.ST_GID]
 			else:
-				self.sync_user = pwd.getpwnam('portage').pw_uid
-				self.sync_group = grp.getgrnam('portage').gr_gid
-				os.makedirs(os.path.dirname(self.root),exist_ok=True)
-				os.chown(os.path.dirname(self.root),self.sync_user,self.sync_group)
+				self.sync_user = pwd.getpwnam("portage").pw_uid
+				self.sync_group = grp.getgrnam("portage").gr_gid
+				os.makedirs(os.path.dirname(self.root), exist_ok=True)
+				os.chown(os.path.dirname(self.root), self.sync_user, self.sync_group)
 			# we need to assign here because drop_perms_and_run forks.
 			self.can_write = self.drop_perms_and_run(self.repo_can_write_test) == 0
 			if not self.can_write:
@@ -386,7 +399,7 @@ priority = %s
 				return True
 			self.update_repos_conf()
 			try:
-				EgoModule.run_ego_module('profile', self.config, ['update'])
+				EgoModule.run_ego_module("profile", self.config, ["update"])
 			except PermissionError:
 				Output.error("Could not update ego profiles automatically due to permissions (code in /root, most likely.)")
 				Output.error("Please run 'epro update' manually as root.")
@@ -427,5 +440,6 @@ priority = %s
 
 	def handle(self):
 		self.sync_meta_repo_and_kits()
+
 
 # vim: ts=4 sw=4 noet

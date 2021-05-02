@@ -27,11 +27,11 @@ html_theme = "sphinx_rtd_theme"
 html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
 
 sys.path.insert(0, os.path.abspath(".."))
-sys.path.insert(0, os.path.abspath("../python"))
-sys.path.insert(0, os.path.abspath("../python/ego"))
-sys.path.insert(0, os.path.abspath("../python/mediawiki"))
-sys.path.insert(0, os.path.abspath("../python/tests"))
-sys.path.insert(0, os.path.abspath("../python/third_party"))
+sys.path.insert(0, os.path.abspath("../modules"))
+sys.path.insert(0, os.path.abspath("../modules/ego"))
+sys.path.insert(0, os.path.abspath("../modules/mediawiki"))
+sys.path.insert(0, os.path.abspath("../modules/tests"))
+sys.path.insert(0, os.path.abspath("../modules/third_party"))
 
 # -- General configuration ------------------------------------------------
 

@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/modules
 
 import os
 from enum import Enum, unique

@@ -10,69 +10,72 @@ from ego.profile import getProfileCatalogAndTree, ProfileType
 
 
 class MultiChoicesAction(argparse.Action):
-
 	def __init__(self, *args, **kwargs):
-		self.multi_choices = kwargs.pop('choices')
+		self.multi_choices = kwargs.pop("choices")
 		return super().__init__(*args, **kwargs)
 
 	def __call__(self, parser, namespace, values, option_string=None):
 		for value in values:
 			if value not in self.multi_choices:
-				raise argparse.ArgumentError(self, "invalid choice: %r (choose from %s)" % (
-					value, ', '.join([repr(c) for c in self.multi_choices])))
+				raise argparse.ArgumentError(
+					self, "invalid choice: %r (choose from %s)" % (value, ", ".join([repr(c) for c in self.multi_choices]))
+				)
 		setattr(namespace, self.dest, values)
 
-class Module(EgoModule):
 
+class Module(EgoModule):
 	def add_arguments(self, parser):
 
 		# specify "mix-in" as alternate spelling for "mix-ins":
 
-		valid_profile_types = [ str(x) for x in ProfileType.valid() ]
-		subparsers = parser.add_subparsers(title='actions', dest='action')
+		valid_profile_types = [str(x) for x in ProfileType.valid()]
+		subparsers = parser.add_subparsers(title="actions", dest="action")
 
-		show_parser = subparsers.add_parser('show', help="Print profiles")
+		show_parser = subparsers.add_parser("show", help="Print profiles")
 		show_parser.set_defaults(handler=self.handle_show_action)
 
-		show_json_parser = subparsers.add_parser('show-json', help="Print profiles in JSON format")
+		show_json_parser = subparsers.add_parser("show-json", help="Print profiles in JSON format")
 		show_json_parser.set_defaults(handler=self.handle_show_json_action)
 
-		get_parser = subparsers.add_parser('get', help="Print the value of a given profile")
-		get_parser.add_argument('profile', choices=valid_profile_types)
+		get_parser = subparsers.add_parser("get", help="Print the value of a given profile")
+		get_parser.add_argument("profile", choices=valid_profile_types)
 		get_parser.set_defaults(handler=self.handle_get_action)
 
-		list_parser = subparsers.add_parser('list', help="List given profiles (or all by default)")
-		list_parser.add_argument('profiles', nargs='*', choices=valid_profile_types, action=MultiChoicesAction, help=(
-			"Profiles to show: %s" % ', '.join(valid_profile_types)
-		))
+		list_parser = subparsers.add_parser("list", help="List given profiles (or all by default)")
+		list_parser.add_argument(
+			"profiles",
+			nargs="*",
+			choices=valid_profile_types,
+			action=MultiChoicesAction,
+			help=("Profiles to show: %s" % ", ".join(valid_profile_types)),
+		)
 		list_parser.set_defaults(handler=self.handle_list_action)
 
-		update_parser = subparsers.add_parser('update', help="Update profiles (/etc/portage/make.profile/parent)")
+		update_parser = subparsers.add_parser("update", help="Update profiles (/etc/portage/make.profile/parent)")
 		update_parser.set_defaults(handler=self.handle_write)
 
 		single_profile_parsers = [
-			subparsers.add_parser('arch', help="Change your arch profile"),
-			subparsers.add_parser('build', help="Change your build profile"),
-			subparsers.add_parser('subarch', help="Change your subarch profile"),
-			subparsers.add_parser('flavor', help="Change your flavor profile"),
+			subparsers.add_parser("arch", help="Change your arch profile"),
+			subparsers.add_parser("build", help="Change your build profile"),
+			subparsers.add_parser("subarch", help="Change your subarch profile"),
+			subparsers.add_parser("flavor", help="Change your flavor profile"),
 		]
 		for subparser in single_profile_parsers:
-			subparser.add_argument('new_value')
+			subparser.add_argument("new_value")
 			subparser.set_defaults(handler=self.handle_single_profile_actions)
 
-		mixins_parser = subparsers.add_parser('mix-ins', aliases=['mix-in'], help="Change your mix-ins profile")
-		mixins_parser.add_argument('mixins', nargs='*')
+		mixins_parser = subparsers.add_parser("mix-ins", aliases=["mix-in"], help="Change your mix-ins profile")
+		mixins_parser.add_argument("mixins", nargs="*")
 		mixins_parser.set_defaults(handler=self.handle_mix_ins_action)
 
 	def python_info(self):
 		Output.header("Python kit")
-		branch, default_branch = self.config.get_configured_kit("python-kit")
-		Output.log("%s%12s%s: %s%s%s" % (
-			Color.BOLD, "branch", Color.END, Color.CYAN, branch, Color.END))
+		branch, default_branch = self.config.get_configured_kit("modules-kit")
+		Output.log("%s%12s%s: %s%s%s" % (Color.BOLD, "branch", Color.END, Color.CYAN, branch, Color.END))
 
 	def short_list(self):
 		Output.header("Enabled Profiles")
-		for key in [ ProfileType.ARCH, ProfileType.BUILD, ProfileType.SUBARCH, ProfileType.FLAVOR, ProfileType.MIX_IN ]:
+		for key in [ProfileType.ARCH, ProfileType.BUILD, ProfileType.SUBARCH, ProfileType.FLAVOR, ProfileType.MIX_IN]:
 			all_enabled = list(self.tree.get_children(key))
 			if len(all_enabled) == 0:
 				Output.log("%s%12s%s: (not set)" % (Color.BOLD, key, Color.END))
@@ -89,9 +92,9 @@ class Module(EgoModule):
 			for item in self.tree.get_children(p_type):
 				out = {}
 				out["shortname"] = item.name
-				#if item.path is not None:
-					# TODO: support path
-				#	out["path"] = item.path
+				# if item.path is not None:
+				# TODO: support path
+				# 	out["path"] = item.path
 				outdict[key].append(out)
 		return outdict
 
@@ -104,7 +107,7 @@ class Module(EgoModule):
 
 		for specifier in self.tree.get_children([ProfileType.FLAVOR, ProfileType.MIX_IN]):
 
-			for list_type in [ ProfileType.FLAVOR, ProfileType.MIX_IN ]:
+			for list_type in [ProfileType.FLAVOR, ProfileType.MIX_IN]:
 				inherited_things = list(self.tree.recursively_get_children(list_type, specifier=specifier))
 
 				if not len(inherited_things):
@@ -135,7 +138,7 @@ class Module(EgoModule):
 		Output.log(json.dumps(self.short_JSON(), indent=4))
 
 	def handle_get_action(self):
-		Output.log(' '.join(p.name for p in self.tree.get_children(ProfileType.from_string(self.options.profile))))
+		Output.log(" ".join(p.name for p in self.tree.get_children(ProfileType.from_string(self.options.profile))))
 
 	def handle_list_action(self):
 
@@ -214,10 +217,16 @@ class Module(EgoModule):
 			current_setting = None
 		if profile_type in [ProfileType.BUILD, ProfileType.ARCH]:
 			if newset in available_shortnames and len(action) > 0:
-				Output.warning("Previous value: %s -- typically, user should not change this." % current_setting.name if current_setting is not None else None)
+				Output.warning(
+					"Previous value: %s -- typically, user should not change this." % current_setting.name
+					if current_setting is not None
+					else None
+				)
 
 		if newset not in available_shortnames:
-			Output.fatal("%s %s is not available. Can't set. Available names: %s" % (action, newset, repr(available_shortnames)))
+			Output.fatal(
+				"%s %s is not available. Can't set. Available names: %s" % (action, newset, repr(available_shortnames))
+			)
 		self.writeout = True
 		profile_path = self.catalog.find_path(profile_type, newset)
 		if profile_path is None:
@@ -308,8 +317,9 @@ class Module(EgoModule):
 	def __call__(self, *args):
 		# Little trick to force end of arguments when using mix-ins command to
 		# prevent argparse from considering "-foo" as an argument.
-		if len(args) and '--' not in args and args[0] in ['mix-in', 'mix-ins']:
-			args = (args[0], '--') + args[1:]
+		if len(args) and "--" not in args and args[0] in ["mix-in", "mix-ins"]:
+			args = (args[0], "--") + args[1:]
 		super().__call__(*args)
+
 
 # vim: ts=4 noexpandtab sw=4

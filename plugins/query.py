@@ -14,26 +14,23 @@ from ego.output import Color, Output, Table
 
 
 class Module(EgoModule):
-
 	def add_arguments(self, parser):
-		subparsers = parser.add_subparsers(title='subcommands', dest='subcommand')
+		subparsers = parser.add_subparsers(title="subcommands", dest="subcommand")
 
-		versions_parser = subparsers.add_parser('versions', aliases=['v'], help=(
-			"Show available ebuild versions matching the given atom."
-		))
-		versions_parser.add_argument('atom', type=self.atom_argument(False))
+		versions_parser = subparsers.add_parser(
+			"versions", aliases=["v"], help=("Show available ebuild versions matching the given atom.")
+		)
+		versions_parser.add_argument("atom", type=self.atom_argument(False))
 		versions_parser.set_defaults(handler=self.handle_versions_subcommand)
 
-		origin_parser = subparsers.add_parser('origin', aliases=['o'], help=(
-			"Show from which repository the given package comes from."
-		))
-		origin_parser.add_argument('package', type=self.atom_argument(False))
+		origin_parser = subparsers.add_parser(
+			"origin", aliases=["o"], help=("Show from which repository the given package comes from.")
+		)
+		origin_parser.add_argument("package", type=self.atom_argument(False))
 		origin_parser.set_defaults(handler=self.handle_origin_subcommand)
 
-		bugs_parser = subparsers.add_parser('bugs', help=(
-			"Show Funtoo bugs related to the given package."
-		))
-		bugs_parser.add_argument('package', type=self.atom_argument(False))
+		bugs_parser = subparsers.add_parser("bugs", help=("Show Funtoo bugs related to the given package."))
+		bugs_parser.add_argument("package", type=self.atom_argument(False))
 		bugs_parser.set_defaults(handler=self.handle_bugs_subcommand)
 
 	def handle(self):
@@ -48,37 +45,36 @@ class Module(EgoModule):
 		if installed for each ebuild matching the atom.
 		"""
 		atom = self.options.atom
-		ebuilds = sorted(atom.list_matching_ebuilds(), key=lambda x: (
-			x.category, x.package, x.get_version()))
+		ebuilds = sorted(atom.list_matching_ebuilds(), key=lambda x: (x.category, x.package, x.get_version()))
 		old_cat_pkg = None
 		old_slot = None
-		table = Table(3, align='rrr', col_sep='|', join='+', lpad=1)
+		table = Table(3, align="rrr", col_sep="|", join="+", lpad=1)
 
 		for ebuild in ebuilds:
-			cat_pkg = '{}/{}'.format(ebuild.category, ebuild.package)
-			slot = ebuild.vars.get('SLOT', '0')
+			cat_pkg = "{}/{}".format(ebuild.category, ebuild.package)
+			slot = ebuild.vars.get("SLOT", "0")
 			if cat_pkg != old_cat_pkg:
 				if old_cat_pkg is not None:
-					table.separator('')
-				table.append(cat_pkg, 'slot', 'repo')
+					table.separator("")
+				table.append(cat_pkg, "slot", "repo")
 				old_cat_pkg = cat_pkg
 				old_slot = None
 			if old_slot != slot:
-				table.separator('-')
+				table.separator("-")
 				old_slot = slot
 			else:
-				slot = ''
+				slot = ""
 			repo_name = ebuild.repo_name
 			branch, default_branch = self.config.get_configured_kit(repo_name)
 			repo = Color.blue(repo_name)
 			if branch:
-				repo = (repo + '/') + Color.green(branch)
+				repo = (repo + "/") + Color.green(branch)
 			version = Color.cyan(ebuild.version)
 			if ebuild.is_installed():
 				if ebuild.is_in_tree():
-					marker = '* '
+					marker = "* "
 				else:
-					marker = Color.red('- ')
+					marker = Color.red("- ")
 				version = Color.bold(marker) + Color.bold(version)
 			table.append(version, Color.yellow(slot), repo)
 
@@ -91,19 +87,19 @@ class Module(EgoModule):
 		atom is useless and will be ignored.
 		"""
 		repo_urls = {
-			'faustoo': 'https://github.com/fmoro/faustoo/tree/master/{cat}/{pkg}',
-			'fusion809': 'https://github.com/fusion809/fusion809-overlay/tree/master/{cat}/{pkg}',
-			'flora': 'https://code.funtoo.org/bitbucket/projects/CO/repos/flora/browse/{cat}/{pkg}',
-			'gentoo-staging': 'https://code.funtoo.org/bitbucket/projects/AUTO/repos/gentoo-staging/browse/{cat}/{pkg}',
-			'kit-fixups': 'https://code.funtoo.org/bitbucket/projects/CORE/repos/kit-fixups/browse/{kit}/{branch}/{cat}/{pkg}',
-			'rh1': 'https://github.com/x48rph/glassfish/tree/master/{cat}/{pkg}',
+			"faustoo": "https://github.com/fmoro/faustoo/tree/master/{cat}/{pkg}",
+			"fusion809": "https://github.com/fusion809/fusion809-overlay/tree/master/{cat}/{pkg}",
+			"flora": "https://code.funtoo.org/bitbucket/projects/CO/repos/flora/browse/{cat}/{pkg}",
+			"gentoo-staging": "https://code.funtoo.org/bitbucket/projects/AUTO/repos/gentoo-staging/browse/{cat}/{pkg}",
+			"kit-fixups": "https://code.funtoo.org/bitbucket/projects/CORE/repos/kit-fixups/browse/{kit}/{branch}/{cat}/{pkg}",
+			"rh1": "https://github.com/x48rph/glassfish/tree/master/{cat}/{pkg}",
 		}
-		gentoo_base_url = 'https://github.com/gentoo/gentoo/tree/master/{cat}/{pkg}'
+		gentoo_base_url = "https://github.com/gentoo/gentoo/tree/master/{cat}/{pkg}"
 		atom = self.options.package
-		r = requests.get('http://ports.funtoo.org/packages.xml')
+		r = requests.get("http://ports.funtoo.org/packages.xml")
 		try:
 			root = ElementTree.fromstring(r.text)
-			xpath = 'category'
+			xpath = "category"
 			if atom.category:
 				xpath += '[@name="{}"]'.format(atom.category)
 			categories = root.findall(xpath)
@@ -112,12 +108,12 @@ class Module(EgoModule):
 				if atom.repository:
 					xpath += '[@kit="{}"]'.format(atom.repository)
 				for package in category.findall(xpath):
-					cat = category.attrib['name']
-					pkg = package.attrib['name']
-					kit = package.attrib['kit']
-					repository = package.attrib['repository']
-					base_url = repo_urls.get(repository, '')
-					if '{branch}' in base_url:
+					cat = category.attrib["name"]
+					pkg = package.attrib["name"]
+					kit = package.attrib["kit"]
+					repository = package.attrib["repository"]
+					base_url = repo_urls.get(repository, "")
+					if "{branch}" in base_url:
 						repo = appi.conf.Repository[kit]
 						branch, default_branch = self.config.get_configured_kit(repo.name)
 						if branch is None:
@@ -125,16 +121,18 @@ class Module(EgoModule):
 					else:
 						branch = None
 					url = base_url.format(kit=kit, branch=branch, cat=cat, pkg=pkg)
-					if 'branch' in base_url and requests.get(url).status_code == 404:
-						url = base_url.format(kit=kit, branch='global', cat=cat, pkg=pkg)
+					if "branch" in base_url and requests.get(url).status_code == 404:
+						url = base_url.format(kit=kit, branch="global", cat=cat, pkg=pkg)
 					gentoo_url = gentoo_base_url.format(cat=cat, pkg=pkg)
 					if requests.get(gentoo_url).status_code == 404:
-						gentoo_url = ''
+						gentoo_url = ""
 					else:
 						gentoo_url = "\t{}\n".format(Color.cyan(gentoo_url))
 					sys.stdout.write(
 						"{cat}/{pkg}::{kit} comes from {repo}\n\t{url}\n{gentoo_url}".format(
-							cat=cat, pkg=pkg, kit=kit,
+							cat=cat,
+							pkg=pkg,
+							kit=kit,
 							repo=Color.green(repository),
 							url=Color.blue(url or "Unknown repository URL"),
 							gentoo_url=gentoo_url,
@@ -146,27 +144,27 @@ class Module(EgoModule):
 	def handle_bugs_subcommand(self):
 		"""Given a valid atom string, list related bugs on bugs.funtoo.org."""
 		atom = self.options.package
-		searches = set(
-			'{}/{}'.format(x.category, x.package)
-			for x in atom.list_matching_ebuilds()
-		)
+		searches = set("{}/{}".format(x.category, x.package) for x in atom.list_matching_ebuilds())
 		table = Table(4)
 		for search in searches:
 			r = requests.post(
-				'https://bugs.funtoo.org/rest/api/2/search', data=json.dumps({
-					'jql': r'CatPkg ~ "\"{0}\"" OR summary ~ "\"{0}\"" ORDER BY created DESC'.format(search),
-				}),
-				headers={'Content-Type': 'application/json'})
+				"https://bugs.funtoo.org/rest/api/2/search",
+				data=json.dumps(
+					{
+						"jql": r'CatPkg ~ "\"{0}\"" OR summary ~ "\"{0}\"" ORDER BY created DESC'.format(search),
+					}
+				),
+				headers={"Content-Type": "application/json"},
+			)
 			result = r.json()
-			for issue in result['issues']:
-				fields = issue['fields']
-				date_created = datetime.strptime(
-					fields['created'], '%Y-%m-%dT%H:%M:%S.%f%z').date()
+			for issue in result["issues"]:
+				fields = issue["fields"]
+				date_created = datetime.strptime(fields["created"], "%Y-%m-%dT%H:%M:%S.%f%z").date()
 				table.append(
-					Color.red(issue['key']),
+					Color.red(issue["key"]),
 					Color.cyan(str(date_created)),
-					Color.purple(fields['status']['name']),
-					Color.yellow(fields['summary'])
+					Color.purple(fields["status"]["name"]),
+					Color.yellow(fields["summary"]),
 				)
 
 		sys.stdout.write(str(table))
@@ -178,6 +176,8 @@ class Module(EgoModule):
 				return appi.QueryAtom(value, strict)
 			except appi.exception.AtomError as e:
 				raise argparse.ArgumentTypeError(str(e))
+
 		return atom_type
+
 
 # vim: ts=4 noet sw=4
