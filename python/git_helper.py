@@ -14,7 +14,7 @@ class GitHelper(object):
 		self.quiet = quiet
 
 	def localBranches(self):
-		if os.path.exists(self.root):
+		if os.path.exists(sedlf.root):
 			retval, out = run_statusoutput('git -C %s for-each-ref --format="(refname)" refs/heads' % self.root)
 			if retval == 0:
 				for ref in out.split():
@@ -46,8 +46,8 @@ class GitHelper(object):
 			quiet=self.quiet,
 		)
 
-	def clone(self, url, branch, depth=None):
-		if depth is not None:
+	def clone(self, url, branch, depth: int = None):
+		if depth is not None and depth != 0:
 			depth_str = "--depth=%s" % depth
 		else:
 			depth_str = ""
