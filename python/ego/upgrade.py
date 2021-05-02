@@ -4,6 +4,7 @@ import os
 from ego.output import Output
 import json
 
+
 class UpgradeLister:
 
 	"""
@@ -44,7 +45,7 @@ class UpgradeLister:
 		else:
 			upgrade_year = upgrade_num = 0
 
-		#upgrade_dir = self.config.meta_repo_root + "/upgrades"
+		# upgrade_dir = self.config.meta_repo_root + "/upgrades"
 		upgrade_dir = "/var/src/meta-repo/upgrades"
 		for cur_year_dir in sorted(list(os.listdir(upgrade_dir))):
 			if not os.path.isdir(upgrade_dir + "/" + cur_year_dir):
@@ -69,11 +70,7 @@ class UpgradeLister:
 					continue
 				elif cur_year < upgrade_year:
 					continue
-				yield {
-					"path" : upgrade_path + "/" + cur_upgrade,
-					"year" : cur_year,
-					"number" : cur_upgrade_num
-				}
+				yield {"path": upgrade_path + "/" + cur_upgrade, "year": cur_year, "number": cur_upgrade_num}
 
 
 class UpgradeHandler:
@@ -98,5 +95,3 @@ class UpgradeHandler:
 	@property
 	def steps(self):
 		return self.json_data["steps"]
-
-

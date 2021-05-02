@@ -8,6 +8,7 @@
 import sys
 import textwrap
 import shutil
+
 if sys.stdout.isatty():
 	is_tty = True
 else:
@@ -61,17 +62,17 @@ class ColorType(str):
 
 
 class Color(object):
-	PURPLE = ColorType('\033[35m' if is_tty else "")
-	CYAN = ColorType('\033[36m' if is_tty else "")
-	DARKCYAN = ColorType('\033[36m' if is_tty else "")
-	DARKBLUEBG = ColorType('\033[44m' if is_tty else "")
-	BLUE = ColorType('\033[34m' if is_tty else "")
-	GREEN = ColorType('\033[32m' if is_tty else "")
-	YELLOW = ColorType('\033[33m' if is_tty else "")
-	RED = ColorType('\033[31m' if is_tty else "")
-	BOLD = ColorType('\033[1m' if is_tty else "")
-	UNDERLINE = ColorType('\033[4m' if is_tty else "")
-	END = ColorType('\033[0m' if is_tty else "")
+	PURPLE = ColorType("\033[35m" if is_tty else "")
+	CYAN = ColorType("\033[36m" if is_tty else "")
+	DARKCYAN = ColorType("\033[36m" if is_tty else "")
+	DARKBLUEBG = ColorType("\033[44m" if is_tty else "")
+	BLUE = ColorType("\033[34m" if is_tty else "")
+	GREEN = ColorType("\033[32m" if is_tty else "")
+	YELLOW = ColorType("\033[33m" if is_tty else "")
+	RED = ColorType("\033[31m" if is_tty else "")
+	BOLD = ColorType("\033[1m" if is_tty else "")
+	UNDERLINE = ColorType("\033[4m" if is_tty else "")
+	END = ColorType("\033[0m" if is_tty else "")
 	AUTOFLUSH = ColorType("")
 
 	@classmethod
@@ -118,7 +119,7 @@ class Color(object):
 		self.chunks = chunks
 
 	def __str__(self):
-		return ''.join([x[0] + str(x[1]) + self.END for x in self.chunks])
+		return "".join([x[0] + str(x[1]) + self.END for x in self.chunks])
 
 	def __len__(self):
 		return sum([len(x[1]) for x in self.chunks])
@@ -129,11 +130,11 @@ class Color(object):
 		chunks = self.chunks + text.chunks
 		return self.__class__(*chunks)
 
-	def rjust(self, width, fillchar=' '):
-		return self.default(' ' * (width - len(self))) + self
+	def rjust(self, width, fillchar=" "):
+		return self.default(" " * (width - len(self))) + self
 
-	def ljust(self, width, fillchar=' '):
-		return self + self.default(' ' * (width - len(self)))
+	def ljust(self, width, fillchar=" "):
+		return self + self.default(" " * (width - len(self)))
 
 
 def mesg(msgtype, msg, entry=None):
@@ -153,7 +154,9 @@ def mesg(msgtype, msg, entry=None):
 		else:
 			outstr = "          {entry:2d} {m}".format(entry=entry, m=msg)
 	elif msgtype == "attemptboot":
-		outstr = "{Y} ATTEMPT >{entry:2d} {B}{G}{m}{O}".format(entry=entry, B=Color.BOLD, Y=Color.YELLOW, G=Color.GREEN, m=msg, O=Color.END)
+		outstr = "{Y} ATTEMPT >{entry:2d} {B}{G}{m}{O}".format(
+			entry=entry, B=Color.BOLD, Y=Color.YELLOW, G=Color.GREEN, m=msg, O=Color.END
+		)
 	elif msgtype == "defboot":
 		if entry is None:
 			outstr = "{C} DEFAULT > {G}{m}{O}".format(C=Color.CYAN, G=Color.GREEN, m=msg, O=Color.END)
@@ -180,8 +183,8 @@ class Output:
 	@classmethod
 	def _output(cls, message, err=False):
 		message = str(message)
-		if not message.endswith('\n'):
-			message += '\n'
+		if not message.endswith("\n"):
+			message += "\n"
 		out = sys.stderr if err else sys.stdout
 		out.write(message)
 		out.flush()
@@ -225,8 +228,7 @@ class Output:
 
 
 class Table:
-
-	def __init__(self, nb_columns, *, align='', col_sep=' ', row_sep='', lpad=0, rpad=0, join=None):
+	def __init__(self, nb_columns, *, align="", col_sep=" ", row_sep="", lpad=0, rpad=0, join=None):
 		self.align = align
 		self.col_sep = col_sep
 		self.row_sep = row_sep
@@ -238,48 +240,40 @@ class Table:
 
 	def append(self, *cells):
 		if self.lpad or self.rpad:
-			cells = tuple(
-				Color.default(' ' * self.lpad) + c + (' ' * self.rpad)
-				for c in cells
-			)
-		self.cols_width = [
-			max(self.cols_width[i], len(x)) for i, x in enumerate(cells)
-		]
+			cells = tuple(Color.default(" " * self.lpad) + c + (" " * self.rpad) for c in cells)
+		self.cols_width = [max(self.cols_width[i], len(x)) for i, x in enumerate(cells)]
 		self.rows.append(cells)
 
 	def separator(self, separator=None):
 		self.rows.append(separator or self.row_sep)
 
 	def __str__(self):
-		output = ''
+		output = ""
 		for row in self.rows:
 			if not row:
-				output += '\n'
+				output += "\n"
 			elif isinstance(row, tuple):
 				cells = []
 				for i, cell in enumerate(row):
 					try:
 						align = self.align[i]
 					except IndexError:
-						align = 'l'
-					if align == 'l':
+						align = "l"
+					if align == "l":
 						cells.append(cell.ljust(self.cols_width[i]))
-					elif align == 'r':
+					elif align == "r":
 						cells.append(cell.rjust(self.cols_width[i]))
-					elif align == 'c':
+					elif align == "c":
 						cells.append(cell.center(self.cols_width[i]))
 					else:
 						raise ValueError("Invalid alignment '{}'".format(align))
-				output += self.col_sep.join([str(c) for c in cells]) + '\n'
+				output += self.col_sep.join([str(c) for c in cells]) + "\n"
 				if self.row_sep:
-					output += self.join.join([
-						(self.row_sep * width)[:width] for width in self.cols_width
-					]) + '\n'
+					output += self.join.join([(self.row_sep * width)[:width] for width in self.cols_width]) + "\n"
 			else:
 				row = str(row)
-				output += self.join.join([
-					(row * width)[:width] for width in self.cols_width
-				]) + '\n'
+				output += self.join.join([(row * width)[:width] for width in self.cols_width]) + "\n"
 		return output
+
 
 # vim: ts=4 sw=4 noet

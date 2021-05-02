@@ -3,19 +3,22 @@
 from enum import Enum
 from ego.output import mesg
 
+
 class BootLoaderEntryType(Enum):
 	LINUX = "linux"
 	OTHER = "other"
+
 
 class BootMenuFlag(Enum):
 	DEFAULT = "default"
 	ATTEMPT = "attempt"
 
+
 class BootLoaderMenu:
 	"""
 	A nicer way to record the contents ot the boot menu for later introspection.
 	"""
-	
+
 	def __init__(self, extension, config, user_specified_attempt_identifier=None):
 		self.boot_entries = []
 		self.lines = []
@@ -23,7 +26,7 @@ class BootLoaderMenu:
 		self.default_position = None
 		self.user_specified_attempt_identifier = user_specified_attempt_identifier
 		self.config = config
-		
+
 		# we will look for these as we add boot entries:
 		self._attempt_position = None
 		self._attempt_kname = None
@@ -31,11 +34,11 @@ class BootLoaderMenu:
 		# Set to true means: an attempted boot entry has been specified and found.
 		# Used when adding boot entries to know if we should keep looking for a boot entry to attempt.
 		self.attempt_tagged = False
-		
+
 		self.extension = extension
 
 		if user_specified_attempt_identifier is not None:
-			
+
 			# user is telling us to attempt a particular kernel, falling back if it doesn't work.
 			self.user_specified_attempt_identifier = user_specified_attempt_identifier
 			try:
@@ -80,24 +83,17 @@ class BootLoaderMenu:
 				if "image_path" in self.boot_entries[self._attempt_position]:
 					return self.boot_entries[self._attempt_position]["image_path"]
 
-
 	def nextEntryPosition(self):
 		return len(self.lines)
-	
+
 	def has_kname(self, kname):
 		for item in self.boot_entries:
 			if "image_path" in item and item["image_path"] == kname:
 				return True
 		return False
-		
+
 	def addBootEntry(self, boot_type: BootLoaderEntryType, label: str, image_path: str = None):
-		entry = {
-			"type": boot_type,
-			"label": label,
-			"image_path": image_path,
-			"flags": [],
-			"pos": len(self.boot_entries)
-		}
+		entry = {"type": boot_type, "label": label, "image_path": image_path, "flags": [], "pos": len(self.boot_entries)}
 		self.boot_entries.append(entry)
 
 		# Set ATTEMPT flag as appropriate:
@@ -127,5 +123,3 @@ class BootLoaderMenu:
 			else:
 				mesg("boot", label, entry=pos)
 			pos += 1
-		
-

@@ -6,8 +6,8 @@ from pathlib import Path
 from datetime import datetime
 from ego.output import Output
 
-class GitHelper(object):
 
+class GitHelper(object):
 	def __init__(self, module, root, quiet=False):
 		self.module = module
 		self.root = root
@@ -15,7 +15,7 @@ class GitHelper(object):
 
 	def localBranches(self):
 		if os.path.exists(self.root):
-			retval, out = run_statusoutput("git -C %s for-each-ref --format=\"(refname)\" refs/heads" % self.root)
+			retval, out = run_statusoutput('git -C %s for-each-ref --format="(refname)" refs/heads' % self.root)
 			if retval == 0:
 				for ref in out.split():
 					yield ref.split("/")[-1]
@@ -41,7 +41,10 @@ class GitHelper(object):
 		self.readOnlyCheck()
 		opts = " ".join(options)
 		run("git -C %s remote set-branches --add %s %s" % (self.root, remote, branch), quiet=self.quiet)
-		return run("git -C %s fetch %s %s refs/heads/%s:refs/remotes/%s/%s" % (self.root, opts, remote, branch, remote, branch), quiet=self.quiet)
+		return run(
+			"git -C %s fetch %s %s refs/heads/%s:refs/remotes/%s/%s" % (self.root, opts, remote, branch, remote, branch),
+			quiet=self.quiet,
+		)
 
 	def clone(self, url, branch, depth=None):
 		if depth is not None:

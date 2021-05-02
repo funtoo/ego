@@ -1,6 +1,7 @@
 import os
 from ego.output import Output
 
+
 class ReleaseHandler:
 
 	"""

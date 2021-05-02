@@ -14,12 +14,15 @@ def getExtension(config, ego_module):
 
 
 class GRUBLegacyExtension(Extension):
-
 	def __init__(self, boot_config, ego_module):
 		super().__init__(boot_config, ego_module)
-		self.fn = "{path}/{dir}/{file}".format(path = self.boot_config["boot/path"], dir = self.boot_config["grub-legacy/dir"], file = self.boot_config["grub-legacy/file"])
+		self.fn = "{path}/{dir}/{file}".format(
+			path=self.boot_config["boot/path"],
+			dir=self.boot_config["grub-legacy/dir"],
+			file=self.boot_config["grub-legacy/file"],
+		)
 		self.bootitems = []
-		
+
 	def initialize(self):
 		self.grub_root = self.DeviceGRUB(self.DeviceOfFilesystem(self.boot_config["boot/path"]))
 		if self.grub_root is None:
@@ -39,15 +42,15 @@ class GRUBLegacyExtension(Extension):
 			mytype = "vista"
 		elif mytype in ["windows 7", "win7"]:
 			mytype = "win7"
-		elif mytype in [ "windows 8", "win8"]:
+		elif mytype in ["windows 8", "win8"]:
 			mytype = "win8"
 		elif mytype in ["haiku", "haiku os"]:
 			mytype = "haiku"
 		else:
-			self.msgs.append(["fatal","Unrecognized boot entry type \"{type}\"".format(type = mytype)])
+			self.msgs.append(["fatal", 'Unrecognized boot entry type "{type}"'.format(type=mytype)])
 			return False
-		params = self.boot_config["{s}/params".format(s = sect)].split()
-		myroot = self.r.GetParam(params,"root=")
+		params = self.boot_config["{s}/params".format(s=sect)].split()
+		myroot = self.r.GetParam(params, "root=")
 		# TODO check for valid root entry
 		l.append("title {s}".format(s=sect))
 		self.bootitems.append(sect)
@@ -56,9 +59,9 @@ class GRUBLegacyExtension(Extension):
 			self.msgs.append(["fatal", "Couldn't determine root device using grub-probe"])
 			return False
 		if mytype == "haiku":
-			l.append("  rootnoverify {dev}".format(dev = mygrubroot))
-		else :
-			l.append("  root {dev}".format(dev = mygrubroot))
+			l.append("  rootnoverify {dev}".format(dev=mygrubroot))
+		else:
+			l.append("  root {dev}".format(dev=mygrubroot))
 		if mytype in ["win7", "win8"]:
 			l.append("  chainloader +4")
 		elif mytype in ["vista", "dos", "winxp", "haiku"]:
@@ -66,24 +69,24 @@ class GRUBLegacyExtension(Extension):
 		l.append("")
 		return True
 
-	def DeviceOfFilesystem(self,fs):
+	def DeviceOfFilesystem(self, fs):
 		return self.Guppy(" --target=device {f}".format(f=fs))
 
-	def Guppy(self,argstring, fatal=True):
+	def Guppy(self, argstring, fatal=True):
 		gprobe = "/usr/sbin/grub-probe"
 		if not os.path.exists(gprobe):
 			gprobe = "/sbin/grub-probe"
 		if not os.path.exists(gprobe):
 			raise ExtensionError("couldn't find grub-probe")
-		cmd = shlex.split("{gcmd} {args}".format(gcmd = gprobe, args = argstring))
-		cmdobj = Popen(cmd, bufsize = -1, stdout = PIPE, stderr = STDOUT, shell = False)
+		cmd = shlex.split("{gcmd} {args}".format(gcmd=gprobe, args=argstring))
+		cmdobj = Popen(cmd, bufsize=-1, stdout=PIPE, stderr=STDOUT, shell=False)
 		output = cmdobj.communicate()
 		if cmdobj.poll() != 0:
-			print("ERROR calling {cmd} {args}, Output was:\n{out}".format(cmd = gprobe, args = argstring, out = output[0].decode()))
+			print("ERROR calling {cmd} {args}, Output was:\n{out}".format(cmd=gprobe, args=argstring, out=output[0].decode()))
 			return None
 		else:
 			return output[0].decode().strip("\n")
-	
+
 	def DeviceGRUB(self, dev):
 		out = self.Guppy(" --device {d} --target=drive".format(d=dev))
 		# Convert GRUB "count from 1" (hdx,y) format to legacy "count from 0" format
@@ -101,16 +104,16 @@ class GRUBLegacyExtension(Extension):
 		mys = (mys[0], partnum - 1)
 		out = "({d},{p})".format(d=mys[0], p=mys[1])
 		return out
-	
+
 	def generateBootEntry(self, l, sect, kname, kext):
-		
+
 		ok = True
 		mytype = self.boot_config["{s}/type".format(s=sect)]
 		label = self.r.GetBootEntryString(sect, kname)
-		
+
 		l.append("title {name}".format(name=label))
 		self.bootitems.append(label)
-		
+
 		# Get kernel and params
 		kpath = self.r.strip_mount_point(kname)
 		params = []
@@ -118,7 +121,7 @@ class GRUBLegacyExtension(Extension):
 		if c.hasItem("boot/terminal") and c["boot/terminal"] == "serial":
 			params += [
 				"console=tty0",
-				"console=ttyS%s,%s%s%s" % (c["serial/unit"], c["serial/speed"], c["serial/parity"][0], c["serial/word"])
+				"console=ttyS%s,%s%s%s" % (c["serial/unit"], c["serial/speed"], c["serial/parity"][0], c["serial/word"]),
 			]
 		for param in self.boot_config.item(sect, "params").split():
 			if param not in params:
@@ -141,7 +144,7 @@ class GRUBLegacyExtension(Extension):
 		# Get initrds
 		initrds = self.boot_config.item(sect, "initrd")
 		initrds = self.r.find_initrds(initrds, kname, kext)
-		
+
 		xenpath = None
 		xenparams = []
 		# Populate xen variables if type is xen
@@ -154,13 +157,13 @@ class GRUBLegacyExtension(Extension):
 			xenparams = self.boot_config["{s}/xenparams".format(s=sect)].split()
 
 		# Append kernel lines based on type
-		
+
 		if mytype == "xen":
 			l.append("  kernel {xker} {xparams}".format(xker=xenpath, xparams=" ".join(xenparams)))
 			l.append("  module {ker} {params}".format(ker=kpath, params=" ".join(params)))
 			for initrd in initrds:
-				l.append("  module {initrd}".format(initrd = self.r.strip_mount_point(initrd)))
-		else :
+				l.append("  module {initrd}".format(initrd=self.r.strip_mount_point(initrd)))
+		else:
 			l.append("  kernel {k} {par}".format(k=kpath, par=" ".join(params)))
 			for initrd in initrds:
 				l.append("  initrd {rd}".format(rd=self.r.strip_mount_point(initrd)))
@@ -168,12 +171,12 @@ class GRUBLegacyExtension(Extension):
 		l.append("")
 
 		return ok
-	
+
 	def generateConfigFile(self):
 		l = []
 		ok = True
 		# pass our boot entry generator function to GenerateSections, and everything is taken care of for our boot entries
-		
+
 		ok, self.defpos, self.defname = self.r.GenerateSections(l, self.generateBootEntry, self.generateOtherBootEntry)
 		if not ok:
 			return False, l
@@ -181,17 +184,17 @@ class GRUBLegacyExtension(Extension):
 		if c.hasItem("boot/terminal") and c["boot/terminal"] == "serial":
 			self.msgs.append(["warn", "Configured for SERIAL input/output."])
 			l = [
-					"serial --unit=%s --speed=%s --word=%s --parity=%s --stop=%s" % (
-					c["serial/unit"], c["serial/speed"], c["serial/word"], c["serial/parity"], c["serial/stop"]),
-					"terminal %s serial console" % "--timeout=%s" % c["boot/timeout"] if c.hasItem("boot/timeout") else "",
-					"default {pos}".format(pos=self.defpos),
-					""
-				] + l
+				"serial --unit=%s --speed=%s --word=%s --parity=%s --stop=%s"
+				% (c["serial/unit"], c["serial/speed"], c["serial/word"], c["serial/parity"], c["serial/stop"]),
+				"terminal %s serial console" % "--timeout=%s" % c["boot/timeout"] if c.hasItem("boot/timeout") else "",
+				"default {pos}".format(pos=self.defpos),
+				"",
+			] + l
 		else:
 			l = [
-					self.boot_config.condFormatSubItem("boot/timeout", "timeout {s}"),
-					"default {pos}".format(pos=self.defpos),
-					""
-				] + l
-		
+				self.boot_config.condFormatSubItem("boot/timeout", "timeout {s}"),
+				"default {pos}".format(pos=self.defpos),
+				"",
+			] + l
+
 		return ok, l

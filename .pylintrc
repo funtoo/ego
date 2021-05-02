@@ -1,0 +1,15 @@
+[MESSAGES CONTROL]
+disable=bad-continuation,
+  invalid-name,
+  too-many-arguments,
+  too-many-branches,
+  too-many-locals,
+  too-many-nested-blocks,
+  too-many-statements,
+  unused-argument,
+  R0801
+
+
+[FORMAT]
+max-line-length=119
+indent-string=\t

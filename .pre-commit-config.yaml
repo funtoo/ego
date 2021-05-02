@@ -1,0 +1,34 @@
+---
+minimum_pre_commit_version: 1.15.2
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v3.2.0
+    hooks:
+      - id: check-merge-conflict  # Check for files that contain merge conflict strings.
+        language_version: python3
+        files: \.(yaml|ebuild|tmpl|py)$
+        types: [ python, text ]
+      - id: trailing-whitespace   # Trims trailing whitespace.
+        args: [--markdown-linebreak-ext=md]
+        language_version: python3
+        files: \.(yaml|ebuild|tmpl|py)$
+        types: [ python, text ]
+      - id: mixed-line-ending     # Replaces or checks mixed line ending.
+        args: [--fix=lf]
+        language_version: python3
+        files: \.(yaml|ebuild|tmpl|py)$
+        types: [ python, text ]
+      - id: end-of-file-fixer     # Makes sure files end in a newline and only a newline.
+        language_version: python3
+        files: \.(yaml|ebuild|tmpl|py)$
+        types: [ python, text ]
+      - id: check-ast             # Simply check whether files parse as valid python.
+        language_version: python3
+      - id: check-yaml
+  -   repo: https://github.com/jleclanche/tan
+      rev: 20.0.2
+      hooks:
+      - id: black
+        language_version: python3
+        args: [--line-length=119, --use-tabs]

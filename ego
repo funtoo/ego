@@ -14,12 +14,14 @@ import configparser
 import os
 import sys
 
+
 def join_path(x, y):
 	# ignore absolute paths (leading "/") in second component, for convenience...
 	if y.startswith("/"):
 		return os.path.join(x, y[1:])
 	else:
-		return os.path.join(x,y)
+		return os.path.join(x, y)
+
 
 VERSION = "2.8.0"
 
@@ -33,7 +35,7 @@ else:
 if "EGO_CONFIG" in os.environ:
 	settings_path = os.environ["EGO_CONFIG"]
 else:
-	settings_path = join_path(root_path, '/etc/ego.conf')
+	settings_path = join_path(root_path, "/etc/ego.conf")
 try:
 	settings.read(settings_path)
 except IOError:
@@ -64,8 +66,8 @@ from ego.output import Color, Output
 from ego.module import EgoModule, usage
 
 if root_path != "/":
-		Output.warning("Using ROOT of %s." % root_path)
-		Output.warning("Using ego configuration file %s (if it exists.)" % settings_path)
+	Output.warning("Using ROOT of %s." % root_path)
+	Output.warning("Using ego configuration file %s (if it exists.)" % settings_path)
 
 if __name__ == "__main__":
 	exec_name = os.path.basename(sys.argv[0])
@@ -123,9 +125,10 @@ if __name__ == "__main__":
 		except Exception as e:
 			Output.error("Ego encountered an unexpected error: " + e.__class__.__name__)
 			try:
-				outfile = '/tmp/ego-traceback-%s.txt' % os.getpid()
-				with open(outfile, 'w') as f:
+				outfile = "/tmp/ego-traceback-%s.txt" % os.getpid()
+				with open(outfile, "w") as f:
 					import traceback
+
 					f.write(str(e))
 					f.write(traceback.format_exc())
 				Output.error("Full traceback written to %s." % outfile)

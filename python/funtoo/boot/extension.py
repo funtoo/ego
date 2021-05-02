@@ -10,7 +10,7 @@ from ego.output import mesg
 class ExtensionError(Exception):
 	def __init__(self, *args):
 		self.args = args
-		
+
 	def __str__(self):
 		if len(self.args) == 1:
 			return str(self.args[0])
@@ -56,17 +56,17 @@ class Extension:
 		"""
 		out = open(self.fn, "w")
 		for line in lines:
-			out.write(line+"\n")
+			out.write(line + "\n")
 		out.close()
 		return True
 
 	def backupConfigFile(self) -> bool:
 		""" Create backup as necessary """
-		oldfn = self.fn+".old"
+		oldfn = self.fn + ".old"
 		if os.path.exists(self.fn):
 			if os.path.exists(oldfn):
 				os.unlink(oldfn)
-			os.rename(self.fn,oldfn)
+			os.rename(self.fn, oldfn)
 		return True
 
 	def validateConfigFile(self, lines: list) -> bool:
@@ -75,8 +75,8 @@ class Extension:
 		prints any warnings or throws any errors as required.
 
 		Return values:
-			[ True, [list of warnings] ] - OK
-			[ False, [list of warnings, errors] - Not OK, should abort.
+		        [ True, [list of warnings] ] - OK
+		        [ False, [list of warnings, errors] - Not OK, should abort.
 		"""
 		return True
 
@@ -99,7 +99,9 @@ class Extension:
 		if not boot_menu.success:
 			return False
 
-		self.msgs.append(["info", "Configuration file {name} generated - {num} lines.".format(name=self.fn, num=len(boot_menu.lines))])
+		self.msgs.append(
+			["info", "Configuration file {name} generated - {num} lines.".format(name=self.fn, num=len(boot_menu.lines))]
+		)
 
 		# TRY VALIDATING CONFIG FILE
 
@@ -116,7 +118,7 @@ class Extension:
 		ok = self.backupConfigFile()
 		if not ok:
 			return False
-			
+
 		# TRY WRITING CONFIG FILE
 
 		mesg("debug", "Writing new config file to {name}".format(name=self.fn))
@@ -132,5 +134,6 @@ class Extension:
 			return False
 
 		return True
+
 
 # vim: ts=4 sw=4 noet

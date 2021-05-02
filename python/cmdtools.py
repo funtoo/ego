@@ -7,8 +7,8 @@ from enum import Enum
 from datetime import datetime
 from io import StringIO
 
-class Task(object):
 
+class Task(object):
 	def __init__(self, cmdlist, abortOnError=True):
 		self.cmdlist = cmdlist
 		self.abortOnError = abortOnError
@@ -57,10 +57,10 @@ class Task(object):
 	def completeEvent(self):
 		pass
 
-class TaskList(object):
 
+class TaskList(object):
 	def __init__(self):
-		self.tasks = [] 
+		self.tasks = []
 
 	def append(self, task):
 		self.tasks.append(task)
@@ -75,13 +75,14 @@ class TaskList(object):
 		else:
 			return None
 
+
 class OutputMode(Enum):
 	NOREDIRECT = 0
 	NONE = 1
 	OUTFILE = 2
 
-class TaskRunner(object):
 
+class TaskRunner(object):
 	def __init__(self, tasks, stdout=OutputMode.NOREDIRECT, stderr=OutputMode.NOREDIRECT, outfile=None, **kwargs):
 
 		# Supported options:
@@ -139,6 +140,7 @@ class TaskRunner(object):
 		self.completeEvent()
 		return True
 
+
 def run(command, quiet=True):
 	if isinstance(command, str):
 		command = command.split()
@@ -146,10 +148,11 @@ def run(command, quiet=True):
 	tl.append(Task(command))
 	kwargs = {}
 	if quiet:
-		kwargs = { "stdout" : OutputMode.NONE, "stderr" : OutputMode.NONE }
+		kwargs = {"stdout": OutputMode.NONE, "stderr": OutputMode.NONE}
 	tr = TaskRunner(tl, **kwargs)
 	tr.run()
 	return tr.returncode
+
 
 def run_statusoutput(command):
 	if isinstance(command, str):
@@ -161,11 +164,12 @@ def run_statusoutput(command):
 	tr.run()
 	return tr.returncode, outf.getvalue()
 
-class ThreadedTaskRunner(TaskRunner, threading.Thread):
 
+class ThreadedTaskRunner(TaskRunner, threading.Thread):
 	def __init__(self, tasks, outfile=None, **kwargs):
 		TaskRunner.__init__(self, tasks, outfile=outfile, **kwargs)
 		threading.Thread.__init__(self)
+
 
 if __name__ == "__main__":
 
@@ -173,13 +177,13 @@ if __name__ == "__main__":
 	# Then use a ThreadedTaskRunner to write output to a file.
 	# Commands run in-order in a background thread.
 
-	t1 = Task([ "ls", "-l", "/bin" ])
-	t2 = Task([ "ls", "/" ])
+	t1 = Task(["ls", "-l", "/bin"])
+	t2 = Task(["ls", "/"])
 	t3 = Task(["ls", "/home"])
 	t1.nextTask = t2
 	t2.nextTask = t3
 
-	with open('/var/tmp/outy2.txt', 'w') as myfile:
+	with open("/var/tmp/outy2.txt", "w") as myfile:
 		tr = ThreadedTaskRunner(t1, outfile=myfile)
 		print("START BACKGROUND THREAD")
 		tr.start()
@@ -196,9 +200,9 @@ if __name__ == "__main__":
 	# Commands run in-order and our current process waits (we gain
 	# control when the TaskRunner is complete.)
 
-	t1 = Task([ "ls", "-l", "/bin" ])
-	t2 = Task([ "ls", "/" ])
-	t3 = Task(["ls", "/home"]) 
+	t1 = Task(["ls", "-l", "/bin"])
+	t2 = Task(["ls", "/"])
+	t3 = Task(["ls", "/home"])
 	tl = TaskList()
 	tl.append(t1)
 	tl.append(t2)

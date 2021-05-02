@@ -4,9 +4,11 @@ import mwparserfromhell
 import urllib.parse
 import requests
 import sys
+
 ignore_nodes = [mwparserfromhell.nodes.comment.Comment]
 ignore_tags = ["languages"]
 ignore_magic_words = ["__NOTITLE__", "__TOC__", "__NOTOC__"]
+
 
 class TextType(str):
 	pass
@@ -31,12 +33,11 @@ class WikiTextSpace(str):
 
 
 class WikiTextNewLine(str):
-
 	def __repr__(self):
 		return "<NEWLINE>"
 
-class WikiTextNewBlock(str):
 
+class WikiTextNewBlock(str):
 	def __repr__(self):
 		return "<NEWBLOCK>"
 
@@ -53,13 +54,13 @@ def parse(node):
 
 	for node in nodes:
 
-		#if type(node) == mwparserfromhell.nodes.tag.Tag and node.tag == "table":
-		#	for line in node.contents.split("\n"):
-		#		if line.startswith("!"):
-		#			continue
-		#		else:
-		#			for stuff in parse([line, "\n"], all_pages):
-		#				yield stuff
+		# if type(node) == mwparserfromhell.nodes.tag.Tag and node.tag == "table":
+		# 	for line in node.contents.split("\n"):
+		# 		if line.startswith("!"):
+		# 			continue
+		# 		else:
+		# 			for stuff in parse([line, "\n"], all_pages):
+		# 				yield stuff
 		if type(node) == mwparserfromhell.nodes.template.Template:
 			yield node
 		elif type(node) == mwparserfromhell.nodes.Tag and node.tag == "translate":
@@ -99,8 +100,11 @@ def wikitext_parse(wikitext: str, category=None, all_pages=None):
 		yield el
 
 
-wiki_page="Install"
-url = "https://www.funtoo.org/api.php?action=query&prop=revisions&rvprop=content&format=json&formatversion=2&titles=%s" % urllib.parse.quote(wiki_page)
+wiki_page = "Install"
+url = (
+	"https://www.funtoo.org/api.php?action=query&prop=revisions&rvprop=content&format=json&formatversion=2&titles=%s"
+	% urllib.parse.quote(wiki_page)
+)
 wikitext_page = requests.get(url).json()["query"]["pages"][0]["revisions"][0]["content"]
 
 for node in wikitext_parse(wikitext_page):

@@ -35,10 +35,13 @@ def all_funtoo_repos(config):
 		if "location" not in conf_in[repo_name]:
 			Output.warning("No location specified for '%s' repository in %s" % (repo_name, repo_path))
 		dict_out[repo_name] = {
-			"has_profiles": os.path.exists(join_path(config.root_path, conf_in[repo_name]["location"] + "/profiles/profiles.ego.desc")),
-			"config": conf_in[repo_name]
+			"has_profiles": os.path.exists(
+				join_path(config.root_path, conf_in[repo_name]["location"] + "/profiles/profiles.ego.desc")
+			),
+			"config": conf_in[repo_name],
 		}
 	return dict_out
+
 
 class ProfileName(Enum):
 	"""
@@ -120,12 +123,12 @@ class ProfileType(ProfileName):
 	@classmethod
 	def valid(cls):
 		# valid for use in setting profiles.
-		return [ ProfileType.ARCH, ProfileType.BUILD, ProfileType.SUBARCH, ProfileType.FLAVOR, ProfileType.MIX_IN ]
+		return [ProfileType.ARCH, ProfileType.BUILD, ProfileType.SUBARCH, ProfileType.FLAVOR, ProfileType.MIX_IN]
 
 	@classmethod
 	def single(cls):
 		# profile types that should only be set once.
-		return [ ProfileType.ARCH, ProfileType.BUILD, ProfileType.SUBARCH, ProfileType.FLAVOR ]
+		return [ProfileType.ARCH, ProfileType.BUILD, ProfileType.SUBARCH, ProfileType.FLAVOR]
 
 
 class MetaProfileCatalog:
@@ -183,15 +186,16 @@ class MetaProfileCatalog:
 		# This property is used by ProfileSpecifier for resolving ':foo' stuff in profiles.
 		return self.config.kits_root + "/core-kit/profiles"
 
+
 class ProfileCatalog:
 	"""
 
 	``ProfileCatalog`` will allow us to see what profile settings -- flavors, subarches, mix-ins, builds -- are
 	available in a particular profile repository.
-	
+
 	It is initialized by specifying a repository directory where ``ProfileCatalog`` will find an ``ego.desc`` file. This
 	JSON file will be read in and contains paths where ProfileCatalog can find each type of sub-profile.
-	
+
 	ProfileCatalog allows an ``arch`` string to be set via ``self.set_arch()`` or specified directly as a keyword
 	argument to the ``self.list()`` method. When specified, this string will be used to augment the list of mix-ins with
 	subarch mix-ins, and provide a list of subarches. Note that without specifying ``arch``, it is impossible for
@@ -282,7 +286,7 @@ class ProfileCatalog:
 
 
 class ProfileSpecifier(object):
-	""" ``ProfileSpecifier`` is an object used by ``ProfileTree`` to model the profile hierarchy. Each
+	"""``ProfileSpecifier`` is an object used by ``ProfileTree`` to model the profile hierarchy. Each
 	``ProfileSpecifier`` takes a specifier that is in one of the following formats:
 
 	``:foo/bar/oni``
@@ -361,9 +365,9 @@ class ProfileSpecifier(object):
 	@property
 	def name(self):
 		if self.repo_name is None or self.repo_name == "core-kit":
-			return self.resolved_path.split('/')[-1]
+			return self.resolved_path.split("/")[-1]
 		else:
-			return self.repo_name + ":" + self.resolved_path.split('/')[-1]
+			return self.repo_name + ":" + self.resolved_path.split("/")[-1]
 
 	def classify(self):
 
@@ -415,7 +419,7 @@ class ProfileTree(object):
 		self.master_repo_name = master_repo_name
 		self.funtoo_repos = funtoo_repos
 		self.config = config
-		self.root_parent_dir = join_path(self.config.root_path, '/etc/portage/make.profile')
+		self.root_parent_dir = join_path(self.config.root_path, "/etc/portage/make.profile")
 		self.parent_map = defaultdict(None)
 		# put variable definitions above this line ^^
 		self.reload()
@@ -456,7 +460,7 @@ class ProfileTree(object):
 			if strout.find(":funtoo/kits/python-kit/") != -1:
 				# strip old python-kit settings
 				continue
-			outfile.write(strout + '\n')
+			outfile.write(strout + "\n")
 
 		# add new python-kit settings
 		for kit in self.config.all_kit_names_in_release:
@@ -483,7 +487,11 @@ class ProfileTree(object):
 		:param name: The directory name of the profile to match (for example, 'workstation', 'gnome', etc.)
 		:return: None
 		"""
-		new_lines = [spec_obj.spec_str for spec_obj in self.profile_hier.keys() if not ((profile_type == spec_obj.classify()) and (spec_obj.name == name))]
+		new_lines = [
+			spec_obj.spec_str
+			for spec_obj in self.profile_hier.keys()
+			if not ((profile_type == spec_obj.classify()) and (spec_obj.name == name))
+		]
 		self.reload(new_lines)
 
 	def append_mixin(self, spec_str):
@@ -536,7 +544,7 @@ class ProfileTree(object):
 				insert_pos = 0
 			elif profile_type == ProfileType.FLAVOR:
 				try:
-					insert_pos = next(i for i,v in enumerate(line_types) if v.classify() == ProfileType.BUILD) + 1
+					insert_pos = next(i for i, v in enumerate(line_types) if v.classify() == ProfileType.BUILD) + 1
 				except StopIteration:
 					try:
 						# before first mix-in
@@ -655,8 +663,11 @@ class ProfileTree(object):
 		:return: A list of ``ProfileSpecifier`` objects matching the criteria.
 
 		"""
-		_child_dict = _child_dict if _child_dict is not None else self.profile_path_map[
-			specifier.resolved_path if specifier else self.root_parent_dir]
+		_child_dict = (
+			_child_dict
+			if _child_dict is not None
+			else self.profile_path_map[specifier.resolved_path if specifier else self.root_parent_dir]
+		)
 		out = []
 		for child_path, child_target_dict in _child_dict.items():
 			if child_types is None:
@@ -673,7 +684,7 @@ class ProfileTree(object):
 		fn = os.path.join(parent_dir, "parent")
 		if not os.path.exists(fn):
 			return
-		with open(fn, 'r') as f:
+		with open(fn, "r") as f:
 			for line in f.readlines():
 				if len(line) and line[0] == "#":
 					continue
@@ -689,5 +700,6 @@ def getProfileCatalogAndTree(config):
 	current_arch = tree.get_arch()
 	catalog.set_arch(current_arch.name if current_arch is not None else None)
 	return catalog, tree
+
 
 # vim: ts=4 noet sw=4

@@ -10,20 +10,19 @@ from pathlib import Path
 import configparser
 from configparser import InterpolationError
 
+
 def join_path(x, y):
 	# ignore absolute paths (leading "/") in second component, for convenience...
 	return os.path.join(x, y.lstrip("/"))
 
-class EgoConfig(object):
 
+class EgoConfig(object):
 	def get_setting(self, section, key, default=None):
 		if section in self.settings and key in self.settings[section]:
 			try:
 				return self.settings[section][key]
 			except InterpolationError:
-				sys.stderr.write(
-					"There is an error in your ego.conf at section '%s', key '%s'.\n" % (section, key)
-				)
+				sys.stderr.write("There is an error in your ego.conf at section '%s', key '%s'.\n" % (section, key))
 				sys.exit(1)
 		else:
 			return default
@@ -53,22 +52,22 @@ class EgoConfig(object):
 			return False
 
 	def load_kit_metadata(self, fn):
-		if not hasattr(self, '_kit_%s' % fn):
-			path = Path(self.meta_repo_root) / 'metadata' / ('%s.json' % fn)
+		if not hasattr(self, "_kit_%s" % fn):
+			path = Path(self.meta_repo_root) / "metadata" / ("%s.json" % fn)
 			try:
 				with path.open() as f:
 					return json.loads(f.read(), object_pairs_hook=OrderedDict)
 			except OSError:
 				return {}
-		return getattr(self, '_kit_%s' % fn)
+		return getattr(self, "_kit_%s" % fn)
 
 	@property
 	def kit_info_metadata(self):
-		return self.load_kit_metadata('kit-info')
+		return self.load_kit_metadata("kit-info")
 
 	@property
 	def kit_sha1_metadata(self):
-		return self.load_kit_metadata('kit-sha1')
+		return self.load_kit_metadata("kit-sha1")
 
 	@property
 	def default_release(self):
@@ -90,7 +89,7 @@ class EgoConfig(object):
 			kits = []
 			for kit_name in self.kit_info_metadata["release_defs"].keys():
 				branch, default_branch = self.get_configured_kit(kit_name)
-				if branch != 'skip':
+				if branch != "skip":
 					kits.append(kit_name)
 			return kits
 		else:
@@ -150,7 +149,6 @@ class EgoConfig(object):
 			pass
 		return kit_branch, default_kit_branch
 
-
 	def __init__(self, settings, settings_path, root_path="/", install_path="/usr/share/ego"):
 
 		# TODO: This is a mess and needs some cleaning up
@@ -178,7 +176,9 @@ class EgoConfig(object):
 		self.meta_repo_root = self.get_setting("global", "meta_repo_path", join_path(self.root_path, "/var/git/meta-repo"))
 		self.sync_base_url = self.get_setting("global", "sync_base_url", "https://github.com/funtoo/{repo}")
 		self.meta_repo_branch = "master" if self.release in ["1.0", "1.2"] else "%s-release" % self.release
-		self.repos_conf_path = self.get_setting("global", "repos_conf_path", join_path(self.root_path, "/etc/portage/repos.conf"))
+		self.repos_conf_path = self.get_setting(
+			"global", "repos_conf_path", join_path(self.root_path, "/etc/portage/repos.conf")
+		)
 
 		kit_path = self.get_setting("global", "kits_path", "kits")
 		if kit_path.startswith("/"):
@@ -186,7 +186,7 @@ class EgoConfig(object):
 		else:
 			self.kits_root = os.path.join(self.meta_repo_root, kit_path)
 		r_common = os.path.commonprefix([self.root_path, self.kits_root])
-		self.unprefixed_kits_root = self.kits_root[len(r_common):]
+		self.unprefixed_kits_root = self.kits_root[len(r_common) :]
 		if not self.unprefixed_kits_root.startswith("/"):
 			self.unprefixed_kits_root = "/" + self.unprefixed_kits_root
 		self.sync_user = self.get_setting("global", "sync_user", "portage")

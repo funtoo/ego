@@ -2,12 +2,12 @@
 
 import sys
 import unittest
+
 sys.path.insert(0, "..")
 from ego.profile import ProfileType
 
 
 class ProfileEnumTest(unittest.TestCase):
-
 	def test_compare(self):
 		self.assertGreater(ProfileType.BUILD, ProfileType.ARCH)
 		self.assertGreater(ProfileType.SUBARCH, ProfileType.BUILD)
@@ -21,6 +21,7 @@ class ProfileEnumTest(unittest.TestCase):
 		self.assertEqual(ProfileType.SUBARCH, "subarch")
 		self.assertEqual(ProfileType.FLAVOR, "flavor")
 		self.assertEqual(ProfileType.MIX_IN, "mix-ins")
+
 
 if __name__ == "__main__":
 	unittest.main()

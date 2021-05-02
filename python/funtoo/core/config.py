@@ -17,7 +17,7 @@ from collections import OrderedDict
 class ConfigFileError(Exception):
 	def __init__(self, *args):
 		self.args = args
-	
+
 	def __str__(self):
 		if len(self.args) == 1:
 			return str(self.args[0])
@@ -27,11 +27,11 @@ class ConfigFileError(Exception):
 
 class ConfigFile:
 	def __init__(self, fname=None, existing=True, msgs=None):
-		
+
 		# we use self.sections as the master list of sections, with their contents in self.obj. It is up to this class
 		# to keep self.sections and self.obj in sync. self.sections is used so that the ordering of the sections can be
 		# preserved when we dump the data.
-		
+
 		self.orderedObjects = []
 		self.templates = {}
 		self.sectionData = OrderedDict()
@@ -42,19 +42,18 @@ class ConfigFile:
 			"sectionData": {},
 			"template": {},
 		}
-		
+
 		self.parent = None
 		self.defaults = ""
-		
+
 		self.existing = existing
 		self.fname = fname
-		
+
 		if self.existing and self.fileExists():
 			fn = open(self.fname, "r")
 			self.read(fn.readlines())
 			fn.close()
-	
-	
+
 	def deburr(self, str, delim=None):
 		# remove surrounding quotes
 		str = str.strip()
@@ -64,14 +63,14 @@ class ConfigFile:
 			return str[1:-1]
 		else:
 			return str
-	
+
 	def fileExists(self):
 		if not self.fname:
 			return False
 		if not os.path.exists(self.fname):
 			return False
 		return True
-	
+
 	def setParent(self, parent):
 		"""
 		The "parent" is currently a static setting that you would override
@@ -96,7 +95,7 @@ class ConfigFile:
 		any parents.
 		"""
 		self.parent = parent
-	
+
 	def dump(self):
 		lines = []
 		for obj, name in self.orderedObjects:
@@ -115,11 +114,11 @@ class ConfigFile:
 			# remove extra trailing newline
 			del lines[-1]
 		return lines
-	
+
 	def printDump(self):
 		for line in self.dump():
 			sys.stdout.write(line)
-	
+
 	def write(self):
 		if self.fname:
 			base = os.path.dirname(self.fname)
@@ -132,10 +131,10 @@ class ConfigFile:
 			if os.path.exists(self.fname):
 				os.unlink(self.fname)
 			os.rename("{fn}.new".format(fn=self.fname), self.fname)
-	
+
 	def readFromLines(self, lines):
 		self.read(lines.split("\n"))
-	
+
 	"""
 	self.orderedObjects =
 
@@ -148,7 +147,7 @@ class ConfigFile:
 
 
 	"""
-	
+
 	def read(self, lines):
 		ln = 0
 		while ln < len(lines):
@@ -157,21 +156,21 @@ class ConfigFile:
 				self.orderedObjects.append(["comment", lines[ln]])
 				ln += 1
 				continue
-			
+
 			elif lines[ln].rstrip()[-1:] == "{":
 				# section start
 				section = self.deburr(lines[ln], "{")
 				if section in self.sectionData:
 					# duplicate section - bad
-					raise ConfigFileError("Duplicate config file section \"{sect}\" on line {num}".format(sect=section, num=ln + 1))
-				
+					raise ConfigFileError('Duplicate config file section "{sect}" on line {num}'.format(sect=section, num=ln + 1))
+
 				# Initialize internal section data store
 				self.sectionData[section] = {}
 				self.sectionDataOrder[section] = []
-				
+
 				# Record line number of section definition
 				self.lineData["section"][section] = ln + 1
-				
+
 				ln += 1
 				while ln < len(lines) and lines[ln].strip() != "}":
 					# strip comments from variable line - these comments don't get preserved on dump()
@@ -185,20 +184,20 @@ class ConfigFile:
 						# empty line, skip
 						ln += 1
 						continue
-					
+
 					# at least we have a variable name
-					
+
 					varname = ls[0]
 					vardata = " ".join(ls[1:])
-					
+
 					if varname == "{":
 						# this is illegal
-						raise ConfigFileError("Illegal variable name \"{\" on line {num}".format(num=ln + 1))
-					
+						raise ConfigFileError('Illegal variable name "{" on line {num}'.format(num=ln + 1))
+
 					if len(ls) < 2 or (vardata == ""):
 						# a variable but no data
-						raise ConfigFileError("Variable name \"{name}\" has no data on line {num}".format(name=varname, num=ln + 1))
-					
+						raise ConfigFileError('Variable name "{name}" has no data on line {num}'.format(name=varname, num=ln + 1))
+
 					# the following conditional block allows additional += lines to append to variables without
 					# throwing an exception, as follows:
 					#
@@ -215,71 +214,71 @@ class ConfigFile:
 					# code path, at variable resolution time. An initial "+=" means "inherit from default section",
 					# whereas successive "+="'s hit the code path here and mean "append to previously-defined
 					# line."
-					
+
 					if varname in self.sectionData[section]:
 						if ls[1] == "+=":
 							self.sectionData[section][varname] += " {data}".format(data=" ".join(ls[2:]))
 						else:
-							raise ConfigFileError("Duplicate variable \"{name}\" on line {num}".format(name=varname, num=ln + 1))
+							raise ConfigFileError('Duplicate variable "{name}" on line {num}'.format(name=varname, num=ln + 1))
 					else:
 						# record our variable data
 						self.sectionDataOrder[section].append(varname)
 						self.sectionData[section][varname] = vardata
-					
+
 					# record line number of variable data:
 					self.lineData["sectionData"]["{sect}/{name}".format(sect=section, name=varname)] = ln + 1
-					
+
 					ln += 1
-				
+
 				self.orderedObjects.append(["section", section])
 				ln += 1
-			
+
 			elif lines[ln].rstrip()[-1:] == "[":
 				template = self.deburr(lines[ln], "[")
-				
+
 				if template in self.templates:
 					# bad - duplicate template
-					raise ConfigFileError("Duplicate template \"{tem}\" on line {num}".format(tem=template, num=ln + 1))
+					raise ConfigFileError('Duplicate template "{tem}" on line {num}'.format(tem=template, num=ln + 1))
 				self.lineData["template"][template] = ln + 1
-				
+
 				ln += 1
 				tdata = []
 				while ln < len(lines) and lines[ln].strip() != "]":
 					tdata.append(lines[ln])
 					ln += 1
-				
+
 				self.templates[template] = tdata
 				self.orderedObjects.append(["template", template])
 				ln += 1
 			else:
 				# no clue what this is
-				raise ConfigFileError("Unexpected data \"{data}\" on line {num}".format(data=lines[ln], num=ln + 1))
-	
+				raise ConfigFileError('Unexpected data "{data}" on line {num}'.format(data=lines[ln], num=ln + 1))
+
 	# IMPLEMENT THIS:
-	
+
 	def hasTemplate(self, template):
 		if self.parent:
 			return self.parent.hasTemplate(template) or template in self.templates
 		else:
 			return template in self.templates
-	
+
 	def hasLocalTemplate(self, template):
 		return template in self.templates
-	
+
 	def hasItem(self, item):
 		return self.item(item, varname=None, bool=True)
-	
+
 	def condSubItem(self, item, str):
 		return self.subItem(item, str, cond=True)
-	
+
 	def condFormatSubItem(self, item, str):
 		return self.formatSubItem(item, str, cond=True)
-	
+
 	def flagItemList(self, item):
 		"""
 		This method parses a variable line containing "foo bar -oni" into two sub-lists ([foo, bar], [oni])
 		"""
-		
+
 		my_list = self.item(item).split()
 		grab = []
 		skip = []
@@ -290,57 +289,57 @@ class ConfigFile:
 			else:
 				grab.append(item)
 		return grab, skip
-	
+
 	def getSections(self):
 		# might want to add ability to see only local sections, vs. parent sections too.
 		return list(self.sectionData.keys())
-	
+
 	def subItem(self, item, str, cond=False):
 		"""
 		Give this function "foo/bar" and "blah %s blah" and it will return "blah <value of foo/bar> blah"
 		If cond=True, then we will zap the line (return "") if str points to a null ("") value
 		"""
-		
+
 		if cond and not self.item(item, varname=None):
 			return ""
 		else:
 			return str % self.item(item, varname=None)
-	
+
 	def formatSubItem(self, item, str, cond=False):
 		"""
 		Give this function "foo/bar" and "blah {s} blah" and it will return "blah <value of foo/bar> blah"
 		If cond=True, then we will zap the line (return "") if str points to a null ("") value
 		"""
-		
+
 		if cond and not self.item(item, varname=None):
 			return ""
 		else:
 			return str.format(s=self.item(item, varname=None))
-	
+
 	def hasLocalItem(self, item):
-		
+
 		return self.item(item, varname=None, bool=True, parents=False)
-	
+
 	def __setitem__(self, key, value):
-		
+
 		# Need to throw exception if value already exists in parents?
-		
+
 		keysplit = key.split("/")
 		section = "/".join(keysplit[:-1])
 		varname = keysplit[-1]
-		
+
 		if not section in self.sectionData:
 			# initialize internal data store
 			self.sectionData[section] = {}
 			self.sectionDataOrder[section] = []
 			# add to our ordered objects list so we output this section at the end when we dump()
 			self.orderedObjects.append(["section", section])
-		
+
 		self.sectionData[section][varname] = value
-	
+
 	def __getitem__(self, item):
 		return self.item(item, varname=None)
-	
+
 	def inherit(self, section):
 		"""
 		Override this in the subclass.
@@ -354,14 +353,14 @@ class ConfigFile:
 		"default/graphics".
 		"""
 		return None
-	
+
 	def template(self, section):
 		# TODO: IMPLEMENT ME WITH INHERITANCE JUST LIKE self.item()
 		if self.hasTemplate(section):
 			return self.templates[section]
 		else:
 			return None
-	
+
 	def item(self, section, varname=None, bool=False, parents=True, defaults=True):
 		"""
 		This is the master function for returning the value of a
@@ -380,20 +379,22 @@ class ConfigFile:
 
 		if varname==None, then cat/name are autogenerated from the value in cat, which is expected to be "foo/bar"
 		"""
-		
+
 		if varname is None:
 			keysplit = section.split("/")
 			section = "/".join(keysplit[:-1])
 			varname = keysplit[-1]
-		
+
 		defsection = None
 		if defaults:
 			defsection = self.inherit(section)
-		
+
 		if section in self.sectionData and varname in self.sectionData[section]:
 			if bool:
 				return True
-			elif (len(self.sectionData[section][varname].split()) >= 2) and (self.sectionData[section][varname].split()[0] == "+="):
+			elif (len(self.sectionData[section][varname].split()) >= 2) and (
+				self.sectionData[section][varname].split()[0] == "+="
+			):
 				# we have data, and we have the append operator -- set realdata to everything minus the initial "+="
 				realdata = " ".join(self.sectionData[section][varname].split()[1:])
 				if defsection in self.sectionData and varname in self.sectionData[defsection]:

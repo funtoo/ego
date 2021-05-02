@@ -13,14 +13,14 @@ except ImportError:
 	has_mw_parser = False
 	pass
 
-__all__ = ['EgoModule', 'usage']
+__all__ = ["EgoModule", "usage"]
 
 
 def usage(config):
 	print("Usage: %s [module] [info|options]..." % os.path.basename(sys.argv[0]))
 	Output.header("Available ego modules")
 	for mod, info in config.available_modules():
-		desc = ''
+		desc = ""
 		if "description" in info:
 			desc = info["description"]
 		if "shortcut" in info:
@@ -66,24 +66,31 @@ class EgoModule:
 			sys.exit(1)
 
 	def __call__(self, *args):
-		parser = argparse.ArgumentParser('ego ' + self.name, description=self.info['description'])
+		parser = argparse.ArgumentParser("ego " + self.name, description=self.info["description"])
 		if self.version:
-			parser.add_argument('--version', action='version', version=(
-				"ego %(ego_version)s / %(module)s %(module_version)s (by %(module_author)s)" % {
-					'ego_version': self.version, 'module': self.name,
-					'module_version': self.info['version'], 'module_author': self.info['author'],
-				}
-			))
+			parser.add_argument(
+				"--version",
+				action="version",
+				version=(
+					"ego %(ego_version)s / %(module)s %(module_version)s (by %(module_author)s)"
+					% {
+						"ego_version": self.version,
+						"module": self.name,
+						"module_version": self.info["version"],
+						"module_author": self.info["author"],
+					}
+				),
+			)
 		verbosity_group = parser.add_mutually_exclusive_group()
-		verbosity_group.add_argument('--verbosity', default=1, type=int, help="Set verbosity level")
-		verbosity_group.add_argument('-v', default=0, action='count', help="Increase verbosity level by 1 per occurrence")
-		verbosity_group.add_argument('-q', default=0, action='count', help="Decrease verbosity level by 1 per occurrence")
+		verbosity_group.add_argument("--verbosity", default=1, type=int, help="Set verbosity level")
+		verbosity_group.add_argument("-v", default=0, action="count", help="Increase verbosity level by 1 per occurrence")
+		verbosity_group.add_argument("-q", default=0, action="count", help="Decrease verbosity level by 1 per occurrence")
 		self.add_arguments(parser)
 		options = parser.parse_args(args)
 		self.options = options
 		options = vars(options)
 		options["parser"] = self.parser = parser
-		Output.verbosity = options.pop('verbosity') + options.pop('v') - options.pop('q')
+		Output.verbosity = options.pop("verbosity") + options.pop("v") - options.pop("q")
 
 		self.handle()
 
@@ -95,16 +102,17 @@ class EgoModule:
 
 	@classmethod
 	def run_ego_module(cls, modname, config, args, VERSION=None):
-		loader = importlib.machinery.SourceFileLoader(modname, '%s/modules/%s.ego' % (config.ego_dir, modname))
+		loader = importlib.machinery.SourceFileLoader(modname, "%s/modules/%s.ego" % (config.ego_dir, modname))
 		try:
 			mod = loader.load_module()
 			if mod:
 				ego_module = mod.Module(modname, config, VERSION)
 				ego_module(*args)
 			else:
-				print(Color.RED + "Error: ego module \"%s\" not found." % modname + Color.END)
+				print(Color.RED + 'Error: ego module "%s" not found.' % modname + Color.END)
 				sys.exit(1)
 		except FileNotFoundError:
 			return None
+
 
 # vim: ts=4 sw=4 noexpandtab
