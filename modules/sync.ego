@@ -319,7 +319,7 @@ priority = %s
 					else:
 						retval = sync_func()
 					we_synced = True
-					if retval not in [ 0, 256]:
+					if retval not in [ 0, 256, True]:
 						we_synced_successfully = False
 						self.kits_retval["fails"].append((kt, branch, retval))
 				if success:
