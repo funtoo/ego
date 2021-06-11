@@ -101,10 +101,7 @@ if __name__ == "__main__":
 						print("%20s: %s" % (key, econfig.ego_mods_info[mod][key]))
 					print()
 				else:
-					if "help" in econfig.ego_mods_info[mod]:
-						print(econfig.ego_mods_info[mod]["help"])
-					else:
-						print("No help available for this ego module.")
+					EgoModule.run_ego_module(mod, econfig, ['-h'], VERSION)
 			action = None
 		elif len(sys.argv) >= 2:
 			# called as 'ego'
