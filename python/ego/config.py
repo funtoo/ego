@@ -175,7 +175,12 @@ class EgoConfig(object):
 
 		self.meta_repo_root = self.get_setting("global", "meta_repo_path", join_path(self.root_path, "/var/git/meta-repo"))
 		self.sync_base_url = self.get_setting("global", "sync_base_url", "https://github.com/funtoo/{repo}")
-		self.meta_repo_branch = "master" if self.release in ["1.0", "1.2"] else "%s-release" % self.release
+		if self.release in ["1.0", "1.2"]:
+			self.meta_repo_branch = "master"
+		elif self.release == "1.4":
+			self.meta_repo_branch = "1.4-release"
+		else:
+			self.meta_repo_branch = self.release
 		self.repos_conf_path = self.get_setting(
 			"global", "repos_conf_path", join_path(self.root_path, "/etc/portage/repos.conf")
 		)
