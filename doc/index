@@ -1,8 +1,5 @@
 .\" Man page generated from reStructuredText.
 .
-.TH   "" "" ""
-.SH NAME
- \- 
 .
 .nr rst2man-indent-level 0
 .
@@ -30,6 +27,9 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .in \\n[rst2man-indent\\n[rst2man-indent-level]]u
 ..
+.TH ""  "" "" ""
+.SH NAME
+ \- 
 .\" Ego documentation master file, created by
 .\" sphinx-quickstart on Tue Oct 17 23:38:36 2017.
 .\" You can adapt this file completely to your liking, but it should at least

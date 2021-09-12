@@ -23,7 +23,7 @@ def join_path(x, y):
 		return os.path.join(x, y)
 
 
-VERSION = "2.8.0"
+VERSION = "2.8.3"
 
 settings = configparser.ConfigParser()
 

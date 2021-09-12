@@ -1,8 +1,5 @@
 .\" Man page generated from reStructuredText.
 .
-.TH EGO MODULES  "" "" ""
-.SH NAME
-Ego Modules \- 
 .
 .nr rst2man-indent-level 0
 .
@@ -30,6 +27,9 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .in \\n[rst2man-indent\\n[rst2man-indent-level]]u
 ..
+.TH "EGO MODULES"  "" "" ""
+.SH NAME
+Ego Modules \- 
 .sp
 Ego uses modular design. The modules that are currently available are:
 .INDENT 0.0

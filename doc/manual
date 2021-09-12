@@ -1,8 +1,5 @@
 .\" Man page generated from reStructuredText.
 .
-.TH EGO MANUAL PAGES  "" "" ""
-.SH NAME
-Ego Manual Pages \- 
 .
 .nr rst2man-indent-level 0
 .
@@ -30,6 +27,9 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .in \\n[rst2man-indent\\n[rst2man-indent-level]]u
 ..
+.TH "EGO MANUAL PAGES"  "" "" ""
+.SH NAME
+Ego Manual Pages \- 
 .sp
 Here you can find manual pages for ego and its modules.
 .IP "System Message: ERROR/3 (<stdin>:, line 6)"

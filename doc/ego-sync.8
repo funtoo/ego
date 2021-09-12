@@ -1,8 +1,5 @@
 .\" Man page generated from reStructuredText.
 .
-.TH EGO SYNC 8 "" "2.8.0" "Funtoo Linux Core System"
-.SH NAME
-ego sync \- Funtoo Linux Sync Module
 .
 .nr rst2man-indent-level 0
 .
@@ -30,9 +27,12 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .in \\n[rst2man-indent\\n[rst2man-indent-level]]u
 ..
+.TH "EGO SYNC" 8 "" "2.8.3" "Funtoo Linux Core System"
+.SH NAME
+ego sync \- Funtoo Linux Sync Module
 .SH SYNOPSIS
 .sp
-\fBego sync [\-h] [\-\-kits\-only|\-\-meta\-repo\-only|\-\-in\-place|\-\-config\-only] [\-\-dest DESTINATION]\fP
+\fBego sync [\-h] [\-\-kits|\-\-no\-kits] [\-\-meta|\-\-no\-meta] [\-\-in\-place] [\-\-config|\-\-no\-config] [\-\-dest DESTINATION]\fP
 .SH USAGE
 .sp
 Use the \fBego sync\fP command to perform an initial clone of meta\-repo, or to update meta\-repo according to the settings
@@ -49,29 +49,28 @@ the current user and the current user\(aqs primary group.
 \fBego sync\fP, when run as root, will run \fBemerge sync\fP in order to sync any non\-Funtoo kits, and this will also
 trigger any \(aqpackage move updates\(aq (renames) that need to be applied to the package database in \fB/var/db/pkg\fP\&.
 When run as a regular user, these steps are skipped.
-.SS Syncing Kits Only
+.SS Disable Updates to Kits
 .sp
-Use the \fB\-\-kits\-only\fP option to tell ego to only sync the kits themselves, and not update meta\-repo.
-.SS Syncing Meta\-Repo Only
+By default, all kits will be updated. To turn this off, specify the \fB\-\-no\-kits\fP option.
+.SS Disable Updates to Meta\-Repo
 .sp
-Use the \fB\-\-meta\-repo\-only\fP option to tell ego to only sync meta\-repo, and not update or clone any kits.
+By default, meta\-repo will be updated to the latest version available. To turn this off, specify the
+\fB\-\-no\-meta\fP option. This is used by metro when it is using a Portage snapshot and wants to use \fIthat\fP
+snapshot and not update it.
+.SS Disable Config Updates
+.sp
+By default, \fBego sync\fP will update configuration in \fB/etc/portage\fP, unless \fB\-\-dest\fP is being used
+to write out the meta\-repo to a non\-default location. This involves ensuring that the correct kits are
+checked out according to \fB/etc/ego.conf\fP kit and release settings, and that updates are made to
+\fB/etc/portage/repos.conf\fP, and the active profiles enabled in \fB/etc/portage/make.profile/parent\fP
+are set correctly based on your profile (flavor and mix\-in) settings.
+.sp
+You almost always want config to be updated when you run \fBego sync\fP to ensure everything is
+configured properly, but if you want to disable this, you can use the \fB\-\-no\-config\fP option
+which will disable these configuration updates.
 .SS Syncing In\-Place
 .sp
-Use the \fB\-\-in\-place\fP option to tell ego to not perform any syncing, but to check out the correct kits according
-to \fB/etc/ego.conf\fP kit and release settings, update \fB/etc/portage/repos.conf\fP, and update the active profiles
-accordingly. This is useful in conjunction when doing development and using Funtoo\(aqs merge\-all\-kits script to
-generate your own local meta\-repo. After this is done, moving to symlinking it to \fB/var/git/meta\-repo\fP and running
-\fBego sync \-\-in\-place\fP will ensure that the correct kit branches are checked out and that meta\-repo is ready to use.
-You must run \fBego sync \-\-in\-place\fP as root since it must modify files in \fB/etc/portage\fP\&.
-.SS Updating Config Only
-.sp
-The \fB\-\-config\-only\fP option will instruct ego to not change the current kit branches that are checked out at all,
-so \fBmeta\-repo\fP will not be touched, but the configuration in \fB/etc/portage\fP will be updated to reflect the current
-state of \fBmeta\-repo\fP\&. This is different than \fB\-\-in\-place\fP as what is in \fB/etc/ego.conf\fP is not consulted and
-the files in \fB/etc/portage\fP are set up to use the \fBmeta\-repo\fP as it currently exists on disk. This is used by
-\fBmetro\fP when building stages. When a meta\-repo snapshot is extracted, \fBego sync \-\-kits\-only\fP is run to grab the
-kit repos, and then \fBego sync \-\-config\-only\fP is run to update the files in \fB/etc/portage\fP to use this extracted
-meta\-repo.
+Use the \fB\-\-in\-place\fP option to tell ego to not perform any syncing, so it is short\-hand for \fB\-\-no\-meta \-\-no\-kits\fP\&.
 .SS Creating a Meta\-Repo For Archiving
 .sp
 The \fB\-\-dest\fP option can be used to manually specify the location to point to a new location to create
