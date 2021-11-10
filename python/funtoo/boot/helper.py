@@ -49,7 +49,7 @@ def get_scanpaths(boot_config: BootConfigFile) -> ScanPaths:
 
 
 def get_cpu_vendor() -> str:
-	return getoutput("/usr/bin/lscpu | grep ^Vendor").split(" ").pop()
+	return getoutput("LANG=C /usr/bin/lscpu | grep ^Vendor").split(" ").pop()
 
 
 @unique

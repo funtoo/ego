@@ -126,7 +126,8 @@ class Resolver:
 			return False
 
 	def generate_cpu_microcode_initramfs(self, scanpath="/boot"):
-		return self.cpu.generate_cpu_microcode_initramfs(scanpath)
+		if self.cpu is not None:
+			return self.cpu.generate_cpu_microcode_initramfs(scanpath)
 
 	def find_initrds(self, initrds, scanpath, kernel, kext):
 		found = []
