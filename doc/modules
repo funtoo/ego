@@ -45,7 +45,7 @@ ego query \- provides various information about packages in repository
 ego sync \- manages the process of synchronizing portage tree (meta\-repo)
 .UNINDENT
 .IP "System Message: ERROR/3 (<stdin>:, line 12)"
-Unknown directive type "toctree".
+Unknown directive type \(dqtoctree\(dq.
 .INDENT 0.0
 .INDENT 3.5
 .sp

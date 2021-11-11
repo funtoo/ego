@@ -27,7 +27,7 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .in \\n[rst2man-indent\\n[rst2man-indent-level]]u
 ..
-.TH "EGO BOOT" 8 "" "2.8.3" "Funtoo Linux Core System"
+.TH "EGO BOOT" 8 "" "2.8.4" "Funtoo Linux Core System"
 .SH NAME
 ego boot \- Funtoo Linux Boot Loader Module
 .SH SYNOPSIS
@@ -75,11 +75,11 @@ along with installing new CPU microcode for your CPU if such packages are availa
 It is also possible to run \fBego boot microcode\fP, which will update boot microcode without touching your boot loader
 configuration.
 .sp
-It is possible to use \fBego boot\fP to "attempt" to boot a kernel. By using the following syntax, upon next reboot,
+It is possible to use \fBego boot\fP to \(dqattempt\(dq to boot a kernel. By using the following syntax, upon next reboot,
 a kernel will be attempted to boot once. If it succeeds, and \fBego boot success\fP is run after startup (typically
-from \fB/etc/local.d\fP, then the successfully\-booted kernel will be "promoted" to be the default kernel. If booting
+from \fB/etc/local.d\fP, then the successfully\-booted kernel will be \(dqpromoted\(dq to be the default kernel. If booting
 fails and the system OOPSes or halts, the system will reboot in 10 seconds and continue to use the original default
-kernel. If \fBego boot success\fP then runs from \fB/etc/local.d\fP, ego will "see" that the attempted kernel is not
+kernel. If \fBego boot success\fP then runs from \fB/etc/local.d\fP, ego will \(dqsee\(dq that the attempted kernel is not
 running and it will no longer attempt the new kernel on successive boots.
 .sp
 To specify the kernel to attempt, use the following syntax:

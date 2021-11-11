@@ -33,7 +33,7 @@ Ego Manual Pages \-
 .sp
 Here you can find manual pages for ego and its modules.
 .IP "System Message: ERROR/3 (<stdin>:, line 6)"
-Unknown directive type "toctree".
+Unknown directive type \(dqtoctree\(dq.
 .INDENT 0.0
 .INDENT 3.5
 .sp

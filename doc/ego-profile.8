@@ -27,7 +27,7 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .in \\n[rst2man-indent\\n[rst2man-indent-level]]u
 ..
-.TH "EGO PROFILE" 1 "" "2.8.3" "Funtoo Linux Core System"
+.TH "EGO PROFILE" 1 "" "2.8.4" "Funtoo Linux Core System"
 .SH NAME
 ego profile \- Funtoo Linux Ego Profile Module
 .SH SYNOPSIS
@@ -175,10 +175,10 @@ configuration if you like:
 .nf
 .ft C
 {
-    "mix\-ins" : "funtoo/1.0/linux\-gnu/mix\-ins",
-    "flavor" : "funtoo/1.0/linux\-gnu/flavor",
-    "arch" : "funtoo/1.0/linux\-gnu/arch",
-    "build" : "funtoo/1.0/linux\-gnu/build"
+    \(dqmix\-ins\(dq : \(dqfuntoo/1.0/linux\-gnu/mix\-ins\(dq,
+    \(dqflavor\(dq : \(dqfuntoo/1.0/linux\-gnu/flavor\(dq,
+    \(dqarch\(dq : \(dqfuntoo/1.0/linux\-gnu/arch\(dq,
+    \(dqbuild\(dq : \(dqfuntoo/1.0/linux\-gnu/build\(dq
 }
 .ft P
 .fi
@@ -187,7 +187,7 @@ configuration if you like:
 .sp
 This file defines locations for mix\-ins, flavors, subarches and builds of Funtoo Linux in your overlay. Note that
 currently, it is not possible to define arches in your overlay, just subarches, but it is still necessary to define
-an "arch" path in the JSON as this is used as a starting point to find subarch profiles.
+an \(dqarch\(dq path in the JSON as this is used as a starting point to find subarch profiles.
 .sp
 Using the above config, you are now ready to create your own profile settings. You would then place your mix\-ins in:
 .INDENT 0.0
@@ -246,7 +246,7 @@ for easy identification. Also please note that you should \fInot\fP use the \fBe
 in \fB/etc/portage/repos.conf/\fP, as \fBego\-\fP\-prefixed repository files are managed by ego directly.
 .SH ADDITIONAL DOCUMENTATION
 .sp
-Please see \fI\%http://www.funtoo.org/Funtoo_Profiles\fP (\fBedoc "Funtoo Profiles" | less\fP) for more detailed documentation,
+Please see \fI\%http://www.funtoo.org/Funtoo_Profiles\fP (\fBedoc \(dqFuntoo Profiles\(dq | less\fP) for more detailed documentation,
 including a list of all flavors, mix\-ins, detailed documentation on Funtoo Linux media mix\-ins, how profile settings are
 stored in Funtoo Linux, as well as information about the history of the profile system, originally envisioned by Daniel
 Robbins and brought to life by Seemant Kulleen.

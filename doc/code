@@ -33,9 +33,9 @@ Code Reference \-
 .sp
 Semi\-autodocumented code directly from program modules.
 .SH MODULES
-.SS The "profile" module
+.SS The \(dqprofile\(dq module
 .IP "System Message: ERROR/3 (<stdin>:, line 12)"
-Unknown directive type "automodule".
+Unknown directive type \(dqautomodule\(dq.
 .INDENT 0.0
 .INDENT 3.5
 .sp
@@ -49,9 +49,9 @@ Unknown directive type "automodule".
 .fi
 .UNINDENT
 .UNINDENT
-.SS The "output" module
+.SS The \(dqoutput\(dq module
 .IP "System Message: ERROR/3 (<stdin>:, line 19)"
-Unknown directive type "automodule".
+Unknown directive type \(dqautomodule\(dq.
 .INDENT 0.0
 .INDENT 3.5
 .sp
@@ -65,9 +65,9 @@ Unknown directive type "automodule".
 .fi
 .UNINDENT
 .UNINDENT
-.SS The "module" module
+.SS The \(dqmodule\(dq module
 .IP "System Message: ERROR/3 (<stdin>:, line 26)"
-Unknown directive type "automodule".
+Unknown directive type \(dqautomodule\(dq.
 .INDENT 0.0
 .INDENT 3.5
 .sp
@@ -81,9 +81,9 @@ Unknown directive type "automodule".
 .fi
 .UNINDENT
 .UNINDENT
-.SS The "config" module
+.SS The \(dqconfig\(dq module
 .IP "System Message: ERROR/3 (<stdin>:, line 33)"
-Unknown directive type "automodule".
+Unknown directive type \(dqautomodule\(dq.
 .INDENT 0.0
 .INDENT 3.5
 .sp

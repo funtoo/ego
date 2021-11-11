@@ -27,7 +27,7 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .in \\n[rst2man-indent\\n[rst2man-indent-level]]u
 ..
-.TH "BOOT.CONF" 5 "" "2.8.3" "Funtoo Linux Core System"
+.TH "BOOT.CONF" 5 "" "2.8.4" "Funtoo Linux Core System"
 .SH NAME
 boot.conf \- Funtoo global boot loader configuration file
 .SH SYNOPSIS
@@ -61,7 +61,7 @@ Here is a sample \fI/etc/boot.conf\fP configuration file:
 .ft C
 boot {
         generate grub
-        # "generate grub\-legacy" if you are using grub\-legacy\-0.97
+        # \(dqgenerate grub\-legacy\(dq if you are using grub\-legacy\-0.97
 
         # Below, you can specify the kernel image to boot by default,
         # or the default boot entry name
@@ -75,25 +75,25 @@ display {
         # background /boot/background.jpg
 }
 
-"All my kernels" {
+\(dqAll my kernels\(dq {
         #
         # This entry use reasonable defaults to find all matching kernels.  An
-        # "All my kernels \- <kernel name>" boot entry will be generated for
+        # \(dqAll my kernels \- <kernel name>\(dq boot entry will be generated for
         # *each* kernel found.
         #
-        # type "boot\-update \-\-showdefaults" to see default settings.
+        # type \(dqboot\-update \-\-showdefaults\(dq to see default settings.
 }
 
-"Funtoo Linux console" {
+\(dqFuntoo Linux console\(dq {
         kernel bzImage
 }
 
-"Funtoo Linux with uvesafb" {
+\(dqFuntoo Linux with uvesafb\(dq {
         kernel bzImage\-RHEL5\-uvesafb[\-v]
         params += video=uvesafb:1440x900\-8,mtrr:2
 }
 
-"Xen" {
+\(dqXen\(dq {
         type xen
         xenkernel xen\-4.1.1.gz
         xenparams loglvl=all guest_loglvl=all
@@ -101,12 +101,12 @@ display {
         initrd initramfs[\-v]
 }
 
-"Windows 7" {
+\(dqWindows 7\(dq {
         type win7
         params root=/dev/sda1
 }
 
-"Windows XP" {
+\(dqWindows XP\(dq {
         type winxp
         params root=/dev/sda4
 }
@@ -127,8 +127,8 @@ Currently these are all \fIbuilt\-in\fP sections:
 \fIboot\fP, \fIcolor\fP, \fIdefault\fP, \fIgrub\fP, \fIgrub\-legacy\fP, \fIlilo\fP, \fIserial\fP
 .sp
 In addition, other sections can be created. Any sections with non\-builtin names
-are recognized as boot entry definitions. For example, the sections \fI"Funtoo
-Linux"\fP and \fI"Funtoo Linux genkernel"\fP define boot entries. Due to
+are recognized as boot entry definitions. For example, the sections \fI\(dqFuntoo
+Linux\(dq\fP and \fI\(dqFuntoo Linux genkernel\(dq\fP define boot entries. Due to
 \fI/etc/boot.conf\fP\(aqs wildcard support, a single boot entry section in the
 configuration file may generate multiple actual boot entries for the boot
 loader, depending on how many matches are found. Wildcard support will be
@@ -144,7 +144,7 @@ you leave out the \fIboot/timeout\fP setting, the boot menu timeout will default
 .sp
 There are four critical parameters that are used in boot entry and \fIdefault\fP
 sections \-\- \fItype\fP, \fIkernel\fP, \fIinitrd\fP and \fIparams\fP\&. \fItype\fP defaults
-to "linux" and informs \fIboot\-update\fP that we are specifying a Linux boot
+to \(dqlinux\(dq and informs \fIboot\-update\fP that we are specifying a Linux boot
 entry.  It can be set to other values to tell \fIboot\-update\fP that we are
 specifying a Microsoft Windows 7 boot entry, for example.
 .SS Linux Kernel Wildcards
@@ -156,14 +156,14 @@ wildcards are used or multiple kernels are listed \-\- one boot entry will be
 generated for each matching kernel found.
 .sp
 So, for example, the following
-\fI/etc/boot.conf\fP could generate two boot entries named "Funtoo Linux \-
-bzImage" and "Funtoo Linux \- bzImage\-new":
+\fI/etc/boot.conf\fP could generate two boot entries named \(dqFuntoo Linux \-
+bzImage\(dq and \(dqFuntoo Linux \- bzImage\-new\(dq:
 .INDENT 0.0
 .INDENT 3.5
 .sp
 .nf
 .ft C
-"Funtoo Linux" {
+\(dqFuntoo Linux\(dq {
         kernel bzImage bzImage\-new
 }
 .ft P
@@ -179,7 +179,7 @@ the base name, plus a hypen and any additional text:
 .sp
 .nf
 .ft C
-"Funtoo Linux" {
+\(dqFuntoo Linux\(dq {
         kernel bzImage[\-v]
 }
 .ft P
@@ -196,7 +196,7 @@ within brackets, which work similarly to \fI[\-v]\fP, above:
 .sp
 .nf
 .ft C
-"Funtoo Linux" {
+\(dqFuntoo Linux\(dq {
         kernel bzImage[\-2.6*]
 }
 .ft P
@@ -204,7 +204,7 @@ within brackets, which work similarly to \fI[\-v]\fP, above:
 .UNINDENT
 .UNINDENT
 .sp
-The above wildcard will match "bzImage", "bzImage\-2.6.18", and "bzImage\-2.6.24".
+The above wildcard will match \(dqbzImage\(dq, \(dqbzImage\-2.6.18\(dq, and \(dqbzImage\-2.6.24\(dq.
 .sp
 Remember that wildcards are optional. If you don\(aqt want to deal with them, you
 can just provide the name of a kernel image.
@@ -217,7 +217,7 @@ this:
 .sp
 .nf
 .ft C
-"Funtoo Linux" {
+\(dqFuntoo Linux\(dq {
         kernel bzImage
         initrd initramfs.igz
 }
@@ -235,7 +235,7 @@ the following boot entry:
 .sp
 .nf
 .ft C
-"Funtoo Linux" {
+\(dqFuntoo Linux\(dq {
         kernel bzImage[\-v]
         initrd initramfs[\-v]
 }
@@ -266,7 +266,7 @@ since you can only load one kernel at boot. Here\(aqs an example:
 .sp
 .nf
 .ft C
-"Funtoo Linux" {
+\(dqFuntoo Linux\(dq {
         kernel bzImage
         initrd initramfs\-1.igz initramfs\-2.igz
 }
@@ -287,7 +287,7 @@ a boot entry that is equivalent to the previous example:
 .sp
 .nf
 .ft C
-"Funtoo Linux" {
+\(dqFuntoo Linux\(dq {
         kernel bzImage
         # load initramfs\-1.igz:
         initrd initramfs\-1.igz
@@ -306,7 +306,7 @@ And in the following example, the initial \fI+=\fP tells coreboot to append
 .sp
 .nf
 .ft C
-"Funtoo Linux" {
+\(dqFuntoo Linux\(dq {
         kernel bzImage
         # load our default initramfs image(s), plus this one:
         initrd += initramfs\-1.igz
@@ -326,7 +326,7 @@ Matuschek that was posted on the funtoo\-dev mailing list:
 .sp
 .nf
 .ft C
-"Funtoo Linux On Ice" {
+\(dqFuntoo Linux On Ice\(dq {
         params root=/dev/sda2
         params += rootfstype=jfs
         params += usbcore.autosuspend=1
@@ -396,7 +396,7 @@ using the scan variable:
 .sp
 .nf
 .ft C
-"Debian Sid" {
+\(dqDebian Sid\(dq {
         scan /mnt/debian/boot
         kernel vmlinuz[\-v]
         initrd initrd.img
@@ -423,7 +423,7 @@ approach:
 .sp
 .nf
 .ft C
-"Windows 7" {
+\(dqWindows 7\(dq {
         type win7
         params root=/dev/sda6
 }
@@ -482,7 +482,7 @@ other than the normal default set by boot.conf:
 .sp
 .nf
 .ft C
-"Windows 10" {
+\(dqWindows 10\(dq {
     type win10
     params root=/dev/sda6
     params += chainloader=+4
@@ -528,7 +528,7 @@ default. If you had the following boot entry:
 .sp
 .nf
 .ft C
-"My Windows 7" {
+\(dqMy Windows 7\(dq {
         type win7
         params root=/dev/sda6
 }
@@ -562,14 +562,14 @@ the kernel image name:
 .nf
 .ft C
 boot {
-        default "Funtoo Linux"
+        default \(dqFuntoo Linux\(dq
 }
 .ft P
 .fi
 .UNINDENT
 .UNINDENT
 .sp
-If multiple "Funtoo Linux" boot entries are created, the one that has the most
+If multiple \(dqFuntoo Linux\(dq boot entries are created, the one that has the most
 recently created kernel (by file modification time) will be booted by default.
 .sp
 Also note that if no \fBdefault\fP setting is specified, or no match is found,
@@ -581,7 +581,7 @@ Note that double\-quotes are optional both in section names and in the
 .SS \fIboot :: bootdev\fP
 .sp
 Specifies which device or partition to install the bootloader to. This is
-currently only used for lilo and is the equivalent of setting "boot = <bootdev>"
+currently only used for lilo and is the equivalent of setting \(dqboot = <bootdev>\(dq
 in \fB/etc/lilo.conf\fP\&. Other bootloaders will just ignore it if set:
 .INDENT 0.0
 .INDENT 3.5
@@ -597,11 +597,11 @@ boot {
 .UNINDENT
 .SS \fIboot :: terminal\fP
 .sp
-Specifies the terminal mode: either "serial" or "video". Defaults to "video".
+Specifies the terminal mode: either \(dqserial\(dq or \(dqvideo\(dq. Defaults to \(dqvideo\(dq.
 This setting affects your boot\-loader input/output as well as your kernel\(aqs
 output.
 .sp
-If you set it to "serial", use the "serial" section (see below) to set serial
+If you set it to \(dqserial\(dq, use the \(dqserial\(dq section (see below) to set serial
 options.
 .SH SERIAL SECTION
 .sp
@@ -626,7 +626,7 @@ use the proper chainloader +4 parameter to load Microsoft Windows 7:
 .sp
 .nf
 .ft C
-"My Windows 7" {
+\(dqMy Windows 7\(dq {
         type win7
         params root=/dev/sda6
 }
@@ -677,12 +677,12 @@ rootfstype=auto\fP\&.
 Specifies the video mode to be used by the boot loader\(aqs menus. This value is
 also inherited and used as the video mode for the kernel when a graphical boot
 (\fIuvesafb\fP, \fIvesafb\-tng\fP) is used. This option is only supported for
-\fIgrub\fP\&. Default value is "text" for MBR booting, or "640x480" for UEFI booting.
+\fIgrub\fP\&. Default value is \(dqtext\(dq for MBR booting, or \(dq640x480\(dq for UEFI booting.
 .SS \fIdisplay :: background\fP
 .sp
 Specifies the graphical image to display at boot. The specified file should
 exist within \fB/boot\fP, and the path to the file should be specified relative
-to \fB/boot\fP\&. A file with a "jpg", "jpeg", "png", or "tga" extension
+to \fB/boot\fP\&. A file with a \(dqjpg\(dq, \(dqjpeg\(dq, \(dqpng\(dq, or \(dqtga\(dq extension
 (capitalized or lowercase) will be recognized and used. This option is only
 supported for \fIgrub\fP, and defaults to being unset.
 .SS \fIdisplay :: font\fP
