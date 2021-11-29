@@ -27,7 +27,13 @@ def ago(diff):
 	if diff.days == 1:
 		out += "1 day"
 	elif diff.days:
-		out += "%s days" % diff.days
+		if diff.seconds / 3600 >= 24:
+			# If there more than 24 hours stored in diff.seconds
+			days_to_add = int(diff.seconds / (3600 * 24))
+			diff.seconds %= 3600 * 24
+		else:
+			days_to_add = 0
+		out += "%s days" % (diff.days + days_to_add)
 	if diff.seconds / 3600 >= 1:
 		if len(out):
 			out += " "
