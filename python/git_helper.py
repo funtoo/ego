@@ -40,7 +40,7 @@ class GitHelper(object):
 		options = options or []
 		self.readOnlyCheck()
 		opts = " ".join(options)
-		run("git -C %s remote set-branches --add %s %s" % (self.root, remote, branch), quiet=self.quiet)
+		run("git -C %s remote set-branches %s %s" % (self.root, remote, branch), quiet=self.quiet)
 		return run(
 			"git -C %s fetch %s %s refs/heads/%s:refs/remotes/%s/%s" % (self.root, opts, remote, branch, remote, branch),
 			quiet=self.quiet,
