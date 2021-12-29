@@ -118,9 +118,9 @@ class Intel(CPU, IConcreteCPU):
 class AMD(CPU, IConcreteCPU):
 	def __init__(self, *args, **kwargs):
 		super().__init__(*args, **kwargs)
-		self._default_microcode_loc = "/boot"
+		self._default_microcode_loc = "/lib/firmware/amd-ucode"
 		self._microcode_filename = "amd-uc.img"
-		self._microcode_path = self._set_microcode_path()
+		self._microcode_path = self._get_microcode_path()
 		self._microcode_packages = [
 			{
 				"package": "sys-kernel/linux-firmware",
@@ -136,23 +136,17 @@ class AMD(CPU, IConcreteCPU):
 	def microcode_packages(self):
 		return self._microcode_packages
 
-	def _set_microcode_path(self):
-		scanpaths = set(self._default_microcode_loc) | self._scanpaths
-		for scanpath in scanpaths:
-			microcode_path = Path.joinpath(Path(scanpath), self._microcode_filename)
-			if microcode_path.exists():
-				return microcode_path
+	def _get_microcode_path(self):
+		return Path.joinpath(Path(self._default_microcode_loc), self._microcode_filename)
 
 	def has_microcode(self):
-		scanpaths = set(self._default_microcode_loc) | self._scanpaths
-		return any(
-			map(
-				lambda x: Path.joinpath(Path(x), self._microcode_filename).exists(),
-				scanpaths,
-			)
-		)
+		return self.microcode_path.exists()
 
 	def generate_cpu_microcode_initramfs(self, scanpath):
+		s, o = getstatusoutput(
+			"cp %s %s >/dev/null 2>&1"
+			% (self.microcode_path, scanpath)
+		)
 		path = Path.joinpath(Path(scanpath), self._microcode_filename)
 		return path.exists(), str(path)
 
