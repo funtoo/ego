@@ -27,7 +27,7 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .in \\n[rst2man-indent\\n[rst2man-indent-level]]u
 ..
-.TH "BOOT.CONF" 5 "" "2.8.5" "Funtoo Linux Core System"
+.TH "BOOT.CONF" 5 "" "2.8.6" "Funtoo Linux Core System"
 .SH NAME
 boot.conf \- Funtoo global boot loader configuration file
 .SH SYNOPSIS
@@ -187,7 +187,8 @@ the base name, plus a hypen and any additional text:
 .UNINDENT
 .UNINDENT
 .sp
-Above, \fIbzImage[\-v]\fP will match \fIbzImage\fP as well as \fIbzImage\-*\fP\&.
+Above, \fIbzImage[\-v]\fP will match \fIbzImage\fP as well as \fIbzImage\-*\fP\&. Note that
+any files ending in \fI\&.sig\fP will now be ignored.
 .sp
 In addition, \fIboot.conf\fP now supports the inclusion of arbitrary glob wildcards
 within brackets, which work similarly to \fI[\-v]\fP, above:
@@ -205,6 +206,21 @@ within brackets, which work similarly to \fI[\-v]\fP, above:
 .UNINDENT
 .sp
 The above wildcard will match \(dqbzImage\(dq, \(dqbzImage\-2.6.18\(dq, and \(dqbzImage\-2.6.24\(dq.
+.sp
+You can also now exclude certain patterns by providing additional patterns
+prefixed by \fI\-\fP, after the initial match(es):
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+\(dqFuntoo Linux\(dq {
+        kernel bzImage[\-2.6*] \-bzImage\-2.6.8 \-bzImage\-3*
+}
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
 .sp
 Remember that wildcards are optional. If you don\(aqt want to deal with them, you
 can just provide the name of a kernel image.
