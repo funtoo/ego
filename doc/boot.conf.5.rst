@@ -102,7 +102,8 @@ the base name, plus a hypen and any additional text::
                 kernel bzImage[-v]
         }
 
-Above, *bzImage[-v]* will match *bzImage* as well as *bzImage-**.
+Above, *bzImage[-v]* will match *bzImage* as well as *bzImage-**. Note that
+any files ending in *.sig* will now be ignored.
 
 In addition, *boot.conf* now supports the inclusion of arbitrary glob wildcards
 within brackets, which work similarly to *[-v]*, above::
@@ -112,6 +113,14 @@ within brackets, which work similarly to *[-v]*, above::
         }
 
 The above wildcard will match "bzImage", "bzImage-2.6.18", and "bzImage-2.6.24".
+
+You can also now exclude certain patterns by providing additional patterns
+prefixed by *-*, after the initial match(es)::
+
+        "Funtoo Linux" {
+                kernel bzImage[-2.6*] -bzImage-2.6.8 -bzImage-3*
+        }
+
 
 Remember that wildcards are optional. If you don't want to deal with them, you
 can just provide the name of a kernel image.

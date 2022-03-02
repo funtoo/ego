@@ -25,12 +25,12 @@ def bracketzap(instr, wild=True):
 	if wstart > wstop:
 		return instr
 	if wild:
-		if instr[wstart : wstop + 1] == "[-v]":
-			return instr[0:wstart] + "-*" + instr[wstop + 1 :]
+		if instr[wstart: wstop + 1] == "[-v]":
+			return instr[0:wstart] + "-*" + instr[wstop + 1:]
 		else:
-			return instr[0:wstart] + instr[wstart + 1 : wstop] + instr[wstop + 1 :]
+			return instr[0:wstart] + instr[wstart + 1: wstop] + instr[wstop + 1:]
 	else:
-		return instr[0:wstart] + instr[wstop + 1 :]
+		return instr[0:wstart] + instr[wstop + 1:]
 
 
 class Resolver:
@@ -74,6 +74,7 @@ class Resolver:
 
 	def GetMatchingKernels(self, scanpath, globlist, skip=None):
 		# find kernels in scanpath that match globs in globlist, and return them
+		skip_suffixes = [".sig"]
 		found = []
 		if skip is None:
 			skip = []
@@ -81,6 +82,9 @@ class Resolver:
 			base_glob = os.path.normpath(scanpath + "/" + bracketzap(pattern, wild=False))
 			wild_glob = os.path.normpath(scanpath + "/" + bracketzap(pattern, wild=True))
 			for match in glob.glob(base_glob):
+				for skippable in skip_suffixes:
+					if match.endswith(skippable):
+						continue
 				if match not in skip and match not in found:
 					if not os.path.exists(match):
 						self.msgs.append(["warn", "Could not read file %s -- skipping" % match])
@@ -96,7 +100,7 @@ class Resolver:
 							continue
 						# append the matching kernel, and the literal [-v]
 						# extension that was found on this kernel
-						found.append([match, match[len(scanpath) + 1 + pattern.find("[") :], os.path.getmtime(match)])
+						found.append([match, match[len(scanpath) + 1 + pattern.find("["):], os.path.getmtime(match)])
 		return found
 
 	def microcode_initialize(self):
@@ -263,7 +267,7 @@ class Resolver:
 	def ZapParam(self, params, param):
 		pos = 0
 		while pos < len(params):
-			if params[pos][0 : len(param)] == param:
+			if params[pos][0: len(param)] == param:
 				del params[pos]
 				continue
 			pos += 1
@@ -271,8 +275,8 @@ class Resolver:
 	def GetParam(self, params, param):
 		pos = 0
 		while pos < len(params):
-			if params[pos][0 : len(param)] == param:
-				return params[pos][len(param) :]
+			if params[pos][0: len(param)] == param:
+				return params[pos][len(param):]
 			pos += 1
 		return None
 
@@ -371,8 +375,9 @@ class Resolver:
 					)
 
 	def _GenerateLinuxSection(
-		self, boot_menu: BootLoaderMenu, sect: str, sfunc: Callable[[BootLoaderMenu, str, str, str], bool]
+			self, boot_menu: BootLoaderMenu, sect: str, sfunc: Callable[[BootLoaderMenu, str, str, str], bool]
 	) -> bool:
+
 		"""Generates section for Linux systems"""
 		ok = True
 		# Process a section, such as "genkernel" section.
@@ -443,7 +448,7 @@ class Resolver:
 		return ok
 
 	def _GenerateOtherSection(
-		self, boot_menu: BootLoaderMenu, sect: str, ofunc: Callable[[BootLoaderMenu, str], bool]
+			self, boot_menu: BootLoaderMenu, sect: str, ofunc: Callable[[BootLoaderMenu, str], bool]
 	) -> bool:
 		"""Generate section for non-Linux systems"""
 
@@ -460,10 +465,10 @@ class Resolver:
 		return ok
 
 	def GenerateSections(
-		self,
-		boot_menu: BootLoaderMenu,
-		sfunc: Callable[[BootLoaderMenu, str, str], bool],
-		ofunc: Callable[[BootLoaderMenu, str], bool] = None,
+			self,
+			boot_menu: BootLoaderMenu,
+			sfunc: Callable[[BootLoaderMenu, str, str], bool],
+			ofunc: Callable[[BootLoaderMenu, str], bool] = None,
 	) -> BootLoaderMenu:
 		"""Generates sections using passed in extension-supplied functions"""
 		try:
@@ -536,7 +541,7 @@ class Resolver:
 	def strip_mount_point(self, file_path):
 		"""Strips mount point from file_path"""
 		if self.config.root_path != "/":
-			file_path = file_path[len(self.config.root_path) :]
+			file_path = file_path[len(self.config.root_path):]
 			if file_path[:1] != "/":
 				file_path = "/" + file_path
 			if file_path.startswith("/boot/"):
@@ -548,6 +553,5 @@ class Resolver:
 				if len(split_path) == 2:
 					return os.path.normpath(split_path[1])
 		return file_path
-
 
 # vim: ts=4 sw=4 noet
