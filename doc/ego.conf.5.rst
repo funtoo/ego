@@ -77,8 +77,9 @@ ego sync will read the group and user ownership of meta-repo and use this user a
 This setting defines the base URL to use for cloning of kits as well as meta-repo. Default value is
 ``https://github.com/funtoo/{repo}``. The ``{repo}`` value is replaced with the name of the kit or with the literal
 value ``meta-repo``. Note that this setting only takes effect upon first clone, and if changed, you should remove
-meta-repo and kits and perform an initial ``ego sync`` to reinitialize the repositories.
-
+eta-repo and kits and perform an initial ``ego sync`` to reinitialize the repositories. Also note that this
+setting can be overridden by using the ``EGO_SYNC_BASE_URL`` environment variable, which will take precedence over
+the configuration file setting/default if found.
 
 Kits Section
 ============
