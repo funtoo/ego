@@ -67,7 +67,7 @@ from ego.module import EgoModule, usage
 
 if root_path != "/":
 	Output.warning("Using ROOT of %s." % root_path)
-	Output.warning("Using ego configuration file %s (if it exists.)" % settings_path)
+	Output.warning("Using ego configuration file %s" % settings_path)
 
 if __name__ == "__main__":
 	exec_name = os.path.basename(sys.argv[0])

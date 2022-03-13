@@ -1,14 +1,12 @@
 #!/usr/bin/python3
 
-import sys
-
-import os
 import glob
 import json
+import os
+import sys
 from collections import OrderedDict
-from pathlib import Path
-import configparser
 from configparser import InterpolationError
+from pathlib import Path
 
 
 def join_path(x, y):
