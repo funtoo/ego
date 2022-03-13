@@ -172,7 +172,10 @@ class EgoConfig(object):
 		self.settings_path = settings_path
 
 		self.meta_repo_root = self.get_setting("global", "meta_repo_path", join_path(self.root_path, "/var/git/meta-repo"))
-		self.sync_base_url = self.get_setting("global", "sync_base_url", "https://github.com/funtoo/{repo}")
+		if "EGO_SYNC_BASE_URL" in os.environ:
+			self.sync_base_url = os.environ["EGO_SYNC_BASE_URL"]
+		else:
+			self.sync_base_url = self.get_setting("global", "sync_base_url", "https://github.com/funtoo/{repo}")
 		if self.release in ["1.0", "1.2"]:
 			self.meta_repo_branch = "master"
 		elif self.release == "1.4":
