@@ -27,7 +27,7 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .in \\n[rst2man-indent\\n[rst2man-indent-level]]u
 ..
-.TH "EGO.CONF" 5 "" "2.8.6" "Funtoo Linux Core System"
+.TH "EGO.CONF" 5 "" "2.8.7" "Funtoo Linux Core System"
 .SH NAME
 ego.conf \- Ego global configuration file
 .SH SYNOPSIS
@@ -94,7 +94,9 @@ ego sync will read the group and user ownership of meta\-repo and use this user 
 This setting defines the base URL to use for cloning of kits as well as meta\-repo. Default value is
 \fBhttps://github.com/funtoo/{repo}\fP\&. The \fB{repo}\fP value is replaced with the name of the kit or with the literal
 value \fBmeta\-repo\fP\&. Note that this setting only takes effect upon first clone, and if changed, you should remove
-meta\-repo and kits and perform an initial \fBego sync\fP to reinitialize the repositories.
+eta\-repo and kits and perform an initial \fBego sync\fP to reinitialize the repositories. Also note that this
+setting can be overridden by using the \fBEGO_SYNC_BASE_URL\fP environment variable, which will take precedence over
+the configuration file setting/default if found.
 .SS Kits Section
 .sp
 The \fIkits\fP section is used to specify non\-default branches to use for Funtoo Linux kits. By default, \fBego\fP will use
