@@ -121,10 +121,11 @@ class GRUBExtension(Extension):
 		params = self.boot_config["{s}/params".format(s=sect)].split()
 		myroot = self.resolver.GetParam(params, "root=")
 		mychainloader = self.resolver.GetParam(params, "chainloader=")
+		menuflags = self.boot_config["{s}/menuflags".format(s=sect)]
 		myname = sect
 		# TODO check for valid root entry
 		boot_menu.lines.append("")
-		boot_menu.lines.append('menuentry "{mn}" {{'.format(mn=myname))
+		boot_menu.lines.append('menuentry "{mn}" {mf} {{'.format(mn=myname, mf=menuflags))
 		if mytype in ["linux16"]:
 			k = self.resolver.strip_mount_point(self.boot_config[sect + "/kernel"])
 			full_k = os.path.join(self.boot_config["boot/path"], k.lstrip("/"))
@@ -159,7 +160,8 @@ class GRUBExtension(Extension):
 		mytype = self.boot_config["{s}/type".format(s=sect)]
 		boot_menu.lines.append("")
 		label = self.resolver.GetBootEntryString(sect, k_full_path)
-		boot_menu.lines.append('menuentry "{l}" {{'.format(l=label))
+		menuflags = self.boot_config["{s}/menuflags".format(s=sect)]
+		boot_menu.lines.append('menuentry "{l}" {mf} {{'.format(l=label, mf=menuflags))
 
 		# TODO: add last-selected, which is different than last-booted.
 		# if self.config["boot/autopick"] == "last-booted":
